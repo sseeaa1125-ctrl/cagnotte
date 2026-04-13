@@ -9,7 +9,12 @@ import {
   Toggle,
   VisibilityCard,
 } from "@/components/ui";
-import { VISIBILITY_LABELS, WIZARD_FIELDS, WIZARD_LABELS } from "@/lib/constants";
+import {
+  VISIBILITY_LABELS,
+  WIZARD_EXTRA_LABELS,
+  WIZARD_FIELDS,
+  WIZARD_LABELS,
+} from "@/lib/constants";
 import {
   useWizardDraft,
   type FestiveDraft,
@@ -165,7 +170,7 @@ export default function FestiveStep3Page() {
 
         <fieldset className="flex flex-col gap-4 border-t border-border pt-6">
           <legend className="text-sm font-semibold text-primary">
-            Options d&apos;affichage
+            {WIZARD_EXTRA_LABELS.displayOptionsLegend}
           </legend>
           <Toggle
             checked={hideAmount}

@@ -998,6 +998,10 @@ export const DATE_PICKER_LABELS = {
   placeholder: "Sélectionnez une date...",
 } as const;
 
+export const WIZARD_EXTRA_LABELS = {
+  displayOptionsLegend: "Options d'affichage",
+} as const;
+
 export const EDIT_LABELS = {
   h1: "Modifier ma cagnotte",
   subtitle: "Mettez à jour le contenu sans changer l'URL.",
