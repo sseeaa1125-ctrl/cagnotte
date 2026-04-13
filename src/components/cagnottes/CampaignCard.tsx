@@ -15,10 +15,21 @@ export interface CampaignCardProps {
     donorCount: number;
     endDate?: string | null;
   };
+  /**
+   * Phase 7 plan 07-01 — destination variant.
+   * - "public"  → /c/[slug]                      (donor-facing page, DEFAULT)
+   * - "creator" → /tableau-de-bord/cagnottes/[slug] (owner detail page)
+   * Default stays "public" so every existing call-site is unchanged.
+   */
+  linkVariant?: "public" | "creator";
   className?: string;
 }
 
-export function CampaignCard({ cagnotte, className }: CampaignCardProps) {
+export function CampaignCard({
+  cagnotte,
+  linkVariant = "public",
+  className,
+}: CampaignCardProps) {
   const {
     slug,
     title,
@@ -43,9 +54,14 @@ export function CampaignCard({ cagnotte, className }: CampaignCardProps) {
       })}`
     : "";
 
+  const href =
+    linkVariant === "creator"
+      ? `/tableau-de-bord/cagnottes/${slug}`
+      : `/c/${slug}`;
+
   return (
     <a
-      href={`/c/${slug}`}
+      href={href}
       className={cn(
         "group flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-shadow",
         "hover:shadow-lg",

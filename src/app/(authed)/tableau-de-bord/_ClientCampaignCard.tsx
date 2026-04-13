@@ -77,6 +77,9 @@ export function ClientCampaignCard({ block }: ClientCampaignCardProps) {
         donorCount,
         endDate,
       }}
+      // Phase 7 plan 07-01 — dashboard cards route to the creator
+      // detail page, NOT the donor-facing /c/[slug] page.
+      linkVariant="creator"
     />
   );
 }
