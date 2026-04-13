@@ -8,7 +8,6 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import { api, ApiError, clearCsrfToken } from "@/lib/api";
 
 interface SellerInfo {
@@ -53,12 +52,17 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const [seller, setSeller] = useState<SellerInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Phase 5 plan 05-01 — fetchSeller is silent on 401. Anonymous visitors
+  // (public donor flow, /inscription, /connexion) legitimately hit 401 on
+  // /api/auth/me and should NOT be redirected from a public page. The (authed)
+  // route group ships in plan 05-02 with a server-side cookies() guard that
+  // handles unauth redirects BEFORE JSX renders. Do not re-introduce a
+  // client-side redirect here — it races with Phase 4 public pages.
   const fetchSeller = useCallback(async () => {
     setError(null);
     try {
@@ -66,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSeller(res.seller);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        router.replace("/connexion");
+        setSeller(null);
       } else if (err instanceof ApiError && err.status === 429) {
         setError("Trop de requêtes. Patiente quelques minutes puis réessaye.");
       } else {
@@ -76,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     fetchSeller();
