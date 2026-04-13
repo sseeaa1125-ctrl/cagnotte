@@ -7,6 +7,8 @@ export { Select } from "./Select";
 export type { SelectProps, SelectOption } from "./Select";
 export { DatePicker } from "./DatePicker";
 export type { DatePickerProps } from "./DatePicker";
+export { Calendar } from "./Calendar";
+export type { CalendarProps } from "./Calendar";
 export { ImageUpload } from "./ImageUpload";
 export type { ImageUploadProps } from "./ImageUpload";
 
