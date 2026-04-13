@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CampaignCard } from "@/components/cagnottes/CampaignCard";
 import { ShareSheet } from "@/components/share/ShareSheet";
@@ -129,12 +130,12 @@ export default async function CreateSuccessPage({ searchParams }: PageProps) {
       </section>
 
       <div className="flex justify-center">
-        <a
+        <Link
           href="/tableau-de-bord"
           className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-primary hover:underline"
         >
           {SUCCESS_LABELS.backToDashboardCta}
-        </a>
+        </Link>
       </div>
     </div>
   );

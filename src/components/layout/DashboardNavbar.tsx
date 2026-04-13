@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { NAV_LABELS, MISC } from "@/lib/constants";
@@ -57,7 +58,7 @@ export function DashboardNavbar({
     >
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         {/* Logo — two-tone lowercase wordmark (Banani phase-7 navbar-logo) */}
-        <a
+        <Link
           href="/tableau-de-bord"
           aria-label={MISC.siteName}
           className="flex items-center font-headings text-2xl font-black tracking-tighter text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
@@ -66,24 +67,24 @@ export function DashboardNavbar({
           <span className="ml-1 text-lg font-medium text-gray-400">
             {MISC.brandSuffix}
           </span>
-        </a>
+        </Link>
 
         {/* Center nav (desktop) */}
         <nav className="hidden items-center gap-6 md:flex">
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               className="text-sm font-medium text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
         {/* Right: notif bell + avatar */}
         <div className="flex items-center gap-2">
-          <a
+          <Link
             href="/notifications"
             className="relative flex h-12 w-12 items-center justify-center rounded-full text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             aria-label={`${NAV_LABELS.notifications} (${unreadCount})`}
@@ -97,7 +98,7 @@ export function DashboardNavbar({
                 {badgeLabel}
               </span>
             ) : null}
-          </a>
+          </Link>
 
           <div ref={menuRef} className="relative">
             <button
@@ -125,20 +126,20 @@ export function DashboardNavbar({
                     {seller.displayName}
                   </p>
                 </div>
-                <a
+                <Link
                   href="/profil"
                   role="menuitem"
                   className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
                 >
                   {NAV_LABELS.profil}
-                </a>
-                <a
+                </Link>
+                <Link
                   href="/retraits"
                   role="menuitem"
                   className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
                 >
                   {NAV_LABELS.retirerMesFonds}
-                </a>
+                </Link>
                 <button
                   type="button"
                   role="menuitem"

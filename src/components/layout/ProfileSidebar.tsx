@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import {
   User,
   Lock,
@@ -76,12 +77,12 @@ function KycPill({ status }: { status: string }) {
         <ShieldQuestion size={12} aria-hidden />
         {PROFILE_SIDEBAR.kycNone}
       </span>
-      <a
+      <Link
         href="/profil/kyc"
         className="text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
       >
         {PROFILE_SIDEBAR.kycCta}
-      </a>
+      </Link>
     </div>
   );
 }
@@ -147,13 +148,13 @@ export function ProfileSidebar({
         <div className="mt-4 rounded-3xl bg-white p-4 shadow-sm">
           <SidebarNav items={navItems} />
           <div className="my-2 border-t border-border" aria-hidden />
-          <a
+          <Link
             href="/connexion"
             className="flex min-h-12 items-center gap-3 rounded-lg px-4 py-3 text-sm text-red-600 transition-colors hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 focus-visible:ring-offset-2"
           >
             <LogOut size={18} aria-hidden />
             <span>{PROFILE_SIDEBAR.logout}</span>
-          </a>
+          </Link>
         </div>
       </aside>
 

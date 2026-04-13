@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShieldCheck, Sparkles } from "lucide-react";
 import { CREATE_PICKER_LABELS } from "@/lib/constants";
@@ -104,12 +105,12 @@ export default function CreatePickerPage() {
         </span>
       </div>
 
-      <a
+      <Link
         href="/tableau-de-bord"
         className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-primary hover:underline"
       >
         {CREATE_PICKER_LABELS.cancelCta}
-      </a>
+      </Link>
     </div>
   );
 }

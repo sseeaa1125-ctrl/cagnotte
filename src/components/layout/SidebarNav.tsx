@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export interface SidebarNavItem {
@@ -20,7 +21,7 @@ export function SidebarNav({ items, className }: SidebarNavProps) {
       aria-label="Navigation secondaire"
     >
       {items.map((item) => (
-        <a
+        <Link
           key={item.href}
           href={item.href}
           aria-current={item.active ? "page" : undefined}
@@ -42,7 +43,7 @@ export function SidebarNav({ items, className }: SidebarNavProps) {
             {item.icon}
           </span>
           <span className="flex-1">{item.label}</span>
-        </a>
+        </Link>
       ))}
     </nav>
   );

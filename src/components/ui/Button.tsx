@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -111,6 +112,22 @@ export function Button(props: ButtonProps) {
     void _sp;
     void _cn;
     void _c;
+    // SPA navigation: internal hrefs (starting with "/") use next/link Link
+    // for client-side routing. External / mailto / tel fall back to plain <a>.
+    const href = typeof anchorRest.href === "string" ? anchorRest.href : undefined;
+    const isInternal =
+      typeof href === "string" &&
+      href.startsWith("/") &&
+      !href.startsWith("//");
+    if (isInternal) {
+      const { href: _h, ...linkRest } = anchorRest;
+      void _h;
+      return (
+        <Link href={href as string} className={classes} {...linkRest}>
+          {content}
+        </Link>
+      );
+    }
     return (
       <a className={classes} {...anchorRest}>
         {content}

@@ -63,13 +63,13 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
         {/* Desktop nav */}
         <nav className="hidden items-center gap-8 md:flex">
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               className="text-sm font-medium text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -110,27 +110,27 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
                         {seller.displayName}
                       </p>
                     </div>
-                    <a
+                    <Link
                       href="/profil"
                       role="menuitem"
                       className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
                     >
                       {NAV_LABELS.profil}
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                       href="/notifications"
                       role="menuitem"
                       className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
                     >
                       {NAV_LABELS.notifications}
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                       href="/retraits"
                       role="menuitem"
                       className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
                     >
                       {NAV_LABELS.retirerMesFonds}
-                    </a>
+                    </Link>
                     <button
                       type="button"
                       role="menuitem"
@@ -178,14 +178,14 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
       >
         <nav className="flex flex-col gap-2">
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className="flex min-h-12 items-center rounded-lg px-4 text-base font-medium text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
             {loading ? null : seller ? (

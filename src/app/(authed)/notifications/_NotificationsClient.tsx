@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Gift,
@@ -201,7 +202,7 @@ export function NotificationsClient({
           className="flex gap-2 border-b border-border p-4"
           aria-label="Filtre des notifications"
         >
-          <a
+          <Link
             href="/notifications?filter=all"
             role="tab"
             aria-selected={activeFilter === "all"}
@@ -214,8 +215,8 @@ export function NotificationsClient({
             )}
           >
             {NOTIF_FEED_LABELS.tabAll} ({counts.all})
-          </a>
-          <a
+          </Link>
+          <Link
             href="/notifications?filter=unread"
             role="tab"
             aria-selected={activeFilter === "unread"}
@@ -228,7 +229,7 @@ export function NotificationsClient({
             )}
           >
             {NOTIF_FEED_LABELS.tabUnread} ({counts.unread})
-          </a>
+          </Link>
         </div>
 
         {/* Feed */}

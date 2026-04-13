@@ -1,4 +1,5 @@
 import * as React from "react";
+import Link from "next/link";
 import { Heart } from "lucide-react";
 import { NAV_LABELS, MISC } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -46,12 +47,12 @@ export function Footer({ className }: FooterProps) {
             <ul className="space-y-2">
               {PRODUCT_LINKS.map((link) => (
                 <li key={link.href}>
-                  <a
+                  <Link
                     href={link.href}
                     className="text-sm hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -65,12 +66,12 @@ export function Footer({ className }: FooterProps) {
             <ul className="space-y-2">
               {LEGAL_LINKS.map((link) => (
                 <li key={link.href}>
-                  <a
+                  <Link
                     href={link.href}
                     className="text-sm hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
