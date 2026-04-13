@@ -807,3 +807,242 @@ authRouter.post("/unsubscribe", unsubscribeLimiter, async (req, res) => {
     res.status(500).json({ error: "Erreur interne" });
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 8 fixpack — Google OAuth (hand-rolled, zero new npm deps).
+//
+// Flow:
+//   1. GET /api/auth/google/authorize → generates CSRF state, stores in
+//      izy-google-state cookie (10 min), 302 redirects to Google consent.
+//   2. GET /api/auth/google/callback → verifies state, exchanges code for
+//      id_token (native fetch), decodes JWT middle segment (no signature
+//      verification — we trust Google's HTTPS), upserts Seller by email,
+//      issues izy-token + csrf, 302 redirects to FRONTEND_URL/tableau-de-bord.
+//
+// Security notes accepted as v1 trade-offs:
+//   - id_token signature is not verified (trust Google's HTTPS endpoint).
+//     v2 should fetch Google's JWKS and verify via jose.
+//   - No signature verification means a compromised TLS path could forge
+//     a token. Defense-in-depth: the token exchange hits Google directly.
+// ─────────────────────────────────────────────────────────────────────────
+
+const GOOGLE_STATE_COOKIE = "izy-google-state";
+const GOOGLE_STATE_MAX_AGE = 10 * 60 * 1000; // 10 min
+
+function slugifyDisplayName(raw: string): string {
+  return raw
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 30);
+}
+
+async function generateAvailableSlug(base: string): Promise<string> {
+  let candidate = base || "createur";
+  if (RESERVED_SLUGS.has(candidate)) candidate = `createur-${candidate}`.slice(0, 30);
+  if (candidate.length < 3) candidate = `createur-${candidate}`.slice(0, 30);
+  // Try base, base-2, base-3, ...
+  for (let i = 0; i < 20; i++) {
+    const attempt = i === 0 ? candidate : `${candidate}-${i + 1}`.slice(0, 30);
+    const existing = await prisma.seller.findUnique({
+      where: { slug: attempt },
+      select: { id: true },
+    });
+    if (!existing) return attempt;
+  }
+  // Fallback: random suffix.
+  return `${candidate}-${Date.now().toString(36).slice(-4)}`.slice(0, 30);
+}
+
+function decodeIdTokenPayload(idToken: string): {
+  email?: string;
+  email_verified?: boolean;
+  sub?: string;
+  name?: string;
+  picture?: string;
+} | null {
+  try {
+    const parts = idToken.split(".");
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    // base64url → base64
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const json = Buffer.from(padded, "base64").toString("utf8");
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+// ── GET /api/auth/google/authorize ──
+authRouter.get("/google/authorize", (req, res) => {
+  try {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      logger.error("GOOGLE_CLIENT_ID not configured");
+      res.status(500).json({ error: "OAuth non configuré" });
+      return;
+    }
+
+    const backendBaseUrl =
+      process.env.BACKEND_URL ||
+      `${req.protocol}://${req.get("host")}`;
+    const redirectUri = `${backendBaseUrl}/api/auth/google/callback`;
+
+    const state = crypto.randomBytes(32).toString("hex");
+    const isProd = process.env.NODE_ENV === "production";
+    res.cookie(GOOGLE_STATE_COOKIE, state, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax", // Must be "lax" for OAuth redirect to send the cookie
+      maxAge: GOOGLE_STATE_MAX_AGE,
+      path: "/api/auth",
+    });
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "openid email profile",
+      state,
+      access_type: "offline",
+      prompt: "select_account",
+    });
+
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    res.redirect(302, authUrl);
+  } catch (err) {
+    logger.error("Erreur google/authorize", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// ── GET /api/auth/google/callback ──
+authRouter.get("/google/callback", async (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  try {
+    const code = req.query.code as string | undefined;
+    const state = req.query.state as string | undefined;
+    const cookieState = req.cookies?.[GOOGLE_STATE_COOKIE];
+
+    // Clear state cookie immediately (single-use)
+    const isProd = process.env.NODE_ENV === "production";
+    res.clearCookie(GOOGLE_STATE_COOKIE, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/api/auth",
+    });
+
+    if (!code || !state || !cookieState || state !== cookieState) {
+      res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+      return;
+    }
+
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
+      logger.error("GOOGLE_CLIENT_ID/SECRET not configured");
+      res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+      return;
+    }
+
+    const backendBaseUrl =
+      process.env.BACKEND_URL ||
+      `${req.protocol}://${req.get("host")}`;
+    const redirectUri = `${backendBaseUrl}/api/auth/google/callback`;
+
+    // Exchange code for tokens (native fetch, no new deps)
+    const tokenBody = new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code",
+    });
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: tokenBody.toString(),
+    });
+    if (!tokenRes.ok) {
+      logger.error("Google token exchange failed", {
+        status: tokenRes.status,
+      });
+      res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+      return;
+    }
+    const tokenJson = (await tokenRes.json()) as { id_token?: string };
+    if (!tokenJson.id_token) {
+      res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+      return;
+    }
+
+    // Decode id_token (trust Google HTTPS — see security note above)
+    const profile = decodeIdTokenPayload(tokenJson.id_token);
+    if (!profile?.email || !profile.sub) {
+      res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+      return;
+    }
+
+    const email = profile.email.toLowerCase();
+    const googleId = profile.sub;
+    const name = profile.name?.trim() || email.split("@")[0];
+
+    // Lookup existing seller by email
+    let seller = await prisma.seller.findFirst({
+      where: { email, deletedAt: null },
+    });
+
+    if (seller) {
+      // Existing account — link googleId if missing
+      if (seller.googleId && seller.googleId !== googleId) {
+        // Account is linked to a different Google ID — conflict
+        res.redirect(302, `${frontendUrl}/connexion?error=email_in_use`);
+        return;
+      }
+      if (!seller.googleId) {
+        seller = await prisma.seller.update({
+          where: { id: seller.id },
+          data: {
+            googleId,
+            emailVerified: true, // Google has verified it
+          },
+        });
+      }
+    } else {
+      // New account — create via Google
+      const baseSlug = slugifyDisplayName(name);
+      const slug = await generateAvailableSlug(baseSlug);
+      seller = await prisma.seller.create({
+        data: {
+          email,
+          password: null,
+          googleId,
+          displayName: name,
+          slug,
+          emailVerified: true,
+        },
+      });
+    }
+
+    // Issue session
+    const tokenPayload = {
+      sub: seller.id,
+      slug: seller.slug,
+      plan: seller.plan,
+    };
+    const accessToken = await createAccessToken(tokenPayload);
+    const refreshToken = await createRefreshToken(seller.id);
+    setAuthCookies(res, accessToken, refreshToken);
+    setCsrfCookie(res);
+
+    res.redirect(302, `${frontendUrl}/tableau-de-bord`);
+  } catch (err) {
+    logger.error("Erreur google/callback", err);
+    res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+  }
+});
