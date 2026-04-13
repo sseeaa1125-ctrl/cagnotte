@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import { authRouter } from "./routes/auth.js";
 import { blocksRouter } from "./routes/blocks.js";
 import { ordersRouter } from "./routes/orders.js";
+import { cagnottesRouter } from "./routes/cagnottes.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { uploadRouter } from "./routes/upload.js";
 import { sellersRouter } from "./routes/sellers.js";
@@ -107,6 +108,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/sellers", writeLimiter, verifyCsrf, sellersRouter);
 app.use("/api/blocks", writeLimiter, verifyCsrf, blocksRouter);
 app.use("/api/orders", ordersRouter); // Public order creation — CSRF not needed
+app.use("/api/cagnottes", cagnottesRouter); // Phase 2 02-01 — public GET-only, picks up global limiter
 app.use("/api/webhooks", webhooksRouter); // Webhook signature verification — no cookies
 app.use("/api/upload", writeLimiter, verifyCsrf, uploadRouter);
 app.use("/api/withdrawals", verifyCsrf, withdrawalsRouter);
