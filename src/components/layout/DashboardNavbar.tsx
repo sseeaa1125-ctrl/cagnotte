@@ -56,12 +56,16 @@ export function DashboardNavbar({
       )}
     >
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
-        {/* Logo */}
+        {/* Logo — two-tone lowercase wordmark (Banani phase-7 navbar-logo) */}
         <a
           href="/tableau-de-bord"
-          className="font-headings text-xl font-bold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
+          aria-label={MISC.siteName}
+          className="flex items-center font-headings text-2xl font-black tracking-tighter text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
         >
-          {MISC.siteName}
+          {MISC.brandMark}
+          <span className="ml-1 text-lg font-medium text-gray-400">
+            {MISC.brandSuffix}
+          </span>
         </a>
 
         {/* Center nav (desktop) */}
