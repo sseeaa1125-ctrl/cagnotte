@@ -5,6 +5,15 @@ import { queueTransactionalEmail, queueStandardEmail } from "../lib/queues/index
 import { escapeHtml, formatPrice } from "../lib/utils.js";
 import { generateDownloadToken } from "./orders.js";
 import * as logger from "../lib/logger.js";
+// Phase 2 plan 02-02 — post-transaction notification dispatch (P01 + P06)
+import {
+  fireDonationReceived,
+  fireMilestone,
+  fireDonationMessage,
+  type OrderForDispatch,
+  type BlockForDispatch,
+} from "../lib/notifications/dispatch.js";
+import { detectCrossed } from "../lib/notifications/milestones.js";
 
 // NOTE: cagnottes.sn fork — community/email-marketing/push/google-calendar features removed.
 // Stubs preserved inline to keep the legacy webhook handler compiling.
@@ -273,15 +282,20 @@ webhooksRouter.post("/bictorys", async (req, res) => {
 
     logger.log(`[Webhook Bictorys] ref=${paymentReference} status=${status} amount=${amount}`);
 
-    // 2. Logger le webhook avant tout traitement
-    await prisma.webhookLog.create({
-      data: {
+    // 2. Logger le webhook (idempotent) — Phase 1 added @@unique([externalId, eventType])
+    // so a duplicate webhook delivery upserts the same row instead of throwing P2002.
+    // The PAID branch below upserts AGAIN inside the Serializable transaction; this
+    // outer write is just for non-PAID statuses + the dead community branch + audit.
+    await prisma.webhookLog.upsert({
+      where: { externalId_eventType: { externalId: transactionId, eventType: status } },
+      create: {
         provider: "bictorys",
         eventType: status,
         externalId: transactionId,
         payload: JSON.parse(JSON.stringify(payload)),
         status: "received",
       },
+      update: {},
     });
 
     // 3a. Vérifier si c'est un paiement communauté (ref commence par CM-)
@@ -346,58 +360,172 @@ webhooksRouter.post("/bictorys", async (req, res) => {
           ? new Date(Date.now() + 72 * 60 * 60 * 1000) // A14: 72h (aligned with PRD)
           : undefined;
 
-      // S3: Idempotency + processing dans une transaction sérialisable
-      // Empêche le double-processing en cas de webhooks concurrents
-      const alreadyProcessed = await prisma.$transaction(async (tx) => {
-        // Check idempotency DANS la transaction (atomique)
-        const existingLog = await tx.webhookLog.findFirst({
-          where: { externalId: transactionId, eventType: status, status: "processed" },
-        });
-        if (existingLog || order.paymentStatus === "PAID") {
-          return true;
-        }
+      // Phase 2 plan 02-02 — replaces the prior findFirst-then-update race with
+      // a hard upsert on WebhookLog @@unique([externalId, eventType]) inside the
+      // Serializable transaction. The combination is triple-protected against
+      // double-delivery: (1) WebhookLog unique index, (2) Serializable isolation
+      // (Postgres SSI aborts the loser), (3) Notification.dedupeKey @unique on
+      // the post-tx fire path.
+      //
+      // CRITICAL: the transaction body MUST stay short (< 2s) — Neon serverless
+      // tx ceiling. No email work, no notification dispatch, no Bictorys calls.
+      type PaidTxResult =
+        | { alreadyProcessed: true }
+        | {
+            alreadyProcessed: false;
+            prevTotal: number;
+            newTotal: number;
+            blk: BlockForDispatch | null;
+            ord: OrderForDispatch;
+          };
 
-        await tx.order.update({
-          where: { id: order.id },
-          data: {
-            paymentStatus: "PAID",
-            paidAt: new Date(),
-            paymentExternalId: transactionId,
-            downloadUrl,
-            downloadExpiresAt,
-          },
-        });
+      const paidResult = await prisma.$transaction(
+        async (tx): Promise<PaidTxResult> => {
+          // 1. Upsert webhook log atomically — first writer wins via the Phase 1
+          // composite unique constraint.
+          const log = await tx.webhookLog.upsert({
+            where: { externalId_eventType: { externalId: transactionId, eventType: status } },
+            create: {
+              provider: "bictorys",
+              eventType: status,
+              externalId: transactionId,
+              payload: JSON.parse(JSON.stringify(payload)),
+              status: "received",
+            },
+            update: {},
+          });
 
-        await tx.customer.updateMany({
-          where: { sellerId: order.sellerId, email: order.customerEmail },
-          data: {
-            totalSpent: { increment: order.amount },
-            orderCount: { increment: 1 },
-          },
-        });
+          // 2. If a previous in-flight webhook already marked this log processed,
+          // we are the loser of the race — bail out idempotently.
+          if (log.status === "processed") {
+            return { alreadyProcessed: true };
+          }
 
-        if (order.orderType === "SALE" && order.productId) {
-          await tx.product.update({
-            where: { id: order.productId },
+          // 3. Re-fetch order WITH block (for milestone detection + dispatch).
+          // We re-read inside the tx so the paymentStatus check is consistent
+          // with the eventual mutate.
+          const ord = await tx.order.findUnique({
+            where: { id: order.id },
+            include: { block: true },
+          });
+          if (!ord || ord.paymentStatus === "PAID") {
+            return { alreadyProcessed: true };
+          }
+
+          // 4. Aggregate prevTotal — paid orders on this block EXCLUDING this order.
+          // Used post-tx by detectCrossed() to fire MILESTONE_REACHED at most once
+          // per (block, threshold) via Notification.dedupeKey.
+          let prevTotal = 0;
+          if (ord.blockId) {
+            const agg = await tx.order.aggregate({
+              where: { blockId: ord.blockId, paymentStatus: "PAID", id: { not: ord.id } },
+              _sum: { amount: true },
+            });
+            prevTotal = agg._sum.amount || 0;
+          }
+
+          // 5. Mutate order → PAID
+          await tx.order.update({
+            where: { id: ord.id },
             data: {
-              totalSales: { increment: 1 },
-              totalRevenue: { increment: order.amount },
+              paymentStatus: "PAID",
+              paidAt: new Date(),
+              paymentExternalId: transactionId,
+              downloadUrl,
+              downloadExpiresAt,
             },
           });
-        }
 
-        // Mark webhook log as processed (idempotency)
-        await tx.webhookLog.updateMany({
-          where: { externalId: transactionId },
-          data: { status: "processed" },
-        });
+          // 6. Customer totals
+          await tx.customer.updateMany({
+            where: { sellerId: ord.sellerId, email: ord.customerEmail },
+            data: {
+              totalSpent: { increment: ord.amount },
+              orderCount: { increment: 1 },
+            },
+          });
 
-        return false;
-      }, { isolationLevel: "Serializable" });
+          // 7. Product totals (legacy SALE branch — kept for fork compat)
+          if (ord.orderType === "SALE" && ord.productId) {
+            await tx.product.update({
+              where: { id: ord.productId },
+              data: {
+                totalSales: { increment: 1 },
+                totalRevenue: { increment: ord.amount },
+              },
+            });
+          }
 
-      if (alreadyProcessed) {
+          // 8. Mark log processed atomically with the order mutation.
+          await tx.webhookLog.update({
+            where: { id: log.id },
+            data: { status: "processed" },
+          });
+
+          // 9. Project domain objects into dispatch shapes — the structural types
+          // keep the dispatcher decoupled from Prisma include shapes.
+          const ordForDispatch: OrderForDispatch = {
+            id: ord.id,
+            amount: ord.amount,
+            customerName: ord.customerName,
+            isAnonymous: ord.isAnonymous,
+            donorMessage: ord.donorMessage,
+            messageIsPrivate: ord.messageIsPrivate,
+          };
+          const blkForDispatch: BlockForDispatch | null = ord.block
+            ? {
+                id: ord.block.id,
+                sellerId: ord.block.sellerId,
+                title: ord.block.title,
+                config: ord.block.config,
+              }
+            : null;
+
+          return {
+            alreadyProcessed: false,
+            prevTotal,
+            newTotal: prevTotal + ord.amount,
+            blk: blkForDispatch,
+            ord: ordForDispatch,
+          };
+        },
+        { isolationLevel: "Serializable" },
+      );
+
+      if (paidResult.alreadyProcessed) {
         res.status(200).json({ received: true, already: "processed" });
         return;
+      }
+
+      // Phase 2 plan 02-02 — POST-TRANSACTION notification dispatch. Outside the
+      // tx because (a) Neon's 2s ceiling, (b) email enqueue is fire-and-forget
+      // and must not roll back the order mutation if it fails. Each fire is
+      // wrapped in .catch() so a notification failure never 500s the webhook
+      // (Bictorys would retry forever).
+      if (paidResult.blk) {
+        const blk = paidResult.blk;
+        const ord = paidResult.ord;
+
+        await fireDonationReceived(ord, blk).catch((err) =>
+          logger.error("[notif] fireDonationReceived", err),
+        );
+
+        const goalAmount = ((blk.config as { goalAmount?: number } | null) || {}).goalAmount || 0;
+        const crossed = detectCrossed(paidResult.prevTotal, paidResult.newTotal, goalAmount);
+        for (const t of crossed) {
+          await fireMilestone(blk, t).catch((err) =>
+            logger.error(`[notif] fireMilestone ${t}`, err),
+          );
+        }
+
+        // Per resolved Q1: private messages still fire to the creator (creator
+        // sees everything in their feed; "private" is the public-wall masking
+        // toggle, not a creator-feed toggle).
+        if (ord.donorMessage && ord.donorMessage.trim().length > 0) {
+          await fireDonationMessage(ord, blk).catch((err) =>
+            logger.error("[notif] fireDonationMessage", err),
+          );
+        }
       }
 
       // NOTE: cagnottes.sn fork — Google Calendar auto-Meet, email marketing sync, and
