@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { CheckCircle2, Clock, AlertCircle } from "lucide-react";
+import { Check, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui";
 import { ShareSheet } from "@/components/share/ShareSheet";
 import { api } from "@/lib/api";
@@ -149,11 +149,21 @@ export default function MerciPage() {
 
       {status === "PAID" && (
         <>
-          <CheckCircle2
-            size={64}
-            className="mx-auto text-green-600"
-            aria-hidden
-          />
+          {/* Phase 7 plan 07-03 — animate-ping halo matches /retraits/succes. */}
+          <div className="relative mx-auto h-24 w-24">
+            <div
+              className="absolute inset-0 animate-ping rounded-full bg-[#00B67A]/20"
+              aria-hidden
+            />
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[#E6F3EE]">
+              <Check
+                size={48}
+                strokeWidth={3}
+                className="text-[#00B67A]"
+                aria-hidden
+              />
+            </div>
+          </div>
           <h1 className="font-headings text-3xl font-bold text-primary">
             {MERCI_LABELS.headingPaid}
           </h1>

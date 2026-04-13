@@ -63,8 +63,8 @@ export function CampaignCard({
     <a
       href={href}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-shadow",
-        "hover:shadow-lg",
+        "group flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-all duration-200",
+        "hover:-translate-y-0.5 hover:border-primary hover:shadow-lg",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         className,
       )}
