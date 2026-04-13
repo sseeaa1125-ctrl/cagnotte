@@ -212,17 +212,112 @@ Deferred but tracked.
 
 ## Traceability
 
-Filled by the roadmapper agent in the next step. Empty for now.
+Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for phase goals, success criteria, and plans.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| _(populated during roadmap creation)_ | | |
+| SCHM-01 | Phase 1 | Pending |
+| SCHM-02 | Phase 1 | Pending |
+| SCHM-03 | Phase 1 | Pending |
+| SCHM-04 | Phase 1 | Pending |
+| SCHM-05 | Phase 1 | Pending |
+| FUND-01 | Phase 1 | Pending |
+| FUND-02 | Phase 1 | Pending |
+| FUND-03 | Phase 1 | Pending |
+| FUND-04 | Phase 1 | Pending |
+| FUND-05 | Phase 1 | Pending |
+| FUND-06 | Phase 1 | Pending |
+| FUND-07 | Phase 1 | Pending |
+| DONA-04 | Phase 1 | Pending |
+| VERI-03 | Phase 1 | Pending |
+| VERI-04 | Phase 1 | Pending |
+| DISC-01 | Phase 2 | Pending |
+| DISC-02 | Phase 2 | Pending |
+| DISC-03 | Phase 2 | Pending |
+| DISC-04 | Phase 2 | Pending |
+| DISC-05 | Phase 2 | Pending |
+| DONA-01 | Phase 2 | Pending |
+| DONA-02 | Phase 2 | Pending |
+| DONA-03 | Phase 2 | Pending |
+| DONA-05 | Phase 2 | Pending |
+| DONA-07 | Phase 2 | Pending |
+| DONA-08 | Phase 2 | Pending |
+| NOTF-01 | Phase 2 | Pending |
+| NOTF-02 | Phase 2 | Pending |
+| NOTF-03 | Phase 2 | Pending |
+| NOTF-04 | Phase 2 | Pending |
+| NOTF-05 | Phase 2 | Pending |
+| NOTF-06 | Phase 2 | Pending |
+| NOTF-07 | Phase 2 | Pending |
+| NOTF-08 | Phase 2 | Pending |
+| NOTF-09 | Phase 2 | Pending |
+| NOTF-10 | Phase 2 | Pending |
+| NOTF-11 | Phase 2 | Pending |
+| NOTF-12 | Phase 2 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| KYC-01 | Phase 2 | Pending |
+| KYC-02 | Phase 2 | Pending |
+| KYC-03 | Phase 2 | Pending |
+| KYC-04 | Phase 2 | Pending |
+| VERI-01 | Phase 2 | Pending |
+| VERI-02 | Phase 2 | Pending |
+| VERI-05 | Phase 2 | Pending |
+| VERI-06 | Phase 2 | Pending |
+| VERI-07 | Phase 2 | Pending |
+| FNDN-01 | Phase 3 | Pending |
+| FNDN-02 | Phase 3 | Pending |
+| FNDN-03 | Phase 3 | Pending |
+| FNDN-04 | Phase 3 | Pending |
+| FNDN-05 | Phase 3 | Pending |
+| PRIM-01 | Phase 3 | Pending |
+| PRIM-02 | Phase 3 | Pending |
+| PRIM-03 | Phase 3 | Pending |
+| PRIM-04 | Phase 3 | Pending |
+| PRIM-05 | Phase 3 | Pending |
+| PRIM-06 | Phase 3 | Pending |
+| PRIM-07 | Phase 3 | Pending |
+| PRIM-08 | Phase 3 | Pending |
+| COMP-01 | Phase 3 | Pending |
+| COMP-02 | Phase 3 | Pending |
+| COMP-03 | Phase 3 | Pending |
+| COMP-04 | Phase 3 | Pending |
+| COMP-05 | Phase 3 | Pending |
+| DONA-06 | Phase 4 | Pending |
+| DONF-01 | Phase 4 | Pending |
+| DONF-02 | Phase 4 | Pending |
+| DONF-03 | Phase 4 | Pending |
+| DONF-04 | Phase 4 | Pending |
+| DONF-05 | Phase 4 | Pending |
+| DONF-06 | Phase 4 | Pending |
+| DONF-07 | Phase 4 | Pending |
+| AUTF-01 | Phase 5 | Pending |
+| AUTF-02 | Phase 5 | Pending |
+| AUTF-03 | Phase 5 | Pending |
+| AUTF-04 | Phase 5 | Pending |
+| CRET-01 | Phase 5 | Pending |
+| CRET-02 | Phase 5 | Pending |
+| CRET-03 | Phase 5 | Pending |
+| CRET-04 | Phase 5 | Pending |
+| CRET-05 | Phase 5 | Pending |
+| ATHD-01 | Phase 6 | Pending |
+| ATHD-02 | Phase 6 | Pending |
+| ATHD-03 | Phase 6 | Pending |
+| ATHD-04 | Phase 6 | Pending |
+| MNYS-01 | Phase 6 | Pending |
+| MNYS-02 | Phase 6 | Pending |
+| MNYS-03 | Phase 6 | Pending |
+| MNYS-04 | Phase 6 | Pending |
+| MNYS-05 | Phase 6 | Pending |
+| MNYS-06 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: **78 total** (SCHM-05, FUND-07, DISC-05, DONA-08, NOTF-12, AUTH-03, KYC-04, VERI-07, FNDN-05, PRIM-08, COMP-05, DONF-07, AUTF-04, CRET-05, ATHD-04, MNYS-06)
-- Mapped to phases: 0
-- Unmapped: 78 ⚠️ (expected — roadmapper runs next)
+- v1 requirements: **95 total** (SCHM 5 + FUND 7 + DISC 5 + DONA 8 + NOTF 12 + AUTH 3 + KYC 4 + VERI 7 + FNDN 5 + PRIM 8 + COMP 5 + DONF 7 + AUTF 4 + CRET 5 + ATHD 4 + MNYS 6). *(Note: an earlier draft of this file stated "78 total" — that was a miscount. The category-by-category sum is 95.)*
+- Mapped to phases: **95** (Phase 1: 15, Phase 2: 35, Phase 3: 18, Phase 4: 8, Phase 5: 9, Phase 6: 10)
+- Unmapped: **0** ✓
+- Orphans: **0** ✓
 
 ---
 *Requirements defined: 2026-04-13 (synthesized from `.planning/banani/BACKEND-PLAN.md`, `.planning/banani/STATUS.md`, and `.planning/research/SUMMARY.md`)*
-*Last updated: 2026-04-13 after initial definition*
+*Last updated: 2026-04-13 — traceability table populated by roadmapper (6 phases, 14 plans, 100% coverage)*
