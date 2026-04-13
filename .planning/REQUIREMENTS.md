@@ -92,14 +92,14 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### UI Primitives (PRIM)
 
-- [ ] **PRIM-01**: `Button` primitive with variants `primary` (navy), `outline`, `ghost`, plus social variants (Google/Apple/WhatsApp/Facebook/Email), sizes `md` / `lg`, touch target ≥ 48px
-- [ ] **PRIM-02**: `Input` + `Textarea` primitives with floating label, helper text, character counter, password eye toggle, error state
-- [ ] **PRIM-03**: `Select` + `DatePicker` + `ImageUpload` (drag-drop, JPG/PNG, preview) primitives
-- [ ] **PRIM-04**: `RadioCard` + `Toggle` + `Checkbox` primitives with focus rings and touch-friendly hit areas
-- [ ] **PRIM-05**: `Badge` (category + status pills), `Tabs` (chip style), `Pagination` (numeric) primitives
-- [ ] **PRIM-06**: `Avatar` (with edit overlay), `ProgressBar` (amount / goal / donor count), `KpiCard` (icon + label + value + trend) primitives
-- [ ] **PRIM-07**: `EmptyState`, `Modal`, `Toast` primitives designed from scratch (Banani didn't ship them)
-- [ ] **PRIM-08**: No primitive imports `api()`, `useApi()`, `AuthContext`, or `constants` (ring-1 purity rule)
+- [x] **PRIM-01**: `Button` primitive with variants `primary` (navy), `outline`, `ghost`, plus social variants (Google/Apple/WhatsApp/Facebook/Email), sizes `md` / `lg`, touch target ≥ 48px
+- [x] **PRIM-02**: `Input` + `Textarea` primitives with floating label, helper text, character counter, password eye toggle, error state
+- [x] **PRIM-03**: `Select` + `DatePicker` + `ImageUpload` (drag-drop, JPG/PNG, preview) primitives
+- [x] **PRIM-04**: `RadioCard` + `Toggle` + `Checkbox` primitives with focus rings and touch-friendly hit areas
+- [x] **PRIM-05**: `Badge` (category + status pills), `Tabs` (chip style), `Pagination` (numeric) primitives
+- [x] **PRIM-06**: `Avatar` (with edit overlay), `ProgressBar` (amount / goal / donor count), `KpiCard` (icon + label + value + trend) primitives
+- [x] **PRIM-07**: `EmptyState`, `Modal`, `Toast` primitives designed from scratch (Banani didn't ship them)
+- [x] **PRIM-08**: No primitive imports `api()`, `useApi()`, `AuthContext`, or `constants` (ring-1 purity rule)
 
 ### Composed Blocks (COMP)
 
@@ -271,14 +271,14 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | FNDN-03 | Phase 3 | Complete |
 | FNDN-04 | Phase 3 | Complete |
 | FNDN-05 | Phase 3 | Complete |
-| PRIM-01 | Phase 3 | Pending |
-| PRIM-02 | Phase 3 | Pending |
-| PRIM-03 | Phase 3 | Pending |
-| PRIM-04 | Phase 3 | Pending |
-| PRIM-05 | Phase 3 | Pending |
-| PRIM-06 | Phase 3 | Pending |
-| PRIM-07 | Phase 3 | Pending |
-| PRIM-08 | Phase 3 | Pending |
+| PRIM-01 | Phase 3 | Complete |
+| PRIM-02 | Phase 3 | Complete |
+| PRIM-03 | Phase 3 | Complete |
+| PRIM-04 | Phase 3 | Complete |
+| PRIM-05 | Phase 3 | Complete |
+| PRIM-06 | Phase 3 | Complete |
+| PRIM-07 | Phase 3 | Complete |
+| PRIM-08 | Phase 3 | Complete |
 | COMP-01 | Phase 3 | Pending |
 | COMP-02 | Phase 3 | Pending |
 | COMP-03 | Phase 3 | Pending |
