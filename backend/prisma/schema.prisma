@@ -155,6 +155,11 @@ model Block {
   config   Json
   slug     String?   @unique
 
+  // Phase 2 plan 02-02 — ending-soon cron dedup field (NOTF-04). Set on first
+  // CAGNOTTE_ENDING_SOON fire so the hourly sweep + boot catch-up never re-fires
+  // for the same block. Notification.dedupeKey is the secondary safety net.
+  endingSoonNotifiedAt DateTime?
+
   product             Product?
   bookingService      BookingService?
   community           Community?
