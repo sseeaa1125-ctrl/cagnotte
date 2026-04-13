@@ -1,0 +1,193 @@
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Info } from "lucide-react";
+import { Button, Input, RadioCard, useToast } from "@/components/ui";
+import { api, ApiError } from "@/lib/api";
+import { BANK_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 6 plan 06-02 — /profil/coordonnees-bancaires client island.
+//
+// D-22: Wave + Orange Money only — Free Money is NOT rendered as a RadioCard
+// because Bictorys payouts reject it (routes/withdrawals.ts:42).
+// D-18: Single payout record lives on Seller.payout*; PUT to /api/sellers/profile.
+// D-28: writes use /api/sellers/profile (PUT), not /api/sellers/me.
+// ─────────────────────────────────────────────────────────────────────────
+
+type Provider = "wave_money" | "orange_money";
+
+interface BankFormInitial {
+  payoutProvider: Provider | null;
+  payoutPhone: string;
+  payoutName: string;
+}
+
+function normalizePhone(raw: string): string {
+  // Store digits only; strip +221/221 prefix so we display the 9-digit
+  // national number in the input and send a 9-digit value to the backend.
+  // The backend (cleanPhoneForStorage) will prefix +221 if missing.
+  return raw.replace(/\D/g, "").replace(/^221/, "").slice(0, 9);
+}
+
+export function BankForm({ initial }: { initial: BankFormInitial }) {
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const [provider, setProvider] = React.useState<Provider>(
+    initial.payoutProvider ?? "wave_money",
+  );
+  const [phone, setPhone] = React.useState<string>(
+    normalizePhone(initial.payoutPhone || ""),
+  );
+  const [name, setName] = React.useState<string>(initial.payoutName || "");
+  const [saving, setSaving] = React.useState(false);
+
+  const canSubmit = phone.length === 9 && name.trim().length > 0 && !saving;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    setSaving(true);
+    try {
+      await api("/api/sellers/profile", {
+        method: "PUT",
+        body: {
+          payoutProvider: provider,
+          payoutPhone: `+221${phone}`,
+          payoutName: name.trim(),
+          payoutCountry: "SN",
+        },
+      });
+      toast(BANK_LABELS.saved, "success");
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : BANK_LABELS.errorGeneric;
+      toast(msg, "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* Provider picker — Wave + Orange ONLY (D-22) */}
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-2 text-sm font-medium text-primary">
+          {BANK_LABELS.providerLabel}
+        </legend>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <RadioCard
+            name="bank-provider"
+            value="wave_money"
+            checked={provider === "wave_money"}
+            onChange={(v) => setProvider(v as Provider)}
+            title={BANK_LABELS.providerWave}
+            description={BANK_LABELS.providerWaveHelper}
+            icon={
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3374FF] font-headings text-lg font-black text-white">
+                W
+              </span>
+            }
+          />
+          <RadioCard
+            name="bank-provider"
+            value="orange_money"
+            checked={provider === "orange_money"}
+            onChange={(v) => setProvider(v as Provider)}
+            title={BANK_LABELS.providerOrange}
+            description={BANK_LABELS.providerOrangeHelper}
+            icon={
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6600] font-headings text-lg font-black text-white">
+                O
+              </span>
+            }
+          />
+        </div>
+
+        <div className="mt-1 flex items-start gap-2 rounded-xl bg-blue-50/60 p-3">
+          <Info
+            size={16}
+            className="mt-0.5 flex-shrink-0 text-blue-700"
+            aria-hidden
+          />
+          <p className="text-xs text-blue-900">
+            {BANK_LABELS.noFreeMoneyNotice}
+          </p>
+        </div>
+      </fieldset>
+
+      {/* Phone with +221 prefix badge */}
+      <div className="flex w-full flex-col gap-1.5">
+        <label
+          htmlFor="bank-phone"
+          className="text-sm font-medium text-primary"
+        >
+          {BANK_LABELS.phoneLabel}
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="flex h-12 items-center rounded-lg border border-border bg-muted px-3 text-sm font-medium text-primary">
+            +221
+          </span>
+          <input
+            id="bank-phone"
+            type="tel"
+            inputMode="numeric"
+            autoComplete="tel-national"
+            maxLength={9}
+            value={phone}
+            onChange={(e) => setPhone(normalizePhone(e.target.value))}
+            placeholder={BANK_LABELS.phoneHelper}
+            className={cn(
+              "min-h-12 flex-1 rounded-lg border border-border bg-background px-4 py-3 text-base text-primary placeholder:text-muted-foreground",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+            )}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground">{BANK_LABELS.phoneHelper}</p>
+      </div>
+
+      {/* Name */}
+      <Input
+        label={BANK_LABELS.nameLabel}
+        helper={BANK_LABELS.nameHelper}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        maxLength={100}
+        required
+        autoComplete="name"
+      />
+
+      {/* Security notice */}
+      <div className="flex items-start gap-2 rounded-xl bg-blue-50/60 p-4">
+        <Info
+          size={18}
+          className="mt-0.5 flex-shrink-0 text-blue-700"
+          aria-hidden
+        />
+        <div className="flex flex-col gap-1">
+          <p className="text-sm font-semibold text-blue-900">
+            {BANK_LABELS.securityNoticeTitle}
+          </p>
+          <p className="text-xs text-blue-900/80">
+            {BANK_LABELS.securityNoticeBody}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end pt-2">
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          loading={saving}
+          disabled={!canSubmit}
+        >
+          {saving ? BANK_LABELS.saving : BANK_LABELS.save}
+        </Button>
+      </div>
+    </form>
+  );
+}
