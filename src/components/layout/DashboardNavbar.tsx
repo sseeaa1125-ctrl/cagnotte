@@ -15,7 +15,7 @@ export interface DashboardNavbarProps {
 
 const NAV_ITEMS: Array<{ label: string; href: string }> = [
   { label: NAV_LABELS.tableauBord, href: "/tableau-de-bord" },
-  { label: NAV_LABELS.mesContributions, href: "/mes-participations" },
+  { label: NAV_LABELS.mesContributions, href: "/participations" },
   { label: NAV_LABELS.notifications, href: "/notifications" },
 ];
 
