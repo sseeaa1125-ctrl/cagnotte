@@ -22,6 +22,7 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
 import { prisma } from "../src/lib/prisma.js";
+import { redis } from "../src/lib/redis.js";
 
 const API = process.env.API || "http://localhost:4000";
 const WEBHOOK_SECRET = process.env.BICTORYS_WEBHOOK_SECRET || "";
@@ -29,6 +30,32 @@ const WEBHOOK_SECRET = process.env.BICTORYS_WEBHOOK_SECRET || "";
 if (!WEBHOOK_SECRET) {
   console.error("✗ BICTORYS_WEBHOOK_SECRET manquant dans .env");
   process.exit(1);
+}
+
+/**
+ * Reset the order-related rate-limit counters before running. Tests 9/10 are
+ * intentional flood tests; without this reset, a re-run within the 60s window
+ * would 429 tests 7/8 because the IP counter is still hot.
+ *
+ * We delete every key under `rl:order-ip-min:*`, `rl:order-ip-hour:*`,
+ * `rl:order-email-min:*`. Upstash supports SCAN.
+ */
+async function resetOrderRateLimiters(): Promise<void> {
+  const prefixes = ["rl:order-ip-min:*", "rl:order-ip-hour:*", "rl:order-email-min:*"];
+  for (const pattern of prefixes) {
+    let cursor = "0";
+    let total = 0;
+    do {
+      // @ts-expect-error — Upstash SCAN signature returns [cursor, keys]
+      const [next, keys] = await redis.scan(cursor, { match: pattern, count: 100 });
+      cursor = next as string;
+      if (Array.isArray(keys) && keys.length > 0) {
+        await redis.del(...(keys as string[]));
+        total += keys.length;
+      }
+    } while (cursor !== "0");
+    if (total > 0) console.log(`[setup] cleared ${total} keys for ${pattern}`);
+  }
 }
 
 // ─── Cookie jar + CSRF helper ────────────────────────────────────────────────
@@ -150,6 +177,14 @@ const cleanup: {
 
 async function main(): Promise<void> {
   try {
+    // Pre-flight: clear order rate-limit counters so re-runs aren't poisoned
+    // by tests 09/10 from the previous run.
+    try {
+      await resetOrderRateLimiters();
+    } catch (err) {
+      console.warn(`[setup] rate limiter reset skipped: ${err instanceof Error ? err.message : err}`);
+    }
+
     // ─────────────────────────────────────────────────────────────────────
     // Test 1 — Health check (GET /api/cagnottes returns 200)
     // ─────────────────────────────────────────────────────────────────────
