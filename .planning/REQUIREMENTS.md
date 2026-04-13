@@ -17,13 +17,13 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Fundraiser Types (FUND)
 
-- [ ] **FUND-01**: A creator can publish a **festive** cagnotte with a required occasion (anniversaire, mariage, pot de départ, cadeau commun, naissance, voyage)
-- [ ] **FUND-02**: A creator can publish a **solidaire** cagnotte with a required cause (santé, éducation, projet solidaire, urgence, animaux) and beneficiary (moi-même, un proche, une association)
-- [ ] **FUND-03**: A creator can mark a cagnotte as **public** (listed in discovery) or **private** (accessible only by direct URL, excluded from list and sitemap)
-- [ ] **FUND-04**: A creator can toggle "hide amount" and "hide donor list" on their cagnotte; the public detail endpoint respects both flags
+- [x] **FUND-01**: A creator can publish a **festive** cagnotte with a required occasion (anniversaire, mariage, pot de départ, cadeau commun, naissance, voyage)
+- [x] **FUND-02**: A creator can publish a **solidaire** cagnotte with a required cause (santé, éducation, projet solidaire, urgence, animaux) and beneficiary (moi-même, un proche, une association)
+- [x] **FUND-03**: A creator can mark a cagnotte as **public** (listed in discovery) or **private** (accessible only by direct URL, excluded from list and sitemap)
+- [x] **FUND-04**: A creator can toggle "hide amount" and "hide donor list" on their cagnotte; the public detail endpoint respects both flags
 - [x] **FUND-05**: The slug for a new cagnotte is derived from the title, human-readable (`les-30-ans-de-thomas`), and collides cleanly with a numeric suffix (`-2`, `-3`) — never a random hex
 - [x] **FUND-06**: A slug cannot collide with reserved app routes (api, admin, login, signup, dashboard, tableau-de-bord, profil, notifications, etc.)
-- [ ] **FUND-07**: A creator can edit the title / description / cover / goal of an existing cagnotte without changing its slug (slug rename is an explicit separate action, not an implicit consequence)
+- [x] **FUND-07**: A creator can edit the title / description / cover / goal of an existing cagnotte without changing its slug (slug rename is an explicit separate action, not an implicit consequence)
 
 ### Public Discovery (DISC)
 
@@ -38,7 +38,7 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 - [ ] **DONA-01**: A donor can submit a donation via `POST /api/orders` for a FUNDRAISER block, specifying amount, first name, last name, email, optional phone, and optional message
 - [ ] **DONA-02**: A donor can opt to hide their identity publicly (`isAnonymous: true`) while the organizer can still see the real name
 - [ ] **DONA-03**: A donor can opt to keep their message private so it's not displayed on the public wall (`messageIsPrivate: true`)
-- [ ] **DONA-04**: The platform commission is **6% for solidaire** and **8% for festive** cagnottes, computed server-side with a pure helper that satisfies `commission + net === gross` (basis points on `Order.commissionRate`)
+- [x] **DONA-04**: The platform commission is **6% for solidaire** and **8% for festive** cagnottes, computed server-side with a pure helper that satisfies `commission + net === gross` (basis points on `Order.commissionRate`)
 - [ ] **DONA-05**: Donation creation is rate-limited: 20/min per IP, 100/hour per IP, 5/min per customer email, with a circuit breaker on Bictorys upstream failures
 - [ ] **DONA-06**: A donor in a TikTok / Instagram / Facebook in-app browser is routed through the existing audit-008/009 workaround (base64-encoded proxied redirect) without regression
 - [ ] **DONA-07**: A donor can poll `GET /api/orders/:ref/status` to check payment status from the thank-you page
@@ -76,7 +76,7 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 - [ ] **VERI-01**: A `backend/scripts/seed-dev.ts` script seeds the dev Neon DB with 2 sellers, 4 fundraisers (2 festive + 2 solidaire, 1 private), 10 paid orders with mixed anonymity, and 5 notifications per seller
 - [ ] **VERI-02**: A `backend/scripts/smoke-test.ts` script hits every new/changed route, asserts shapes, and exits 1 on any failure
-- [ ] **VERI-03**: A `backend/scripts/test-commission.ts` script verifies the commission invariant (`commission + net === gross`) across 100 fixtures for both subtypes
+- [x] **VERI-03**: A `backend/scripts/test-commission.ts` script verifies the commission invariant (`commission + net === gross`) across 100 fixtures for both subtypes
 - [x] **VERI-04**: A `backend/scripts/test-slug.ts` script verifies slug generation against 50 French title fixtures including diacritics, reserved words, and collision resolution
 - [ ] **VERI-05**: The smoke-test explicitly asserts the critical pitfalls P01 (webhook dedup), P03 (commission rounding), P05 (private SEO leak)
 - [ ] **VERI-06**: `cd backend && npm run build` completes with 0 TypeScript errors
@@ -221,15 +221,15 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | SCHM-03 | Phase 1 | Complete |
 | SCHM-04 | Phase 1 | Complete |
 | SCHM-05 | Phase 1 | Complete |
-| FUND-01 | Phase 1 | Pending |
-| FUND-02 | Phase 1 | Pending |
-| FUND-03 | Phase 1 | Pending |
-| FUND-04 | Phase 1 | Pending |
+| FUND-01 | Phase 1 | Complete |
+| FUND-02 | Phase 1 | Complete |
+| FUND-03 | Phase 1 | Complete |
+| FUND-04 | Phase 1 | Complete |
 | FUND-05 | Phase 1 | Complete |
 | FUND-06 | Phase 1 | Complete |
-| FUND-07 | Phase 1 | Pending |
-| DONA-04 | Phase 1 | Pending |
-| VERI-03 | Phase 1 | Pending |
+| FUND-07 | Phase 1 | Complete |
+| DONA-04 | Phase 1 | Complete |
+| VERI-03 | Phase 1 | Complete |
 | VERI-04 | Phase 1 | Complete |
 | DISC-01 | Phase 2 | Pending |
 | DISC-02 | Phase 2 | Pending |

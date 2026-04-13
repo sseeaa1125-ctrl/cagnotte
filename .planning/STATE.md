@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 01-backend-foundations 01-02-PLAN.md
-last_updated: "2026-04-13T05:07:40.350Z"
+status: verifying
+stopped_at: Completed 01-03-PLAN.md
+last_updated: "2026-04-13T05:14:00.367Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 3
-  completed_plans: 2
-  percent: 67
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-13)
 
 Phase: 1 (backend-foundations) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-13
 
 Progress: [░░░░░░░░░░] 0% (0/14 plans)
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 *Updated after each plan completion*
 | Phase 01-backend-foundations P01 | 30min | 4 tasks | 3 files |
 | Phase 01-backend-foundations P02 | 10min | 3 tasks | 2 files |
+| Phase 01-backend-foundations P03 | 25min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,8 @@ Recent decisions affecting current work:
 - Phase 4 (public donor revenue path) ships before Phases 5-6 even though deps allow reordering
 - [Phase 01-backend-foundations]: Apostrophe handling: C'est la fête → c-est-la-fete (single-pass regex, no special-case)
 - [Phase 01-backend-foundations]: Duck-typed Prisma P2002 detection (instanceof OR .code === 'P2002') stays in production for async-boundary safety
+- [Phase 01-backend-foundations]: FUNDRAISER commission rates locked at 6% (solidaire) / 8% (festive) basis points using Math.floor; computeCommission helper enforces commission + net === gross invariant inline
+- [Phase 01-backend-foundations]: fundraiserBlockConfigSchema gates festive/solidaire subtype via Zod superRefine with French error messages; subtype-lock against post-payment changes is comment-only in Phase 1 (Phase 2 PATCH route enforces)
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet. Capture ideas via `/gsd-add-todo` during execution.
 
 ## Session Continuity
 
-Last session: 2026-04-13T05:07:40.348Z
-Stopped at: Completed 01-backend-foundations 01-02-PLAN.md
+Last session: 2026-04-13T05:13:49.539Z
+Stopped at: Completed 01-03-PLAN.md
 Resume file: None
