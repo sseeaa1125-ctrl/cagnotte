@@ -221,10 +221,6 @@ export default async function CreatorCagnotteDetailPage({
 
           <div className="flex flex-col gap-2">
             <Badge variant="status-active">
-              <span
-                className="mr-1 inline-block h-2 w-2 rounded-full bg-green-500"
-                aria-hidden
-              />
               {CREATOR_DETAIL_LABELS.statusOnline}
             </Badge>
             <h1 className="font-headings text-3xl font-black text-primary md:text-4xl">
