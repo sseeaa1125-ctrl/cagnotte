@@ -128,6 +128,13 @@ export function DashboardNavbar({
                 >
                   {NAV_LABELS.profil}
                 </a>
+                <a
+                  href="/retraits"
+                  role="menuitem"
+                  className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
+                >
+                  {NAV_LABELS.retirerMesFonds}
+                </a>
                 <button
                   type="button"
                   role="menuitem"

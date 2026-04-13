@@ -132,6 +132,34 @@ Running log of intentional deviations between the Banani design export and the s
 - **Enforcement:** Plan 05-02 verify step greps `! grep -E "Offerts|6%|8%" src/app/(authed)/tableau-de-bord/nouvelle/`.
 - **Introduced by:** Plan 05-02
 
+### D-25 — birthDate dropped from profile form
+- **Banani:** Screen 17 shows a "Date de naissance" field ("14 / 05 / 1992") in the profile form.
+- **cagnottes.sn:** The field is OMITTED from `/profil`. Only Prénom, Nom, Email (readonly), Téléphone + avatar edit are shown.
+- **Rationale:** The `Seller` Prisma model has no `birthDate` column and adding it is a schema migration. CLAUDE.md locks this: "Don't try to clean the schema as a side task." The field has no downstream consumer (KYC captures full name + ID, not DOB) and would silently black-hole if added without a matching column.
+- **Enforcement:** Plan 06-01 T2 verify greps `! grep -q birthDate src/app/(authed)/profil/_ProfileForm.tsx`.
+- **Introduced by:** Plan 06-01
+
+### D-26 — No delete CTA on cagnotte edit (v1)
+- **Banani:** Various cagnotte-edit surfaces hint at a destructive delete action.
+- **cagnottes.sn:** v1 creators cannot self-delete cagnottes via UI — they contact support. A later plan will ship a soft-delete flow with a 7-day cooldown.
+- **Rationale:** Delete is irreversible on donor-facing public pages and has to coordinate with webhook/payout reconciliation. v1 ships without it to avoid half-built recovery paths.
+- **Enforcement:** Plan 06-02 T-cagnotte-edit MUST NOT render a delete button. Grep guard in 06-02 verify.
+- **Introduced by:** Plan 06-01 (skeletal — enforced by 06-02)
+
+### D-27 — "Retirer mes fonds" added to avatar dropdown
+- **Banani:** The avatar dropdown on dashboard screens shows only "Mon profil" + "Se déconnecter".
+- **cagnottes.sn:** We add a third menu item "Retirer mes fonds" → `/retraits` between "Mon profil" and "Se déconnecter". Rendered via `NAV_LABELS.retirerMesFonds`.
+- **Rationale:** Withdrawals are the highest-intent action for an authenticated creator after KYC. Forcing the user to navigate through /profil/coordonnees-bancaires to reach retraits adds friction on the revenue-realization path. The dropdown is the obvious home.
+- **Enforcement:** Plan 06-01 T1 adds the entry to `DashboardNavbar.tsx` (not `DashboardShell.tsx` — the dropdown JSX lives in the navbar). Plan 06-02 ships `/retraits` so the link is live by end of Phase 6.
+- **Introduced by:** Plan 06-01
+
+### D-28 — Profile uses GET /api/auth/me + PUT /api/sellers/profile (NOT /api/sellers/me)
+- **Banani:** N/A — routing architecture.
+- **cagnottes.sn:** The 06-01 PLAN.md interfaces section incorrectly describes `GET /api/sellers/me` and `PATCH /api/sellers/me` as existing endpoints. They do not exist in the fork. The real endpoints are `GET /api/auth/me` (already used by `(authed)/layout.tsx`) and `PUT /api/sellers/profile` (verb is PUT, path is `/profile`). The new `GET /api/sellers/me/participations` added in T0 is the ONLY `/me/*` endpoint — it's a separate specialised handler.
+- **Rationale:** Phase 5 already wired `/api/auth/me` for the layout guard. Adding a redundant `/api/sellers/me` alias would create two sources of truth for seller identity. Respecting the existing contract (auth.me reads, sellers.put("/profile") writes) keeps the surface minimal.
+- **Enforcement:** Plan 06-01 T2 `_ProfileForm.tsx` uses `api("/api/sellers/profile", { method: "PUT", ... })`. Server-side page reads via raw fetch to `/api/auth/me` (cookie forwarded). Grep guard in 06-01 T6 asserts `! grep -r "/api/sellers/me[^/]" src/app/(authed)/profil/`.
+- **Introduced by:** Plan 06-01 (discovered during T2 implementation — Rule 1 auto-fix on incorrect plan contract)
+
 ***
 
 ## Deviation Template (for future entries)

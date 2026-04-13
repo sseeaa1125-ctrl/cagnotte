@@ -50,6 +50,7 @@ export const NAV_LABELS = {
   mesContributions: "Mes participations",
   notifications: "Notifications",
   profil: "Mon profil",
+  retirerMesFonds: "Retirer mes fonds",
   seDeconnecter: "Se déconnecter",
 } as const;
 
@@ -582,6 +583,113 @@ export const SUCCESS_LABELS = {
   copiedToast: "Lien copié !",
   shareCta: "Partager",
   backToDashboardCta: "Retour au tableau de bord",
+} as const;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 6 plan 06-01 — authed money screens (profile, prefs, participations,
+// notifications feed). All French. Banani screens 16 / 17 / 19 / 20.
+// ─────────────────────────────────────────────────────────────────────────
+
+export const PROFILE_SIDEBAR = {
+  tabProfile: "Informations personnelles",
+  tabSecurity: "Sécurité & Mot de passe",
+  tabBank: "Coordonnées bancaires",
+  tabPreferences: "Préférences de notification",
+  tabKyc: "Vérification d'identité",
+  logout: "Se déconnecter",
+  kycApproved: "Identité vérifiée",
+  kycPending: "Vérification en cours",
+  kycRejected: "Vérification refusée",
+  kycNone: "Non vérifié",
+  kycCta: "Vérifier mon identité",
+} as const;
+
+export const PROFILE_LABELS = {
+  h1: "Mon profil",
+  subtitle:
+    "Gérez vos informations personnelles et vos paramètres de sécurité.",
+  sectionTitle: "Informations personnelles",
+  firstName: "Prénom",
+  lastName: "Nom",
+  email: "Adresse e-mail",
+  emailHelper:
+    "Pour modifier votre e-mail, veuillez contacter le support.",
+  phone: "Numéro de téléphone",
+  phonePlaceholder: "77 123 45 67",
+  avatarHint: "JPG ou PNG, 5 Mo max.",
+  save: "Enregistrer les modifications",
+  saving: "Enregistrement…",
+  saved: "Modifications enregistrées",
+  errorGeneric: "Impossible d'enregistrer. Réessaye.",
+  errorAvatar: "Impossible d'envoyer la photo. Réessaye.",
+} as const;
+
+export const NOTIF_PREFS_LABELS = {
+  h1: "Préférences de notification",
+  subtitle: "Choisissez ce que vous voulez recevoir.",
+  group1: "Mes cagnottes",
+  group2: "Mes participations",
+  group3: "Communications Cagnotte.sn",
+  newParticipation: {
+    label: "Nouvelle participation",
+    helper:
+      "Être notifié lorsqu'une personne participe à ma cagnotte",
+  },
+  milestoneReached: {
+    label: "Paliers atteints",
+    helper:
+      "M'informer lorsque je franchis des paliers (50%, 100%)",
+  },
+  endingSoonReminder: {
+    label: "Rappels de fin de cagnotte",
+    helper: "Me prévenir quelques jours avant la clôture",
+  },
+  organizerUpdates: {
+    label: "Mises à jour des organisateurs",
+    helper:
+      "Recevoir des nouvelles des cagnottes que j'ai soutenues",
+  },
+  paymentReceipts: {
+    label: "Reçus de paiement",
+    helper:
+      "Recevoir mes confirmations de participation par e-mail",
+  },
+  newsletter: {
+    label: "Newsletter et offres",
+    helper:
+      "Découvrir nos nouveautés et les belles histoires solidaires",
+  },
+  savedPulse: "Enregistré",
+  errorGeneric: "Impossible d'enregistrer",
+} as const;
+
+export const PARTICIPATIONS_LABELS = {
+  h1: "Mes participations",
+  subtitle:
+    "Retrouvez toutes les cagnottes auxquelles vous avez contribué.",
+  colCagnotte: "Cagnotte",
+  colDate: "Date",
+  colAmount: "Montant",
+  colStatus: "Statut",
+  colActions: "Actions",
+  statusActive: "En cours",
+  statusEnded: "Terminée",
+  viewCagnotte: "Voir la cagnotte",
+  loadMore: "Charger plus",
+  loading: "Chargement…",
+  empty: "Vous n'avez encore participé à aucune cagnotte.",
+  emptyCta: "Découvrir les cagnottes",
+} as const;
+
+export const NOTIF_FEED_LABELS = {
+  h1: "Vos notifications",
+  subtitle: "Restez informé de l'activité de vos cagnottes.",
+  markAllRead: "Tout marquer comme lu",
+  tabAll: "Toutes",
+  tabUnread: "Non lues",
+  loadMore: "Voir les notifications plus anciennes",
+  loading: "Chargement…",
+  empty: "Aucune notification pour l'instant.",
 } as const;
 
 // ── All-cagnottes page labels ──
