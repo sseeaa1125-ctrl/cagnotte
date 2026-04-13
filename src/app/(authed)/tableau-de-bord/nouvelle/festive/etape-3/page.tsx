@@ -7,58 +7,16 @@ import {
   Button,
   Checkbox,
   Toggle,
+  VisibilityCard,
 } from "@/components/ui";
-import { WIZARD_FIELDS, WIZARD_LABELS } from "@/lib/constants";
+import { VISIBILITY_LABELS, WIZARD_FIELDS, WIZARD_LABELS } from "@/lib/constants";
 import {
   useWizardDraft,
   type FestiveDraft,
   type Visibility,
 } from "@/hooks/useWizardDraft";
 import { api, ApiError } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { StepIndicator, WizardHeader } from "../../_StepIndicator";
-
-interface VisibilityCardProps {
-  selected: boolean;
-  onSelect: () => void;
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  extraHelper?: string;
-}
-
-function VisibilityCard({
-  selected,
-  onSelect,
-  icon,
-  title,
-  description,
-  extraHelper,
-}: VisibilityCardProps) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      className={cn(
-        "flex min-h-[120px] w-full flex-col gap-2 rounded-xl border-2 p-4 text-left transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-        selected
-          ? "border-primary bg-[#f8f9fc]"
-          : "border-border bg-background hover:border-primary/50",
-      )}
-    >
-      <div className="flex items-center gap-2 text-primary">
-        {icon}
-        <span className="font-headings text-base font-bold">{title}</span>
-      </div>
-      <p className="text-sm text-muted-foreground">{description}</p>
-      {extraHelper ? (
-        <p className="text-xs text-muted-foreground">{extraHelper}</p>
-      ) : null}
-    </button>
-  );
-}
 
 export default function FestiveStep3Page() {
   const router = useRouter();
@@ -179,23 +137,29 @@ export default function FestiveStep3Page() {
           handlePublish();
         }}
       >
-        <fieldset className="flex flex-col gap-3">
-          <legend className="mb-2 text-sm font-semibold text-primary">
-            {WIZARD_FIELDS.visibilityLabel}
+        <fieldset
+          className="flex flex-col gap-4"
+          role="radiogroup"
+          aria-label={VISIBILITY_LABELS.sectionLabel}
+        >
+          <legend className="mb-2 text-base font-bold text-primary">
+            {VISIBILITY_LABELS.sectionLabel}
           </legend>
           <VisibilityCard
-            selected={visibility === "private"}
-            onSelect={() => setVisibility("private")}
+            value="private"
+            checked={visibility === "private"}
+            onChange={(v) => setVisibility(v as Visibility)}
             icon={<Lock size={18} />}
-            title={WIZARD_FIELDS.visibilityPrivate}
-            description={WIZARD_FIELDS.visibilityPrivateHelper}
+            title={VISIBILITY_LABELS.privateTitle}
+            description={VISIBILITY_LABELS.privateDescription}
           />
           <VisibilityCard
-            selected={visibility === "public"}
-            onSelect={() => setVisibility("public")}
+            value="public"
+            checked={visibility === "public"}
+            onChange={(v) => setVisibility(v as Visibility)}
             icon={<Globe size={18} />}
-            title={WIZARD_FIELDS.visibilityPublic}
-            description={WIZARD_FIELDS.visibilityPublicHelper}
+            title={VISIBILITY_LABELS.publicTitle}
+            description={VISIBILITY_LABELS.publicDescription}
           />
         </fieldset>
 

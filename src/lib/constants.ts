@@ -914,6 +914,89 @@ export const STATS_LABELS = {
   viewCagnotte: "Voir la cagnotte",
 } as const;
 
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 7 plan 07-02 — Banani delta polish labels.
+// Verbatim French strings extracted from the Banani wireframes in
+// .planning/banani/screens/phase-7/. Used by the /retraits flow polish,
+// /profil/coordonnees-bancaires rewrite, the lifted VisibilityCard
+// primitive, and the DatePicker wrapper restyle.
+// ─────────────────────────────────────────────────────────────────────────
+
+export const WITHDRAW_LABELS = {
+  pageTitle: "Retirer mes fonds",
+  pageHelper:
+    "Transférez l'argent récolté vers le compte de votre choix en toute sécurité.",
+  step1Title: "Montant à retirer",
+  step2Title: "Où envoyer l'argent ?",
+  maxChip: "Max",
+  maxHelper: "Vous retirez la totalité du solde disponible.",
+  addAccountCta: "Ajouter un compte bancaire ou Mobile Money",
+  summaryLabel: "RÉCAPITULATIF DU RETRAIT",
+  summaryAmount: "Montant retiré",
+  summaryFees: "Frais de virement",
+  summaryFeesFree: "Gratuit",
+  summaryDelay: "Délai estimé",
+  summaryDelayInstant: "Immédiat",
+  summaryNet: "Vous allez recevoir",
+  confirmCta: "Confirmer le retrait",
+  securedFooter: "Transaction sécurisée",
+} as const;
+
+export const WITHDRAW_PIN_LABELS = {
+  pageTitle: "Vérification de sécurité",
+  // Persistent PIN — NOT SMS OTP. No phone-masked text, no countdown.
+  pageHelperPrefix: "Pour valider votre retrait de ",
+  pageHelperSuffix:
+    ", veuillez saisir votre code PIN à 4 chiffres.",
+  submitCta: "Valider le retrait",
+  cancelCta: "Annuler",
+  pinError: "Code PIN incorrect.",
+  pinForgot: "PIN oublié ?",
+} as const;
+
+export const WITHDRAW_SUCCESS_LABELS = {
+  title: "Retrait confirmé !",
+  helper: "Votre retrait sera traité dans les prochaines minutes.",
+  backCta: "Retour au tableau de bord",
+} as const;
+
+export const BANK_ACCOUNTS_LABELS = {
+  pageTitle: "Coordonnées bancaires",
+  mobileMoneyTitle: "Comptes Mobile Money",
+  mobileMoneyHelper:
+    "Pour recevoir les fonds de vos cagnottes instantanément.",
+  bankAccountsTitle: "Comptes Bancaires",
+  bankAccountsHelper:
+    "Pour les virements bancaires classiques (délai de 48h à 72h).",
+  addAccountCta: "Ajouter",
+  addBankCta: "Ajouter un compte bancaire",
+  activeBadge: "Actif",
+  deleteAriaLabel: "Supprimer",
+  bankEmptyTitle: "Aucun compte bancaire",
+  bankEmptyBody:
+    "Ajoutez un RIB/IBAN pour virer l'argent de vos cagnottes directement sur votre compte bancaire.",
+  mobileEmptyTitle: "Aucun compte Mobile Money configuré.",
+  mobileEmptyBody:
+    "Ajoutez un compte Wave ou Orange Money pour recevoir vos fonds instantanément.",
+  securityNoticeTitle: "Sécurité de vos coordonnées",
+  securityNoticeBody:
+    "Vos coordonnées bancaires et numéros Mobile Money sont cryptés et stockés de manière sécurisée. Ils ne sont utilisés que pour procéder au virement des fonds récoltés sur vos cagnottes.",
+} as const;
+
+export const VISIBILITY_LABELS = {
+  sectionLabel: "Visibilité de la cagnotte",
+  publicTitle: "Publique",
+  publicDescription:
+    "Votre cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de Cagnotte.sn.",
+  privateTitle: "Privée",
+  privateDescription:
+    "Seules les personnes disposant du lien pourront voir la cagnotte et y participer. Elle n'apparaîtra pas dans les recherches. Idéal pour les événements personnels.",
+} as const;
+
+export const DATE_PICKER_LABELS = {
+  placeholder: "Sélectionnez une date...",
+} as const;
+
 export const EDIT_LABELS = {
   h1: "Modifier ma cagnotte",
   subtitle: "Mettez à jour le contenu sans changer l'URL.",

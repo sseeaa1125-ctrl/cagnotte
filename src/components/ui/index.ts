@@ -13,6 +13,8 @@ export type { ImageUploadProps } from "./ImageUpload";
 // Selection
 export { RadioCard } from "./RadioCard";
 export type { RadioCardProps } from "./RadioCard";
+export { VisibilityCard } from "./VisibilityCard";
+export type { VisibilityCardProps } from "./VisibilityCard";
 export { Toggle } from "./Toggle";
 export type { ToggleProps } from "./Toggle";
 export { Checkbox } from "./Checkbox";
