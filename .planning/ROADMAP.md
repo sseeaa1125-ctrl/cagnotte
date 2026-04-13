@@ -152,7 +152,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: Authed screens (4 pages) — profile, notification preferences, participations table with mobile-card fallback, notifications feed with tabs + "Tout marquer comme lu".
+- [x] 06-01: Authed screens (4 pages) — profile, notification preferences, participations table with mobile-card fallback, notifications feed with tabs + "Tout marquer comme lu".
 - [ ] 06-02: Money screens (6 pages we design from scratch) — bank details, withdrawal flow with PIN entry, KYC upload with R2 proxy, cagnotte stats, cagnotte edit (no slug), security/password change.
 
 **Watch out for**:

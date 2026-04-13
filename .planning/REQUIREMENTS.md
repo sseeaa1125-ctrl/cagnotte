@@ -136,10 +136,10 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Authed Screens (ATHD)
 
-- [ ] **ATHD-01**: Profile page (screen 17) — sidebar nav + personal info form (prénom, nom, email readonly, phone with +221, date of birth)
-- [ ] **ATHD-02**: Notification preferences page (screen 19) — grouped toggle list for Mes cagnottes / Mes participations / Communications
-- [ ] **ATHD-03**: Participations page (screen 16) — donor-side table with date / cagnotte / amount / status / actions, with mobile card fallback
-- [ ] **ATHD-04**: Notifications feed page (screen 20) — tabs (Toutes / Non lues), feed items with unread dots, "Tout marquer comme lu" action, pagination
+- [x] **ATHD-01**: Profile page (screen 17) — sidebar nav + personal info form (prénom, nom, email readonly, phone with +221, date of birth)
+- [x] **ATHD-02**: Notification preferences page (screen 19) — grouped toggle list for Mes cagnottes / Mes participations / Communications
+- [x] **ATHD-03**: Participations page (screen 16) — donor-side table with date / cagnotte / amount / status / actions, with mobile card fallback
+- [x] **ATHD-04**: Notifications feed page (screen 20) — tabs (Toutes / Non lues), feed items with unread dots, "Tout marquer comme lu" action, pagination
 
 ### Money Screens (MNYS) — we design
 
@@ -301,10 +301,10 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | CRET-03 | Phase 5 | Complete |
 | CRET-04 | Phase 5 | Complete |
 | CRET-05 | Phase 5 | Complete |
-| ATHD-01 | Phase 6 | Pending |
-| ATHD-02 | Phase 6 | Pending |
-| ATHD-03 | Phase 6 | Pending |
-| ATHD-04 | Phase 6 | Pending |
+| ATHD-01 | Phase 6 | Complete |
+| ATHD-02 | Phase 6 | Complete |
+| ATHD-03 | Phase 6 | Complete |
+| ATHD-04 | Phase 6 | Complete |
 | MNYS-01 | Phase 6 | Pending |
 | MNYS-02 | Phase 6 | Pending |
 | MNYS-03 | Phase 6 | Pending |

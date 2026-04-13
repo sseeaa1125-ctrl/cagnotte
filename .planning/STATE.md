@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 05-02-PLAN.md (creator flow — 9 routes, zero new deps)
-last_updated: "2026-04-13T18:42:31.790Z"
+stopped_at: Completed 06-authed-money-screens-01-PLAN.md
+last_updated: "2026-04-13T19:39:28.237Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 12
-  completed_plans: 12
-  percent: 100
+  total_plans: 14
+  completed_plans: 13
+  percent: 93
 ---
 
 # Project State
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 | Phase 03-frontend-foundations P03 | 35 | 7 tasks | 14 files |
 | Phase 04-public-donor-revenue-path P01 | 1 session | 10 tasks | 20 files |
 | Phase 05 P02 | 75 | 6 tasks | 18 files |
+| Phase 06-authed-money-screens P01 | 10m | 6 tasks | 15 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,8 @@ Recent decisions affecting current work:
 - [Phase 05]: Dashboard progress hydrated via client island _ClientCampaignCard — preserves Ring 2 CampaignCard purity and parallelizes N requests
 - [Phase 05]: Wizard drafts in sessionStorage (never localStorage) keyed cagnotte.wizard.{subtype}.draft.v1 — per-tab scope prevents logout leakage
 - [Phase 05]: Frontend NEVER generates cagnotte slugs — backend ensureUniqueSlug owns the invariant, wizard POSTs {type, title, config} only
+- [Phase 06-authed-money-screens]: Profile writes use PUT /api/sellers/profile not /api/sellers/me (plan contract was wrong)
+- [Phase 06-authed-money-screens]: Notifications tab filter is client-side on readAt===null (backend has no filter param)
 
 ### Pending Todos
 
@@ -122,6 +125,6 @@ None yet. Capture ideas via `/gsd-add-todo` during execution.
 
 ## Session Continuity
 
-Last session: 2026-04-13T18:42:31.786Z
-Stopped at: Completed 05-02-PLAN.md (creator flow — 9 routes, zero new deps)
+Last session: 2026-04-13T19:39:20.708Z
+Stopped at: Completed 06-authed-money-screens-01-PLAN.md
 Resume file: None
