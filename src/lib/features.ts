@@ -9,4 +9,4 @@
  * single 1-line flip.
  */
 
-export const FEATURE_SOCIAL_AUTH = false;
+export const FEATURE_SOCIAL_AUTH = true;

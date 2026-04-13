@@ -9,9 +9,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Apple } from "lucide-react";
 import { Input, Button, useToast } from "@/components/ui";
-import { api, ApiError, storeCsrfToken } from "@/lib/api";
+import { api, ApiError, BACKEND_URL, storeCsrfToken } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { FEATURE_SOCIAL_AUTH } from "@/lib/features";
 import { AUTH_LABELS } from "@/lib/constants";
@@ -37,6 +36,11 @@ function ConnexionForm() {
   const nextUrl = searchParams.get("next") || "/tableau-de-bord";
   const resetFlag = searchParams.get("reset");
   const verifiedFlag = searchParams.get("verified");
+  const oauthError = searchParams.get("error");
+
+  function handleGoogleLogin() {
+    window.location.href = `${BACKEND_URL}/api/auth/google/authorize`;
+  }
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -50,6 +54,17 @@ function ConnexionForm() {
     }
     if (verifiedFlag === "1") {
       toast.toast(AUTH_LABELS.toastVerifiedPleaseLogin, "success");
+    }
+    if (oauthError === "google_failed") {
+      toast.toast(
+        "La connexion Google a échoué. Réessaie ou utilise ton email.",
+        "error",
+      );
+    } else if (oauthError === "email_in_use") {
+      toast.toast(
+        "Cet email est déjà lié à un autre compte. Connecte-toi avec ton mot de passe.",
+        "error",
+      );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -182,20 +197,13 @@ function ConnexionForm() {
             </div>
             <div className="flex flex-col gap-3">
               <Button
+                type="button"
                 variant="social"
-                socialProvider="email"
+                socialProvider="google"
                 fullWidth
-                iconLeft={<Mail className="h-4 w-4" aria-hidden />}
+                onClick={handleGoogleLogin}
               >
-                {AUTH_LABELS.emailLabel}
-              </Button>
-              <Button
-                variant="social"
-                socialProvider="apple"
-                fullWidth
-                iconLeft={<Apple className="h-4 w-4" aria-hidden />}
-              >
-                {AUTH_LABELS.socialAppleLabel}
+                {AUTH_LABELS.socialGoogleLabel}
               </Button>
             </div>
           </div>

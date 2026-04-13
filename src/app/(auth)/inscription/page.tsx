@@ -8,10 +8,10 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Gift, ArrowRight } from "lucide-react";
-import { Input, Button, Checkbox } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { Input, Button, Checkbox, useToast } from "@/components/ui";
+import { api, ApiError, BACKEND_URL } from "@/lib/api";
 import {
   slugifySellerName,
   ensureAvailableSellerSlug,
@@ -32,8 +32,10 @@ interface SignupResponse {
   emailSent: boolean;
 }
 
-export default function InscriptionPage() {
+function InscriptionForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const toast = useToast();
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [email, setEmail] = React.useState("");
@@ -42,6 +44,27 @@ export default function InscriptionPage() {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [slugPreview, setSlugPreview] = React.useState("");
+
+  // Phase 8 fixpack — surface Google OAuth error query params as toasts.
+  React.useEffect(() => {
+    const err = searchParams.get("error");
+    if (err === "google_failed") {
+      toast.toast(
+        "La connexion Google a échoué. Réessaie ou utilise ton email.",
+        "error",
+      );
+    } else if (err === "email_in_use") {
+      toast.toast(
+        "Cet email est déjà lié à un autre compte. Connecte-toi avec ton mot de passe.",
+        "error",
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleGoogleSignup() {
+    window.location.href = `${BACKEND_URL}/api/auth/google/authorize`;
+  }
 
   // Debounced slug preview (no network call — just local slugify).
   React.useEffect(() => {
@@ -261,12 +284,15 @@ export default function InscriptionPage() {
               </span>
               <div className="flex-grow border-t border-border" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="social" socialProvider="google" fullWidth>
+            <div className="flex flex-col gap-3">
+              <Button
+                type="button"
+                variant="social"
+                socialProvider="google"
+                fullWidth
+                onClick={handleGoogleSignup}
+              >
                 {AUTH_LABELS.socialGoogleLabel}
-              </Button>
-              <Button variant="social" socialProvider="apple" fullWidth>
-                {AUTH_LABELS.socialAppleLabel}
               </Button>
             </div>
           </div>
@@ -282,5 +308,13 @@ export default function InscriptionPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function InscriptionPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <InscriptionForm />
+    </React.Suspense>
   );
 }
