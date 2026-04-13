@@ -184,7 +184,7 @@ export default async function CreatorCagnotteDetailPage({
   const subtitle = `${subtypeLabel} • Créée le ${createdAtLabel}`;
 
   const publicBaseUrl =
-    process.env.NEXT_PUBLIC_BASE_URL || "https://cagnottes.sn";
+    process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn";
   const shareUrl = `${publicBaseUrl}/c/${cagnotte.slug}`;
 
   const visibilityLabel =

@@ -13,7 +13,7 @@ import { MERCI_LABELS } from "@/lib/constants";
 const POLL_INTERVAL_MS = 3_000;
 const MAX_POLLS = 40; // 3s × 40 = 2 minutes
 const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://cagnottes.sn";
+  process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn";
 
 type Status = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "TIMEOUT";
 

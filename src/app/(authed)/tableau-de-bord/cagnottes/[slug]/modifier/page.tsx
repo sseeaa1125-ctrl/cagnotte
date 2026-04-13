@@ -126,7 +126,7 @@ export default async function EditCagnottePage({
           {EDIT_LABELS.urlSection}
         </p>
         <code className="mt-2 block break-all rounded-lg bg-gray-50 px-3 py-2 font-mono text-sm text-primary">
-          cagnottes.sn/c/{block.slug}
+          cagnotte.sn/c/{block.slug}
         </code>
         <p className="mt-2 text-xs text-muted-foreground">
           {EDIT_LABELS.slugLocked}

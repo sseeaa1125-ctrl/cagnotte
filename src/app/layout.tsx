@@ -26,23 +26,23 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Cagnottes.sn — Crée ta cagnotte, partage, collecte",
-    template: "%s | Cagnottes.sn",
+    default: "cagnotte.sn — Crée ta cagnotte, partage, collecte",
+    template: "%s | cagnotte.sn",
   },
   description:
     "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money. La façon la plus simple de lever des fonds au Sénégal.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://cagnottes.sn"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn"),
   openGraph: {
-    title: "Cagnottes.sn",
+    title: "cagnotte.sn",
     description:
       "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money.",
-    siteName: "Cagnottes.sn",
+    siteName: "cagnotte.sn",
     locale: "fr_FR",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Cagnottes.sn",
+    title: "cagnotte.sn",
     description:
       "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money.",
   },

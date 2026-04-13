@@ -40,7 +40,7 @@ export const revalidate = 60;
 export const metadata = {
   title: "Toutes les cagnottes",
   description:
-    "Découvre toutes les cagnottes festives et solidaires publiées sur Cagnottes.sn.",
+    "Découvre toutes les cagnottes festives et solidaires publiées sur cagnotte.sn.",
 };
 
 type SubtypeFilter = "all" | "festive" | "solidaire";

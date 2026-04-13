@@ -11,7 +11,7 @@ import { ProgressPoll } from "./ProgressPoll";
 const BACKEND_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_BASE_URL || "https://cagnottes.sn";
+  process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn";
 
 // CRITICAL — OQ-3 / Pitfall P05 mitigation. Never pre-render at build time.
 export const dynamic = "force-dynamic";
@@ -98,7 +98,7 @@ export async function generateMetadata({
     };
   }
 
-  const description = (cagnotte.description ?? "Soutiens cette cagnotte sur Cagnottes.sn").slice(0, 200);
+  const description = (cagnotte.description ?? "Soutiens cette cagnotte sur cagnotte.sn").slice(0, 200);
   const ogImages = cagnotte.coverUrl
     ? [{ url: cagnotte.coverUrl, width: 1200, height: 630 }]
     : [];
@@ -112,7 +112,7 @@ export async function generateMetadata({
       images: ogImages,
       url: `${PUBLIC_BASE_URL}/c/${slug}`,
       type: "website",
-      siteName: "Cagnottes.sn",
+      siteName: "cagnotte.sn",
       locale: "fr_FR",
     },
     twitter: {

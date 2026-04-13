@@ -4,7 +4,7 @@ import type { MetadataRoute } from "next";
 // NO /c/ entries in v1 (OQ-4 lock, P05 mitigation). Cagnotte URLs are never
 // crawled — they're discoverable only via direct share by the creator.
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://cagnottes.sn";
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [

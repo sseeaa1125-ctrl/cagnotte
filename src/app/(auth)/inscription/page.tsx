@@ -203,7 +203,7 @@ export default function InscriptionPage() {
             <p className="text-xs text-muted-foreground">
               {AUTH_LABELS.slugPreviewLabel}{" "}
               <span className="font-mono text-primary">
-                cagnottes.sn/{slugPreview}
+                cagnotte.sn/{slugPreview}
               </span>
             </p>
           ) : null}
@@ -214,7 +214,7 @@ export default function InscriptionPage() {
             label={
               <span>
                 {AUTH_LABELS.tosLabel.replace(
-                  "conditions générales d'utilisation de Cagnottes.sn",
+                  "conditions générales d'utilisation de cagnotte.sn",
                   "",
                 )}
                 <Link
@@ -223,7 +223,7 @@ export default function InscriptionPage() {
                 >
                   conditions générales d{"'"}utilisation
                 </Link>{" "}
-                de Cagnottes.sn
+                de cagnotte.sn
               </span>
             }
             error={

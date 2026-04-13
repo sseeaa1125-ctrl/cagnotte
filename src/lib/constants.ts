@@ -239,7 +239,7 @@ export const HOME_COPY = {
   featuredEmpty: "Aucune cagnotte publiée pour le moment.",
   featuredEmptyCta: "Sois le premier à créer une cagnotte",
   featuredViewAllCta: "Voir toutes les cagnottes",
-  featuresTitle: "Pourquoi Cagnottes.sn",
+  featuresTitle: "Pourquoi cagnotte.sn",
   featuresList: [
     {
       title: "Commission transparente",
@@ -262,7 +262,7 @@ export const HOME_COPY = {
       a: "Une fois ton identité vérifiée, tu peux demander un retrait vers ton Wave, Orange Money, Free Money ou ton compte bancaire. Le transfert arrive sous 24 à 72 heures selon l'opérateur.",
     },
     {
-      q: "Quelle commission prélève Cagnottes.sn ?",
+      q: "Quelle commission prélève cagnotte.sn ?",
       a: "6% pour les cagnottes solidaires (santé, éducation, urgence) et 8% pour les cagnottes festives (mariage, anniversaire, cadeau commun). La commission est affichée au donateur avant le paiement.",
     },
     {
@@ -378,7 +378,7 @@ export const AUTH_LABELS = {
   slugPreviewLabel: "Ton espace sera",
   slugPreviewPlaceholder: "ton-prenom-nom",
   tosLabel:
-    "J'accepte les conditions générales d'utilisation de Cagnottes.sn",
+    "J'accepte les conditions générales d'utilisation de cagnotte.sn",
   tosError: "Tu dois accepter les conditions pour continuer.",
   signupCta: "Créer mon compte",
   signupLoading: "Création du compte…",
@@ -589,7 +589,7 @@ export const WIZARD_FIELDS = {
   visibilityLabel: "Visibilité de la cagnotte",
   visibilityPublic: "Publique",
   visibilityPublicHelper:
-    "Votre cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de Cagnottes.sn.",
+    "Votre cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de cagnotte.sn.",
   visibilityPrivate: "Privée",
   visibilityPrivateHelper:
     "Votre cagnotte ne sera pas listée sur le site. Seules les personnes avec qui vous partagez le lien pourront y accéder.",
@@ -738,7 +738,7 @@ export const NOTIF_FEED_LABELS = {
 // ── All-cagnottes page labels ──
 export const ALL_CAGNOTTES_LABELS = {
   pageTitle: "Toutes les cagnottes",
-  pageSubtitle: "Découvre et soutiens les cagnottes publiées sur Cagnottes.sn.",
+  pageSubtitle: "Découvre et soutiens les cagnottes publiées sur cagnotte.sn.",
   filterAll: "Toutes",
   filterFestive: "Festives",
   filterSolidaire: "Solidaires",

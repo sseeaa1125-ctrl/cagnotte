@@ -245,5 +245,5 @@ export const revalidate = 60;
 export const metadata = {
   title: "Crée ta cagnotte, partage, collecte",
   description:
-    "Cagnottes.sn est la plateforme sénégalaise pour lever des fonds via Wave, Orange Money et Free Money. Crée ta cagnotte en 2 minutes.",
+    "cagnotte.sn est la plateforme sénégalaise pour lever des fonds via Wave, Orange Money et Free Money. Crée ta cagnotte en 2 minutes.",
 };
