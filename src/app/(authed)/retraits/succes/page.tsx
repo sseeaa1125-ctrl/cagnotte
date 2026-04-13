@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CheckCircle2, Info } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { Button } from "@/components/ui";
-import { WITHDRAWAL_LABELS } from "@/lib/constants";
+import { WITHDRAW_SUCCESS_LABELS, WITHDRAWAL_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 import { DraftClearer } from "./_DraftClearer";
 
@@ -45,23 +45,31 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
       <DraftClearer />
 
       <div className="rounded-[2.5rem] bg-white p-6 shadow-sm md:p-10">
-        {/* Pulsing success icon */}
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center">
-          <span className="relative flex h-24 w-24 items-center justify-center">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400/30" />
-            <span className="relative inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-50 text-green-600">
-              <CheckCircle2 size={44} aria-hidden />
-            </span>
-          </span>
+        {/* animate-ping green ring — Banani WithdrawSuccess */}
+        <div className="relative mx-auto mb-8 mt-4 flex h-24 w-24 items-center justify-center">
+          <div className="absolute inset-0 animate-ping rounded-full bg-[#00B67A]/20" />
+          <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-[#E6F3EE]">
+            <Check
+              size={48}
+              strokeWidth={3}
+              className="text-[#00B67A]"
+              aria-hidden
+            />
+          </div>
         </div>
 
-        <h1 className="mb-3 text-center font-headings text-2xl font-bold text-primary md:text-3xl">
-          {WITHDRAWAL_LABELS.successH1}
+        <h1 className="mb-3 text-center font-headings text-2xl font-black text-primary md:text-3xl">
+          {WITHDRAW_SUCCESS_LABELS.title}
         </h1>
-        <p className="mb-6 text-center text-sm text-muted-foreground md:text-base">
-          {WITHDRAWAL_LABELS.successBodyPrefix}
-          <strong className="font-semibold text-primary">{amountLabel}</strong>
-          {WITHDRAWAL_LABELS.successBodySuffix}
+        <p className="mb-6 text-center text-sm text-gray-500 md:text-base">
+          {WITHDRAW_SUCCESS_LABELS.helper}
+          {amountLabel ? (
+            <>
+              {" ("}
+              <strong className="font-bold text-primary">{amountLabel}</strong>
+              {")"}
+            </>
+          ) : null}
         </p>
 
         {/* Summary */}
@@ -113,7 +121,7 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link href="/tableau-de-bord">
             <Button type="button" variant="primary" size="lg">
-              {WITHDRAWAL_LABELS.successBackToDashboard}
+              {WITHDRAW_SUCCESS_LABELS.backCta}
             </Button>
           </Link>
           <Link href="/toutes-les-cagnottes">
