@@ -93,7 +93,10 @@ export const fundraiserBlockConfigSchema = z.object({
   coverUrl: z.string().nullable().optional(),
   buttonText: z.string().max(30).optional(),
   ctaStyle: z.enum(["button", "callout", "preview"]).optional().default("button"),
-  thankYouMessage: z.string().max(500).optional(),
+  // Phase 7 plan 07-03 — PLSH-08. Optional donor-facing thank-you message
+  // rendered on /c/[slug]/merci after a successful donation. Nullable so the
+  // wizard and the /modifier edit form can explicitly clear it.
+  thankYouMessage: z.string().max(500).nullable().optional(),
   videoUrl: z.string().nullable().optional(),
   checkoutSections: z.array(checkoutSectionSchema).nullable().optional(),
   confirmationEmailSubject: z.string().nullable().optional(),
