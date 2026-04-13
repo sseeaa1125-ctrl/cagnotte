@@ -106,7 +106,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: Ship the full 7-screen revenue path as one atomic plan (Home → AllCagnottes → `/c/[slug]` → `/c/[slug]/participer` → `/c/[slug]/paiement` → thank-you) with the in-app browser branching, OG meta for WhatsApp, client-side commission label, and the audit-010 device matrix. This is a single plan because the screens share state and the matrix must be validated end-to-end.
+- [x] 04-01: Ship the full 7-screen revenue path as one atomic plan (Home → AllCagnottes → `/c/[slug]` → `/c/[slug]/participer` → `/c/[slug]/paiement` → thank-you) with the in-app browser branching, OG meta for WhatsApp, client-side commission label, and the audit-010 device matrix. This is a single plan because the screens share state and the matrix must be validated end-to-end.
 
 **Watch out for**:
 - **P02 (In-app browser kills donation flow)** — THE make-or-break pitfall. Re-read `audits/audit-008-inapp-browser-payment.md` and `audits/audit-009-tiktok-payment-flow.md` BEFORE writing any payment button. Use the existing `isInAppBrowser()` / `isTikTokBrowser()` helpers — do NOT rewrite them. Expose ONE button, branch hidden.

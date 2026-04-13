@@ -68,7 +68,6 @@ export function buildProxyRedirectUrl(bictorysUrl: string): string {
 export async function openPaymentUrl(url: string): Promise<OpenResult> {
   // Defense-in-depth allowlist.
   if (!isAllowedPayDomain(url)) {
-    // eslint-disable-next-line no-console
     console.warn("[openPaymentUrl] Unknown domain, refusing:", url);
     return "unsupported";
   }

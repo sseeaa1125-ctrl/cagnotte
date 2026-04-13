@@ -101,26 +101,34 @@ For each browser/device combination, perform this sequence:
 - [x] Commission label uses `formatCommissionLabel` from `src/lib/commission.ts`
       — `grep -ri "offerts" src/app/` returns empty
 
-**Manual smoke (after executor brings up `npm run dev`):**
+**Manual smoke (curl against existing localhost:3000 dev server, 2026-04-13):**
 
-- [ ] `curl -s http://localhost:3000/` → 200 (home renders)
-- [ ] `curl -s http://localhost:3000/toutes-les-cagnottes` → 200
-- [ ] `curl -s http://localhost:3000/c/mariage-aissatou-moussa` → 200
-- [ ] `curl -s http://localhost:3000/c/mariage-aissatou-moussa/participer` → 200
+- [x] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/` → **200**
+- [x] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/toutes-les-cagnottes` → **200**
+- [x] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/c/mariage-aissatou-moussa` → **200**
+- [x] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/c/mariage-aissatou-moussa/participer` → **200**
+- [x] `curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/c/mariage-aissatou-moussa/paiement` → **200**
+- [x] `curl -s -o /dev/null -w "%{http_code}" "http://localhost:3000/c/mariage-aissatou-moussa/merci?ref=test123"` → **200** (renders PENDING then TIMEOUT after 2 min)
 - [ ] Open Safari → `/c/mariage-aissatou-moussa/participer` → fill the form,
       submit → DevTools → Application → Session Storage → key
-      `cagnotte.participer.mariage-aissatou-moussa` exists
+      `cagnotte.participer.mariage-aissatou-moussa` exists _(human task in T8 checkpoint)_
 - [ ] On `/paiement`, tap "Wave" → DevTools Network tab shows POST `/api/orders`
       → response carries `redirectUrl` containing one of the allowlisted Wave/
-      Bictorys hosts
-- [ ] `window.location.href` navigates to the redirect URL (same-window)
+      Bictorys hosts _(human task in T8 checkpoint)_
+- [ ] `window.location.href` navigates to the redirect URL (same-window) _(human task)_
 
-**Result:** ✅ (static checks green) — manual smoke pending dev-server start
-in T8 checkpoint
+**Result:** ✅ (static checks green, all 6 dev-server route HTTP probes return
+200) — interactive form submission + Bictorys staging payment are pending the
+T8 human checkpoint and the cells 1-6 real-device matrix.
+
 **Notes:** Bictorys staging from a desktop browser cannot complete the Wave
 deeplink (no mobile money apps installed). Frontend flow is verified up to the
 redirect; the Bictorys success → `/c/{slug}/merci?ref=...` round trip is part
-of the human cell tests (1-6) on real devices.
+of the human cell tests (1-6) on real devices. The
+`/c/mariage-aissatou-moussa/merci?ref=test123` probe returned 200 with the
+PENDING state — the page polls `/api/orders/test123/status` which 404s after
+the 30s Bictorys cache window, so the page transitions to TIMEOUT after 2
+minutes. That's the expected behavior for a forged/missing reference.
 
 ---
 

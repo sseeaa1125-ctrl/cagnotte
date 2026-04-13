@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Heart, Shield, Smartphone } from "lucide-react";
 import { CampaignCard } from "@/components/cagnottes/CampaignCard";
 import { TrustpilotBadge } from "@/components/trust/TrustpilotBadge";

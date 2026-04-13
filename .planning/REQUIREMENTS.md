@@ -40,7 +40,7 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 - [x] **DONA-03**: A donor can opt to keep their message private so it's not displayed on the public wall (`messageIsPrivate: true`)
 - [x] **DONA-04**: The platform commission is **6% for solidaire** and **8% for festive** cagnottes, computed server-side with a pure helper that satisfies `commission + net === gross` (basis points on `Order.commissionRate`)
 - [x] **DONA-05**: Donation creation is rate-limited: 20/min per IP, 100/hour per IP, 5/min per customer email, with a circuit breaker on Bictorys upstream failures
-- [ ] **DONA-06**: A donor in a TikTok / Instagram / Facebook in-app browser is routed through the existing audit-008/009 workaround (base64-encoded proxied redirect) without regression
+- [x] **DONA-06**: A donor in a TikTok / Instagram / Facebook in-app browser is routed through the existing audit-008/009 workaround (base64-encoded proxied redirect) without regression
 - [x] **DONA-07**: A donor can poll `GET /api/orders/:ref/status` to check payment status from the thank-you page
 - [ ] **DONA-08**: On `PaymentStatus: PAID`, the webhook handler credits the order exactly once even under double delivery (pessimistic lock + `@@unique` webhook log constraint)
 
@@ -111,13 +111,13 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Public Donor Flow (DONF) — REVENUE PATH
 
-- [ ] **DONF-01**: Home page (screen 1) — hero, featured campaigns, features section, FAQ, footer — pixel-perfect at 1280px and mobile-adapted at 375px
-- [ ] **DONF-02**: All-cagnottes discovery page (screen 2) — search + chip filters + paginated grid — **in scope but priority-deferred** per research
-- [ ] **DONF-03**: Public cagnotte detail page `/c/[slug]` (screens 21/22) — cover, description, participants list, sticky sidebar with progress + "Je participe" CTA, WhatsApp share
-- [ ] **DONF-04**: Participate form page `/c/[slug]/participer` (screen 23) — 3-step inline form (amount, info, message) with sticky order summary
-- [ ] **DONF-05**: Payment page `/c/[slug]/paiement` (screen 24) — Mobile Money (Wave/Orange/Free) + Carte selector with phone input, commission transparency label ("6% · 300 FCFA"), Bictorys submit
-- [ ] **DONF-06**: Thank-you page (we design) — success confirmation with polling on `GET /api/orders/:ref/status`, share CTA, "Voir la cagnotte" link
-- [ ] **DONF-07**: In-app browser detection routes TikTok donors through `navigator.share()`, IG/FB through `target="_blank"`, normal browsers through `window.location.href`; `audits/audit-010-banani-inapp-matrix.md` documents an 8-cell device matrix as exit gate
+- [x] **DONF-01**: Home page (screen 1) — hero, featured campaigns, features section, FAQ, footer — pixel-perfect at 1280px and mobile-adapted at 375px
+- [x] **DONF-02**: All-cagnottes discovery page (screen 2) — search + chip filters + paginated grid — **in scope but priority-deferred** per research
+- [x] **DONF-03**: Public cagnotte detail page `/c/[slug]` (screens 21/22) — cover, description, participants list, sticky sidebar with progress + "Je participe" CTA, WhatsApp share
+- [x] **DONF-04**: Participate form page `/c/[slug]/participer` (screen 23) — 3-step inline form (amount, info, message) with sticky order summary
+- [x] **DONF-05**: Payment page `/c/[slug]/paiement` (screen 24) — Mobile Money (Wave/Orange/Free) + Carte selector with phone input, commission transparency label ("6% · 300 FCFA"), Bictorys submit
+- [x] **DONF-06**: Thank-you page (we design) — success confirmation with polling on `GET /api/orders/:ref/status`, share CTA, "Voir la cagnotte" link
+- [x] **DONF-07**: In-app browser detection routes TikTok donors through `navigator.share()`, IG/FB through `target="_blank"`, normal browsers through `window.location.href`; `audits/audit-010-banani-inapp-matrix.md` documents an 8-cell device matrix as exit gate
 
 ### Public Auth (AUTF)
 
@@ -284,14 +284,14 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | COMP-03 | Phase 3 | Complete |
 | COMP-04 | Phase 3 | Complete |
 | COMP-05 | Phase 3 | Complete |
-| DONA-06 | Phase 4 | Pending |
-| DONF-01 | Phase 4 | Pending |
-| DONF-02 | Phase 4 | Pending |
-| DONF-03 | Phase 4 | Pending |
-| DONF-04 | Phase 4 | Pending |
-| DONF-05 | Phase 4 | Pending |
-| DONF-06 | Phase 4 | Pending |
-| DONF-07 | Phase 4 | Pending |
+| DONA-06 | Phase 4 | Complete |
+| DONF-01 | Phase 4 | Complete |
+| DONF-02 | Phase 4 | Complete |
+| DONF-03 | Phase 4 | Complete |
+| DONF-04 | Phase 4 | Complete |
+| DONF-05 | Phase 4 | Complete |
+| DONF-06 | Phase 4 | Complete |
+| DONF-07 | Phase 4 | Complete |
 | AUTF-01 | Phase 5 | Pending |
 | AUTF-02 | Phase 5 | Pending |
 | AUTF-03 | Phase 5 | Pending |

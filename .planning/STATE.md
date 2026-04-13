@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 03-03-PLAN.md — Phase 3 Frontend Foundations green
-last_updated: "2026-04-13T12:07:15.272Z"
+stopped_at: Completed 04-01-PLAN.md (Phase 4 yellow — audit-010 cells 1-6 pending real-device task)
+last_updated: "2026-04-13T16:36:46.415Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 6
-  completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  completed_phases: 4
+  total_plans: 10
+  completed_plans: 10
   percent: 100
 ---
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 | Phase 03-frontend-foundations P01 | 15m | 7 tasks | 7 files |
 | Phase 03 P02 | ~30 min | 6 tasks | 20 files |
 | Phase 03-frontend-foundations P03 | 35 | 7 tasks | 14 files |
+| Phase 04-public-donor-revenue-path P01 | 1 session | 10 tasks | 20 files |
 
 ## Accumulated Context
 
@@ -93,6 +94,10 @@ Recent decisions affecting current work:
 - [Phase 03-frontend-foundations]: DashboardNavbar accepts unreadCount as prop (parent fetches, block is Ring 2 pure)
 - [Phase 03-frontend-foundations]: OrderSummary displays pre-computed commission fields (commissionBp/Amount/netAmount) — never 'Offerts'
 - [Phase 03-frontend-foundations]: ShareSheet uses inline WhatsApp SVG (simple-icons path) — no new npm dep for WA icon
+- [Phase 04-public-donor-revenue-path]: OQ-1: Backend successRedirectUrl now branches to /c/{slug}/merci when cagnotteSlug present
+- [Phase 04-public-donor-revenue-path]: OQ-3: force-dynamic on /c/[slug] (no generateStaticParams — P05 mitigation)
+- [Phase 04-public-donor-revenue-path]: OQ-6: Flow B sessionStorage handoff between /participer and /paiement (clean retry without order duplication)
+- [Phase 04-public-donor-revenue-path]: DONF-07: 3-way in-app branch — TikTok→navigator.share, Meta→a target=_blank, normal→window.location.href
 
 ### Pending Todos
 
@@ -112,6 +117,6 @@ None yet. Capture ideas via `/gsd-add-todo` during execution.
 
 ## Session Continuity
 
-Last session: 2026-04-13T12:07:11.097Z
-Stopped at: Completed 03-03-PLAN.md — Phase 3 Frontend Foundations green
+Last session: 2026-04-13T16:36:38.081Z
+Stopped at: Completed 04-01-PLAN.md (Phase 4 yellow — audit-010 cells 1-6 pending real-device task)
 Resume file: None
