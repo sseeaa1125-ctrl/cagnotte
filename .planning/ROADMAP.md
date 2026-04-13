@@ -35,7 +35,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01: Prisma schema migration — add `Block.slug` + reserved-words guard, `Order.isAnonymous/messageIsPrivate`, `Notification` model + `dedupeKey @unique`, `WebhookLog @@unique([externalId,eventType])`. Use `prisma migrate dev` (not `db push`) so prod gets a named migration. Verify with `db:studio`.
-- [ ] 01-02: Pure `lib/cagnottes/slug.ts` (NFD normalize → collapse → reserved list → numeric suffix retry on P2002, up to 10 attempts, 4-char timestamp fallback) + `backend/scripts/test-slug.ts` standalone test harness.
+- [x] 01-02: Pure `lib/cagnottes/slug.ts` (NFD normalize → collapse → reserved list → numeric suffix retry on P2002, up to 10 attempts, 4-char timestamp fallback) + `backend/scripts/test-slug.ts` standalone test harness.
 - [ ] 01-03: `lib/blocks/schemas.ts` FUNDRAISER extension (subtype/occasion/cause/beneficiary/visibility/hideAmount/hideDonors with superRefine) + `lib/commission.ts` pure helper (`FUNDRAISER_COMMISSION_BP = { solidaire: 600, festive: 800 }`, `Math.floor`, invariant-asserted) + `backend/scripts/test-commission.ts`.
 
 **Watch out for**:
