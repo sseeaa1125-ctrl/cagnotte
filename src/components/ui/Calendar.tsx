@@ -202,8 +202,8 @@ export function Calendar({
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="dialog"
           aria-expanded={open}
-          aria-invalid={error ? true : undefined}
           aria-describedby={error || helper ? `${fieldId}-desc` : undefined}
+          data-invalid={error ? "true" : undefined}
           className={cn(
             "flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3.5 text-left shadow-sm transition-colors",
             "hover:border-primary focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
