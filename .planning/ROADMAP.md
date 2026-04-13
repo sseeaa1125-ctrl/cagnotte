@@ -129,8 +129,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: Public auth screens (4 pages) — signup, login, email-verify landing, forgot/reset flow — wired to Phase 2 auth endpoints with CSRF.
-- [ ] 05-02: Creator flow (7 screens) — dashboard + create-picker + festive wizard (3 steps) + solidaire wizard (3 steps) + create-success.
+- [x] 05-01: Public auth screens (4 pages) — signup, login, email-verify landing, forgot/reset flow — wired to Phase 2 auth endpoints with CSRF.
+- [x] 05-02: Creator flow (7 screens) — dashboard + create-picker + festive wizard (3 steps) + solidaire wizard (3 steps) + create-success.
 
 **Watch out for**:
 - Google/Apple CTAs are in the Banani export — HIDE them (don't delete the JSX, gate them behind a feature flag for v2).

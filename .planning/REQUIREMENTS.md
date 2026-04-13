@@ -128,11 +128,11 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Creator Flow (CRET)
 
-- [ ] **CRET-01**: Dashboard page (screen 6) — 3-column KPI cards, recent cagnottes list, "Créer une cagnotte" CTA
-- [ ] **CRET-02**: Create-picker page (screen 8) — Festive vs Solidaire option cards with trust-line
-- [ ] **CRET-03**: Festive wizard — 3 steps (title + occasion + goal → cover + message + end date → visibility + options + TOS) with step progress indicator
-- [ ] **CRET-04**: Solidaire wizard — 3 steps (title + cause + beneficiary + goal → cover + description + end date → visibility + options + TOS)
-- [ ] **CRET-05**: Create-success page (screen 15) — confetti, shareable link readonly input with copy button, social share sheet, cagnotte preview card
+- [x] **CRET-01**: Dashboard page (screen 6) — 3-column KPI cards, recent cagnottes list, "Créer une cagnotte" CTA
+- [x] **CRET-02**: Create-picker page (screen 8) — Festive vs Solidaire option cards with trust-line
+- [x] **CRET-03**: Festive wizard — 3 steps (title + occasion + goal → cover + message + end date → visibility + options + TOS) with step progress indicator
+- [x] **CRET-04**: Solidaire wizard — 3 steps (title + cause + beneficiary + goal → cover + description + end date → visibility + options + TOS)
+- [x] **CRET-05**: Create-success page (screen 15) — confetti, shareable link readonly input with copy button, social share sheet, cagnotte preview card
 
 ### Authed Screens (ATHD)
 
@@ -296,11 +296,11 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | AUTF-02 | Phase 5 | Pending |
 | AUTF-03 | Phase 5 | Pending |
 | AUTF-04 | Phase 5 | Pending |
-| CRET-01 | Phase 5 | Pending |
-| CRET-02 | Phase 5 | Pending |
-| CRET-03 | Phase 5 | Pending |
-| CRET-04 | Phase 5 | Pending |
-| CRET-05 | Phase 5 | Pending |
+| CRET-01 | Phase 5 | Complete |
+| CRET-02 | Phase 5 | Complete |
+| CRET-03 | Phase 5 | Complete |
+| CRET-04 | Phase 5 | Complete |
+| CRET-05 | Phase 5 | Complete |
 | ATHD-01 | Phase 6 | Pending |
 | ATHD-02 | Phase 6 | Pending |
 | ATHD-03 | Phase 6 | Pending |
