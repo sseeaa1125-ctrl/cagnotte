@@ -9,11 +9,11 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Schema (SCHM)
 
-- [ ] **SCHM-01**: The data model supports a unique per-cagnotte slug so every cagnotte gets a shareable URL `cagnottes.sn/c/<slug>`
-- [ ] **SCHM-02**: The data model supports a donor anonymity flag that masks identity from the public participants list while remaining visible to the organizer
-- [ ] **SCHM-03**: The data model supports a private-message flag that hides a donor's message from the public wall
-- [ ] **SCHM-04**: The data model supports persisted in-app notifications with a deduplication key to prevent double-fires from webhook/cron concurrency
-- [ ] **SCHM-05**: The webhook log enforces idempotency via a unique constraint on `(externalId, eventType)` so double-delivered webhooks cannot double-credit orders
+- [x] **SCHM-01**: The data model supports a unique per-cagnotte slug so every cagnotte gets a shareable URL `cagnottes.sn/c/<slug>`
+- [x] **SCHM-02**: The data model supports a donor anonymity flag that masks identity from the public participants list while remaining visible to the organizer
+- [x] **SCHM-03**: The data model supports a private-message flag that hides a donor's message from the public wall
+- [x] **SCHM-04**: The data model supports persisted in-app notifications with a deduplication key to prevent double-fires from webhook/cron concurrency
+- [x] **SCHM-05**: The webhook log enforces idempotency via a unique constraint on `(externalId, eventType)` so double-delivered webhooks cannot double-credit orders
 
 ### Fundraiser Types (FUND)
 
@@ -216,11 +216,11 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SCHM-01 | Phase 1 | Pending |
-| SCHM-02 | Phase 1 | Pending |
-| SCHM-03 | Phase 1 | Pending |
-| SCHM-04 | Phase 1 | Pending |
-| SCHM-05 | Phase 1 | Pending |
+| SCHM-01 | Phase 1 | Complete |
+| SCHM-02 | Phase 1 | Complete |
+| SCHM-03 | Phase 1 | Complete |
+| SCHM-04 | Phase 1 | Complete |
+| SCHM-05 | Phase 1 | Complete |
 | FUND-01 | Phase 1 | Pending |
 | FUND-02 | Phase 1 | Pending |
 | FUND-03 | Phase 1 | Pending |
