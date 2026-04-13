@@ -940,6 +940,7 @@ export const WITHDRAW_LABELS = {
   summaryNet: "Vous allez recevoir",
   confirmCta: "Confirmer le retrait",
   securedFooter: "Transaction sécurisée",
+  instantBadge: "Instantané",
 } as const;
 
 export const WITHDRAW_PIN_LABELS = {
