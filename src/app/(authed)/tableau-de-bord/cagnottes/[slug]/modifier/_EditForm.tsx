@@ -2,10 +2,18 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Camera } from "lucide-react";
-import { Button, Input, Textarea, Toggle, useToast } from "@/components/ui";
+import { Camera, Eye, Lock } from "lucide-react";
+import {
+  Button,
+  Calendar,
+  Input,
+  Textarea,
+  Toggle,
+  VisibilityCard,
+  useToast,
+} from "@/components/ui";
 import { api, ApiError, BACKEND_URL } from "@/lib/api";
-import { EDIT_LABELS } from "@/lib/constants";
+import { EDIT_LABELS, WIZARD_FIELDS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -74,14 +82,11 @@ function formatSuggestedAmounts(arr: unknown): string {
     .join(", ");
 }
 
-function toDateInputValue(iso: unknown): string {
-  if (typeof iso !== "string" || !iso) return "";
+function toDateValue(iso: unknown): Date | null {
+  if (typeof iso !== "string" || !iso) return null;
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
 }
 
 export function EditForm({ initial }: { initial: EditFormInitial }) {
@@ -109,8 +114,11 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
       ? String(safeConfig.goalAmount)
       : "",
   );
-  const [endDate, setEndDate] = React.useState<string>(
-    toDateInputValue(safeConfig.endDate),
+  const [endDate, setEndDate] = React.useState<Date | null>(
+    toDateValue(safeConfig.endDate),
+  );
+  const [visibility, setVisibility] = React.useState<"public" | "private">(
+    safeConfig.visibility === "private" ? "private" : "public",
   );
   const [thankYouMessage, setThankYouMessage] = React.useState<string>(
     typeof safeConfig.thankYouMessage === "string"
@@ -168,7 +176,8 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
       description: description.trim() || undefined,
       coverUrl: coverUrl ?? null,
       goalAmount: parsedGoal,
-      endDate: endDate ? new Date(endDate).toISOString() : null,
+      endDate: endDate ? endDate.toISOString() : null,
+      visibility,
       // Phase 7 plan 07-03 — PLSH-08. Explicit null clears the server-side
       // field so creators can wipe a previously-set message.
       thankYouMessage: trimmedThankYou.length > 0 ? trimmedThankYou : null,
@@ -282,13 +291,38 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
         required
       />
 
-      <Input
+      <Calendar
         label={EDIT_LABELS.endDateLabel}
         helper={EDIT_LABELS.endDateHelper}
-        type="date"
         value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
+        onChange={setEndDate}
+        minDate={new Date()}
+        placeholder="Sélectionnez une date…"
+        clearable
       />
+
+      {/* Phase 8 fixpack — visibility toggle (moved from non-editable). */}
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-2 text-sm font-bold text-primary">
+          {WIZARD_FIELDS.visibilityLabel}
+        </legend>
+        <VisibilityCard
+          value="public"
+          checked={visibility === "public"}
+          onChange={(v) => setVisibility(v as "public" | "private")}
+          icon={<Eye size={18} aria-hidden />}
+          title={WIZARD_FIELDS.visibilityPublic}
+          description={WIZARD_FIELDS.visibilityPublicHelper}
+        />
+        <VisibilityCard
+          value="private"
+          checked={visibility === "private"}
+          onChange={(v) => setVisibility(v as "public" | "private")}
+          icon={<Lock size={18} aria-hidden />}
+          title={WIZARD_FIELDS.visibilityPrivate}
+          description={WIZARD_FIELDS.visibilityPrivateHelper}
+        />
+      </fieldset>
 
       <Textarea
         label={EDIT_LABELS.thankYouMessageLabel}
