@@ -1005,6 +1005,47 @@ export const WIZARD_EXTRA_LABELS = {
   displayOptionsLegend: "Options d'affichage",
 } as const;
 
+// ── Phase 8 fixpack — /comment (how it works) stub ──
+export const HOW_IT_WORKS_LABELS = {
+  pageTitle: "Comment ça marche",
+  pageSubtitle:
+    "Trois étapes simples pour lever des fonds auprès de votre communauté au Sénégal.",
+  steps: [
+    {
+      number: "1",
+      title: "Créez votre cagnotte",
+      body:
+        "Inscrivez-vous en 2 minutes, choisissez un titre, un objectif et une photo. Festive ou solidaire : votre page est prête.",
+    },
+    {
+      number: "2",
+      title: "Partagez le lien",
+      body:
+        "Envoyez l'URL personnalisée (cagnotte.sn/<votre-page>) sur WhatsApp, les réseaux sociaux ou par SMS à vos proches.",
+    },
+    {
+      number: "3",
+      title: "Recevez les dons",
+      body:
+        "Vos contributeurs paient en Wave, Orange Money, Free Money ou par carte. Retirez les fonds directement sur votre Mobile Money.",
+    },
+  ],
+  ctaTitle: "Prêt à commencer ?",
+  ctaSubtitle: "Créez votre première cagnotte gratuitement.",
+  ctaLabel: "Créer ma cagnotte",
+} as const;
+
+// ── Phase 8 fixpack — /a-propos (about) stub ──
+export const ABOUT_LABELS = {
+  pageTitle: "À propos de cagnotte.sn",
+  paragraphs: [
+    "Cagnotte.sn est la plateforme sénégalaise dédiée à la collecte de fonds en ligne. Nous croyons que chacun devrait pouvoir lever des fonds pour ses projets, que ce soit pour fêter un mariage, financer une opération médicale ou soutenir une cause solidaire.",
+    "Conçue pour le Sénégal, notre plateforme accepte Wave, Orange Money, Free Money et les cartes bancaires. Aucun téléchargement, aucune application : un simple lien partageable suffit.",
+    "Nous proposons deux types de cagnottes : festives (anniversaires, mariages, cadeaux communs) et solidaires (santé, urgence, projets communautaires). La commission est transparente : 8 % pour les cagnottes festives, 6 % pour les cagnottes solidaires — prélevée automatiquement sur le montant collecté.",
+    "Notre mission est simple : rendre la collecte de fonds accessible à tous, en français, en FCFA, et avec les moyens de paiement que vous utilisez tous les jours.",
+  ],
+} as const;
+
 export const EDIT_LABELS = {
   h1: "Modifier ma cagnotte",
   subtitle: "Mettez à jour le contenu sans changer l'URL.",
