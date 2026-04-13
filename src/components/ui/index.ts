@@ -17,3 +17,7 @@ export { Toggle } from "./Toggle";
 export type { ToggleProps } from "./Toggle";
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
+
+// Action
+export { Button } from "./Button";
+export type { ButtonProps } from "./Button";
