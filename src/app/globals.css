@@ -6,7 +6,31 @@ html, body {
 }
 
 @theme inline {
+  /* Fonts — Poppins added alongside existing Inter */
   --font-sans: var(--font-inter);
+  --font-headings: var(--font-poppins);
+
+  /* Brand — Banani navy + pink (supersedes fari.store teal) */
+  --color-background: #FFFFFF;
+  --color-primary: #172866;
+  --color-primary-hover: #121F4E;
+  --color-primary-foreground: #FFFFFF;
+  --color-muted: #F4F6F9;
+  --color-muted-foreground: #5C6784;
+  --color-accent: #E6F3EE;
+  --color-pink: #FBE6ED;
+  --color-border: #E2E8F0;
+  --color-trustpilot: #00B67A;
+  --color-footer: #0E1A40;
+  --color-gold-start: #D8A57D;
+  --color-gold-end: #C47A57;
+
+  /* Radii — sm/md/lg/xl/2xl from Banani style.css */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2.5rem;
 }
 
 /* UI3: Theme utility classes — reduce inline style={{}} in store components */
