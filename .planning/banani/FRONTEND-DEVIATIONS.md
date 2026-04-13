@@ -83,6 +83,55 @@ Running log of intentional deviations between the Banani design export and the s
 - **Enforcement:** Plan 05-01 tasks T4+T5 implement 6-input OTP pattern inline (no new OTP npm dep). Verify step greps for `inputMode="numeric"` and `storeCsrfToken` (verify-email is a login — it issues cookies, reset-password is NOT — user logs in fresh).
 - **Introduced by:** Plan 05-01
 
+### D-11 — (authed) AuthGuard is a SERVER component with raw fetch, not `api()`
+- **Banani:** N/A — Banani doesn't prescribe routing architecture.
+- **cagnottes.sn:** `src/app/(authed)/layout.tsx` is a Next 16 server component that reads `izy-token` from `cookies()` and calls `/api/auth/me` via raw `fetch` with the cookie forwarded in `headers.cookie`. It NEVER imports `@/lib/api`, because `api()` is window-only (reads `document.cookie` for CSRF, uses `localStorage`). Any 401 / network error → `redirect("/connexion?next=/tableau-de-bord")` BEFORE JSX renders.
+- **Rationale:** A client-side AuthGuard flashes protected content for ~200ms before redirecting, which is a security smell and a FOUC. A server component redirects pre-render. The navbar is split out into a small client island `DashboardShell` that owns the `useAuth()` logout callback.
+- **Enforcement:** Plan 05-02 verify step greps `! grep -q "\"use client\"" src/app/(authed)/layout.tsx` and `grep -q "cookies()" src/app/(authed)/layout.tsx`.
+- **Introduced by:** Plan 05-02
+
+### D-12 — Wizard drafts persist in sessionStorage (not localStorage)
+- **Banani:** Banani wizards don't show an explicit "draft saved" UI — persistence is an executor choice.
+- **cagnottes.sn:** `src/hooks/useWizardDraft.ts` stores festive and solidaire drafts under `cagnotte.wizard.${subtype}.draft.v1` in **sessionStorage**, NOT `localStorage`. Entries older than 24h are cleared on mount. Success page wipes both keys via a `DraftClearer` client island on mount.
+- **Rationale:** `localStorage` survives logout and tab close, leaking draft data on shared browsers. `sessionStorage` is per-tab — the wizard is a short-lived multi-step flow; per-tab grain is correct.
+- **Enforcement:** Plan 05-02 verify greps `! grep -q "localStorage" src/hooks/useWizardDraft.ts` and `! grep -rn "localStorage" src/app/(authed)/`.
+- **Introduced by:** Plan 05-02
+
+### D-13 — Cagnotte slug generation is BACKEND-ONLY
+- **Banani:** N/A.
+- **cagnottes.sn:** The wizard publish step posts `{ type: "FUNDRAISER", title, config }` — NEVER a `slug` field. Backend's `ensureUniqueSlug()` (Phase 1 helper) handles P2002 retry and reserved-word collisions. The seller slug helper at `src/lib/slug.ts` is ONLY used for the signup flow (seller vanity URL) — wizards must not touch it.
+- **Rationale:** Double-generating slugs on client + server invites collisions and drift. The backend owns the invariant.
+- **Enforcement:** Plan 05-02 verify greps `! grep -rE "slugify|ensureUniqueSlug" src/app/(authed)/tableau-de-bord/nouvelle/`.
+- **Introduced by:** Plan 05-02
+
+### D-14 — Dashboard progress is hydrated via client island (per-card fetch)
+- **Banani:** Each campaign card on the dashboard shows the current raised / goal / donor count inline.
+- **cagnottes.sn:** `GET /api/blocks` does NOT return `raised` / `donorCount` — these live on `GET /api/blocks/:id/progress`. The server component renders each `CampaignCard` initially with `raised=0, donorCount=0`, and a client sibling `ProgressHydrator` fetches progress per card after mount via `api()`. `CampaignCard` stays pure (Ring 2): props-only, no data fetching.
+- **Rationale:** Fetching N progress endpoints from the server would serialize all of them; hydrating client-side parallelizes, respects Ring 2 purity, and keeps the first paint fast. The Phase 2 backend is the single source of truth — we do NOT mutate the backend to fold progress into `GET /api/blocks`.
+- **Enforcement:** Plan 05-02 keeps data-fetching in `_ClientCampaignCard.tsx` (a client island inside `src/app/(authed)/tableau-de-bord/`), NOT in `src/components/cagnottes/CampaignCard.tsx`. Ring purity script passes.
+- **Introduced by:** Plan 05-02
+
+### D-15 — Create-success confetti uses inline CSS keyframes (zero dep)
+- **Banani:** Screen 15 shows a static green check circle — no confetti.
+- **cagnottes.sn:** The success page plays a subtle CSS-only confetti burst on mount (~25 LOC of Tailwind arbitrary `@keyframes` via a `<style>` tag), navy + pink + cream particles falling once. Zero new npm deps.
+- **Rationale:** The moment of publication is a celebration beat — a restrained confetti burst sells the outcome. Framer Motion is banned by `CLAUDE.md`; CSS keyframes are the only sanctioned animation primitive. The static Banani mock loses nothing by adding this.
+- **Enforcement:** Plan 05-02 verify step runs `git diff package.json` — must be empty. Confetti lives in an inline client island on the success page.
+- **Introduced by:** Plan 05-02
+
+### D-16 — Private-visibility helper text added per creator open-question
+- **Banani:** Step-3 radio cards show only title + description (2 lines each).
+- **cagnottes.sn:** Under the Private radio card, a small muted helper paragraph (`visibilityPrivateHelper`) explicitly states that the cagnotte won't be listed and only direct-link visitors can access it. This mirrors backend `T-02-02` `Cache-Control: private, no-store` behaviour in human language.
+- **Rationale:** The creator open-question list flagged confusion between "private cagnotte" and "hide amount / hide donors" — the helper copy disambiguates at the point of decision.
+- **Enforcement:** Plan 05-02 step-3 pages import `WIZARD_FIELDS.visibilityPrivateHelper` and render it under the private option.
+- **Introduced by:** Plan 05-02
+
+### D-17 — Wizard step-3 does NOT display commission to the creator
+- **Banani:** No commission copy appears on any wizard step.
+- **cagnottes.sn:** Keep it that way. Commission (6% solidaire / 8% festive) is **donor-facing** (shown on `/c/[slug]/paiement`), NOT creator-facing. The wizard is a creation flow — showing commission here would be anxiety-inducing and contradicts the "share freely" celebratory framing.
+- **Rationale:** Commission is honestly disclosed to the paying party (donors) per D-04. The creator sees the real payout totals on the dashboard after the first PAID order. No deception — just correct placement of the disclosure.
+- **Enforcement:** Plan 05-02 verify step greps `! grep -E "Offerts|6%|8%" src/app/(authed)/tableau-de-bord/nouvelle/`.
+- **Introduced by:** Plan 05-02
+
 ***
 
 ## Deviation Template (for future entries)

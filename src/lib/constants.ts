@@ -422,6 +422,168 @@ export const RESET_PASSWORD_LABELS = {
   backToLoginCta: "Retour à la connexion",
 } as const;
 
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 5 plan 05-02 — creator flow labels (dashboard, picker, wizards, success)
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── /tableau-de-bord (Banani screens 6 + 7) ──
+export const DASHBOARD_LABELS = {
+  title: "Tableau de bord",
+  welcomeBack: "Bon retour, {name}",
+  kpiTotalRaised: "Total collecté",
+  kpiDonorCount: "Participations",
+  kpiCampaignCount: "Cagnottes actives",
+  recentCagnottes: "Mes cagnottes récentes",
+  seeAllLink: "Voir tout",
+  createCta: "Créer une cagnotte",
+  emptyTitle: "Lance ta première cagnotte",
+  emptyBody:
+    "Crée une cagnotte en quelques clics et commence à récolter auprès de tes proches.",
+  emptyCta: "Créer ma première cagnotte",
+  sellerUrlLabel: "Ton espace public",
+} as const;
+
+// ── /tableau-de-bord/nouvelle (Banani screen 8) ──
+export const CREATE_PICKER_LABELS = {
+  title: "Créer la cagnotte de votre choix",
+  subtitle: "Choisissez le type de cagnotte qui correspond à votre projet.",
+  festiveTitle: "Festive",
+  festiveDescription:
+    "Cadeau commun, anniversaire, pot de départ, mariage, naissance, voyage…",
+  solidaireTitle: "Solidaire",
+  solidaireDescription:
+    "Appel aux dons, aider un proche ou une association, soutenir un projet, obsèques…",
+  cancelCta: "Retour au tableau de bord",
+  trustBadgeSecure: "100% sécurisé",
+  trustBadgeEasy: "Collecte facilitée",
+} as const;
+
+// ── Wizard shared labels (festive + solidaire, 3 steps) ──
+export const WIZARD_LABELS = {
+  festiveBadge: "🪩 Cagnotte Festive",
+  solidaireBadge: "❤️ Cagnotte Solidaire",
+  backCta: "Retour",
+  continueCta: "Étape suivante",
+  publishCta: "Publier ma cagnotte",
+  publishing: "Publication en cours…",
+  step1Of3: "Étape 1 sur 3",
+  step2Of3: "Étape 2 sur 3",
+  step3Of3: "Étape 3 sur 3",
+  step1TitleFestive: "Commençons par les bases",
+  step1SubtitleFestive:
+    "Donnez un nom à votre cagnotte et précisez l'occasion.",
+  step1TitleSolidaire: "Commençons par les bases",
+  step1SubtitleSolidaire:
+    "Donnez un nom à votre projet solidaire et précisez la cause.",
+  step2TitleFestive: "Personnalisez votre cagnotte",
+  step2SubtitleFestive:
+    "Ajoutez une image et un petit mot pour donner envie de participer.",
+  step2TitleSolidaire: "Personnalisez votre projet",
+  step2SubtitleSolidaire:
+    "Ajoutez une image et expliquez pourquoi vous collectez des fonds.",
+  step3Title: "Paramètres et visibilité",
+  step3SubtitleFestive:
+    "Dernière étape ! Configurez les options de votre cagnotte.",
+  step3SubtitleSolidaire:
+    "Dernière étape ! Configurez les options de votre collecte.",
+} as const;
+
+// ── Wizard field labels (shared festive + solidaire) ──
+export const WIZARD_FIELDS = {
+  titleLabel: "Nom de la cagnotte",
+  titlePlaceholderFestive: "Ex : Pour les 30 ans de Thomas",
+  titlePlaceholderSolidaire: "Ex : Soutien pour le jardin partagé",
+  titleHelp: "Un titre clair donne plus envie de participer.",
+  occasionLabel: "Occasion",
+  occasionPlaceholder: "Sélectionnez une occasion…",
+  occasionOptions: {
+    anniversaire: "Anniversaire",
+    pot_de_depart: "Pot de départ",
+    cadeau_commun: "Cadeau commun",
+    mariage_pacs: "Mariage / PACS",
+    naissance: "Naissance",
+    voyage: "Voyage",
+    autre: "Autre",
+  } as Record<string, string>,
+  causeLabel: "Cause soutenue",
+  causePlaceholder: "Sélectionnez une cause…",
+  causeOptions: {
+    sante_medical: "Santé & Médical",
+    education: "Éducation",
+    projet_solidaire: "Projet solidaire",
+    urgence: "Urgence",
+    animaux: "Animaux",
+    autre: "Autre",
+  } as Record<string, string>,
+  beneficiaryLabel: "Pour qui collectez-vous ?",
+  beneficiaryOptions: {
+    moi_meme: "Moi-même",
+    un_proche: "Un proche",
+    une_association: "Une association",
+  } as Record<string, string>,
+  goalAmountLabel: "Montant à atteindre",
+  goalAmountPlaceholder: "100000",
+  goalAmountHelp: "En FCFA. Minimum 1 000.",
+  coverLabel: "Photo de couverture",
+  coverHelp: "Une belle photo augmente considérablement les dons.",
+  coverUploadError: "Impossible d'envoyer l'image. Réessaye.",
+  descriptionLabelFestive: "Un petit mot pour les participants",
+  descriptionPlaceholderFestive:
+    "Expliquez en quelques mots pourquoi vous organisez cette cagnotte et à quoi servira l'argent récolté…",
+  descriptionLabelSolidaire: "Description du projet",
+  descriptionPlaceholderSolidaire:
+    "Expliquez l'histoire de votre projet, à quoi serviront les fonds et pourquoi chaque don compte…",
+  thankYouMessageLabel: "Message de remerciement (facultatif)",
+  thankYouMessagePlaceholder:
+    "Merci du fond du cœur pour ta contribution !",
+  endDateLabel: "Date de fin",
+  endDateOptional: "Optionnel",
+  endDateHelpFestive:
+    "Vous pouvez toujours modifier ou clôturer la cagnotte plus tôt.",
+  endDateHelpSolidaire:
+    "Laissez vide si votre collecte est à durée indéterminée.",
+  visibilityLabel: "Visibilité de la cagnotte",
+  visibilityPublic: "Publique",
+  visibilityPublicHelper:
+    "Votre cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de Cagnottes.sn.",
+  visibilityPrivate: "Privée",
+  visibilityPrivateHelper:
+    "Votre cagnotte ne sera pas listée sur le site. Seules les personnes avec qui vous partagez le lien pourront y accéder.",
+  hideAmountLabel: "Cacher le montant récolté",
+  hideAmountHelp: "Les visiteurs ne verront pas la somme totale collectée.",
+  hideDonorsLabel: "Cacher les noms des participants",
+  hideDonorsHelp:
+    "Seul vous, l'organisateur, pourrez voir qui a donné.",
+  tosLabelFestive:
+    "J'accepte les Conditions Générales d'Utilisation.",
+  tosLabelSolidaire:
+    "J'accepte les Conditions Générales d'Utilisation et je confirme que les fonds récoltés seront utilisés pour la cause décrite.",
+  tosError: "Vous devez accepter les conditions pour continuer.",
+  errorTitleRequired: "Un titre est requis.",
+  errorOccasionRequired: "Une occasion est requise.",
+  errorCauseRequired: "Une cause est requise.",
+  errorBeneficiaryRequired: "Un bénéficiaire est requis.",
+  errorGoalMin: "Le montant à atteindre doit être d'au moins 1 000 FCFA.",
+  errorDescriptionMin:
+    "La description doit contenir au moins 20 caractères.",
+  errorGeneric: "Impossible de publier la cagnotte. Réessaye.",
+  errorMissingStep1:
+    "Les informations de la première étape sont manquantes. Retour à l'étape 1…",
+} as const;
+
+// ── /tableau-de-bord/nouvelle/succes (Banani screen 15) ──
+export const SUCCESS_LABELS = {
+  title: "Ta cagnotte est publiée !",
+  subtitle:
+    "Partage-la avec tes proches pour commencer à récolter des fonds.",
+  previewLabel: "Aperçu",
+  shareableUrlLabel: "Lien de la cagnotte",
+  copyCta: "Copier",
+  copiedToast: "Lien copié !",
+  shareCta: "Partager",
+  backToDashboardCta: "Retour au tableau de bord",
+} as const;
+
 // ── All-cagnottes page labels ──
 export const ALL_CAGNOTTES_LABELS = {
   pageTitle: "Toutes les cagnottes",
