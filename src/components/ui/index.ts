@@ -21,3 +21,17 @@ export type { CheckboxProps } from "./Checkbox";
 // Action
 export { Button } from "./Button";
 export type { ButtonProps } from "./Button";
+
+// Display
+export { Badge } from "./Badge";
+export type { BadgeProps } from "./Badge";
+export { Avatar } from "./Avatar";
+export type { AvatarProps } from "./Avatar";
+export { ProgressBar } from "./ProgressBar";
+export type { ProgressBarProps } from "./ProgressBar";
+export { KpiCard } from "./KpiCard";
+export type { KpiCardProps } from "./KpiCard";
+export { Pagination } from "./Pagination";
+export type { PaginationProps } from "./Pagination";
+export { Tabs } from "./Tabs";
+export type { TabsProps, TabItem } from "./Tabs";
