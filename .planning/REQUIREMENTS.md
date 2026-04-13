@@ -103,11 +103,11 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Composed Blocks (COMP)
 
-- [ ] **COMP-01**: `PublicNavbar` + `DashboardNavbar` + `TopBanner` + `Footer` + `PreFooter` composed blocks matching Banani design
-- [ ] **COMP-02**: `CampaignCard` with festive/solidaire variants, progress, CTA — used on home, all-cagnottes, dashboard, success
-- [ ] **COMP-03**: `ShareSheet` (WhatsApp / Facebook / Email / Copy link) with WhatsApp pre-filled text and OG meta tags
-- [ ] **COMP-04**: `NotificationItem`, `SidebarNav` (profile tabs), `FilterChipBar`, `TrustpilotBadge` composed blocks
-- [ ] **COMP-05**: `MiniCagnotteCard` + `OrderSummary` (sticky right column) composed blocks for participate/payment pages
+- [x] **COMP-01**: `PublicNavbar` + `DashboardNavbar` + `TopBanner` + `Footer` + `PreFooter` composed blocks matching Banani design
+- [x] **COMP-02**: `CampaignCard` with festive/solidaire variants, progress, CTA — used on home, all-cagnottes, dashboard, success
+- [x] **COMP-03**: `ShareSheet` (WhatsApp / Facebook / Email / Copy link) with WhatsApp pre-filled text and OG meta tags
+- [x] **COMP-04**: `NotificationItem`, `SidebarNav` (profile tabs), `FilterChipBar`, `TrustpilotBadge` composed blocks
+- [x] **COMP-05**: `MiniCagnotteCard` + `OrderSummary` (sticky right column) composed blocks for participate/payment pages
 
 ### Public Donor Flow (DONF) — REVENUE PATH
 
@@ -279,11 +279,11 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | PRIM-06 | Phase 3 | Complete |
 | PRIM-07 | Phase 3 | Complete |
 | PRIM-08 | Phase 3 | Complete |
-| COMP-01 | Phase 3 | Pending |
-| COMP-02 | Phase 3 | Pending |
-| COMP-03 | Phase 3 | Pending |
-| COMP-04 | Phase 3 | Pending |
-| COMP-05 | Phase 3 | Pending |
+| COMP-01 | Phase 3 | Complete |
+| COMP-02 | Phase 3 | Complete |
+| COMP-03 | Phase 3 | Complete |
+| COMP-04 | Phase 3 | Complete |
+| COMP-05 | Phase 3 | Complete |
 | DONA-06 | Phase 4 | Pending |
 | DONF-01 | Phase 4 | Pending |
 | DONF-02 | Phase 4 | Pending |

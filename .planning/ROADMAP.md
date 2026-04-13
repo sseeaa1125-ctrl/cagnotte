@@ -85,7 +85,7 @@ Plans:
 Plans:
 - [x] 03-01: Foundation — Poppins + Inter via `next/font/google`, `@theme` tokens in `globals.css`, `cn()`, `formatPrice`/`formatPhone`/`formatRelativeTime` in `src/lib/format.ts`, French labels in `src/lib/constants.ts`.
 - [x] 03-02: 18 UI primitives in `src/components/ui/*` with ring-1 purity (no domain imports). Button supports social variants (Google/Apple/WhatsApp/Facebook/Email) even where we hide them.
-- [ ] 03-03: Composed domain blocks in `src/components/{layout,cagnottes,checkout,share,notifications,trust}/*` — all blocks used by Phase 4 revenue path ship first.
+- [x] 03-03: Composed domain blocks in `src/components/{layout,cagnottes,checkout,share,notifications,trust}/*` — all blocks used by Phase 4 revenue path ship first.
 
 **Watch out for**:
 - Banani export says "PayDunya", `€`, `+33`, and "Offerts" commission — these MUST be rewritten to Bictorys / FCFA / `+221` / "6% solidaire · 8% festive" as the primitives land. Log every deviation in `.planning/banani/FRONTEND-DEVIATIONS.md`.
