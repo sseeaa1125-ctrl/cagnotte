@@ -4,8 +4,11 @@ import { prisma } from "../lib/prisma.js";
 import { queueTransactionalEmail, queueStandardEmail } from "../lib/queues/index.js";
 import { escapeHtml, formatPrice } from "../lib/utils.js";
 import { generateDownloadToken } from "./orders.js";
-import { generateSubToken } from "./communities.js";
 import * as logger from "../lib/logger.js";
+
+// NOTE: cagnottes.sn fork — community/email-marketing/push/google-calendar features removed.
+// Stubs preserved inline to keep the legacy webhook handler compiling.
+const generateSubToken = (_id: string): string => "";
 
 export const webhooksRouter = Router();
 
@@ -128,19 +131,7 @@ async function handleCommunityPaymentWebhook(
               <p><a href="${cancelUrl}" style="color:#9CA3AF;font-size:12px;text-decoration:underline;">Gérer mon abonnement</a></p>`,
           });
 
-          // Sync contact vers l'outil email marketing (community = client)
-          try {
-            const { syncContactToProvider } = await import("../lib/email-marketing.js");
-            const memberParts = (payment.subscription.memberName || "").split(" ");
-            await syncContactToProvider(payment.community.sellerId, {
-              email: payment.subscription.memberEmail,
-              firstName: memberParts[0] || undefined,
-              lastName: memberParts.slice(1).join(" ") || undefined,
-              tags: ["community"],
-            });
-          } catch (syncErr) {
-            logger.error(`[Webhook] Erreur sync email marketing communauté ref=${paymentReference}`, syncErr);
-          }
+          // NOTE: cagnottes.sn fork — email marketing sync removed.
         }
 
         // Notification au vendeur (standard — pas critique)
@@ -155,21 +146,7 @@ async function handleCommunityPaymentWebhook(
             <p><a href="${FRONTEND_URL}/dashboard/communities" style="display:inline-block;padding:12px 24px;background-color:#0D9488;color:#FFFFFF;text-decoration:none;border-radius:12px;font-weight:600;font-size:14px;">Voir dans ton dashboard</a></p>`,
         });
 
-        // Push notification au vendeur (PWA) — respect notification preferences
-        try {
-          const { sendPushToSeller, formatPushPrice } = await import("../lib/push-notifications.js");
-          const communityPrefs = (payment.community.seller.notificationPrefs as Record<string, boolean> | null) || {};
-          if (communityPrefs.pushCommunities !== false) {
-            await sendPushToSeller(payment.community.sellerId, {
-              title: "Nouvel abonné !",
-              body: `${payment.subscription.memberName || (hasRealEmail ? payment.subscription.memberEmail : "Un membre")} a rejoint ${payment.community.title} — ${formatPushPrice(payment.amount)}/mois`,
-              url: "/dashboard/communities",
-              tag: `community-${payment.id}`,
-            });
-          }
-        } catch (pushErr) {
-          logger.error(`[Push] Erreur push communauté ref=${paymentReference}`, pushErr);
-        }
+        // NOTE: cagnottes.sn fork — push notifications removed.
 
         // Logger notification
         await prisma.communityNotification.create({
@@ -423,63 +400,9 @@ webhooksRouter.post("/bictorys", async (req, res) => {
         return;
       }
 
-      // Auto-création Google Meet pour les bookings si le vendeur a Google Calendar connecté
-      let meetingUrl: string | null = null;
-      if (order.orderType === "BOOKING" && order.bookingDate && order.bookingService) {
-        try {
-          const { createMeetingEvent } = await import("../lib/google-calendar.js");
-          const meetResult = await createMeetingEvent(order.sellerId, {
-            title: `${order.bookingService.title} — ${order.customerName || order.customerEmail}`,
-            startTime: new Date(order.bookingDate),
-            durationMinutes: order.bookingDuration || 60,
-            location: order.bookingLocation || undefined,
-            attendees: [
-              { email: order.seller.email },
-              { email: order.customerEmail },
-            ],
-            reference: order.reference,
-            sellerTimezone: order.seller.timezone || "Africa/Dakar",
-          });
-          if (meetResult?.meetingUrl) {
-            meetingUrl = meetResult.meetingUrl;
-            await prisma.order.update({
-              where: { id: order.id },
-              data: { meetingUrl, googleEventId: meetResult.eventId || null },
-            });
-            logger.log(`[Webhook] Meet créé pour booking ref=${order.reference}: ${meetingUrl}, eventId=${meetResult.eventId}`);
-          }
-        } catch (meetErr) {
-          logger.error(`[Webhook] Erreur création Meet pour ref=${order.reference}`, meetErr);
-        }
-      }
-
-      // Sync contact vers l'outil email marketing du vendeur (Mailchimp, Brevo, Systeme.io)
-      // Skip if no real email provided (anonymous placeholder for DONATION/PAYMENT without email)
-      if (!order.customerEmail.endsWith("@noemail.local")) try {
-        const { syncContactToProvider } = await import("../lib/email-marketing.js");
-        const nameParts = (order.customerName || "").split(" ");
-        // Use block type (LEAD_MAGNET, WAITING_LIST, etc.) for accurate client/lead tagging
-        const blockType = order.product?.block?.type || order.orderType;
-        await syncContactToProvider(order.sellerId, {
-          email: order.customerEmail,
-          firstName: nameParts[0] || undefined,
-          lastName: nameParts.slice(1).join(" ") || undefined,
-          tags: [blockType.toLowerCase()],
-        });
-      } catch (syncErr) {
-        logger.error(`[Webhook] Erreur sync email marketing ref=${order.reference}`, syncErr);
-      }
-
-      // FORMATION: inscrire l'étudiant au cours Systeme.io après paiement
-      if (order.orderType === "SALE" && order.product?.systemeioCourseId && order.product.block?.type === "FORMATION") {
-        try {
-          const { enrollStudentInCourse } = await import("../lib/email-marketing.js");
-          await enrollStudentInCourse(order.sellerId, order.product.systemeioCourseId, order.customerEmail);
-          logger.log(`[Webhook] Inscription Systeme.io cours=${order.product.systemeioCourseId} email=${order.customerEmail} ref=${order.reference}`);
-        } catch (enrollErr) {
-          logger.error(`[Webhook] Erreur inscription Systeme.io ref=${order.reference}`, enrollErr);
-        }
-      }
+      // NOTE: cagnottes.sn fork — Google Calendar auto-Meet, email marketing sync, and
+      // Systeme.io course enrollment removed. These were fari.store-specific integrations.
+      const meetingUrl: string | null = null;
 
       // Escape user-provided data for email HTML (H10: prevent stored XSS)
       const rawCustomerName = order.customerName || (order.customerEmail.endsWith("@noemail.local") ? "Client" : order.customerEmail);
@@ -598,30 +521,7 @@ webhooksRouter.post("/bictorys", async (req, res) => {
         logger.error("Erreur email notification vendeur", emailErr);
       }
 
-      // Push notification au vendeur (PWA) — respect notification preferences
-      try {
-        const { sendPushToSeller, formatPushPrice } = await import("../lib/push-notifications.js");
-        const sellerPrefs = (order.seller.notificationPrefs as Record<string, boolean> | null) || {};
-        const pushKey = order.orderType === "DONATION" ? "pushDonations" : order.orderType === "PAYMENT" ? "pushPayments" : order.orderType === "BOOKING" ? "pushOrders" : "pushOrders";
-        if (sellerPrefs[pushKey] !== false) {
-          const pushTitle = order.orderType === "BOOKING"
-            ? "Réservation confirmée !"
-            : order.orderType === "DONATION"
-              ? "Nouveau don reçu !"
-              : order.orderType === "PAYMENT"
-                ? "Paiement reçu !"
-                : "Nouvelle vente !";
-          const customerLabel = order.customerName || (order.customerEmail.endsWith("@noemail.local") ? (order.customerPhone || "Anonyme") : order.customerEmail);
-          await sendPushToSeller(order.sellerId, {
-            title: pushTitle,
-            body: `${customerLabel} — ${formatPushPrice(order.amount)}`,
-            url: "/dashboard/orders",
-            tag: `order-${order.id}`,
-          });
-        }
-      } catch (pushErr) {
-        logger.error(`[Push] Erreur push order ref=${order.reference}`, pushErr);
-      }
+      // NOTE: cagnottes.sn fork — Web Push notifications removed.
     } else if (status === "failed" || status === "cancelled" || status === "reversed") {
       await prisma.order.update({
         where: { id: order.id },

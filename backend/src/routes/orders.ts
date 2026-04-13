@@ -747,19 +747,7 @@ ordersRouter.post("/lead-magnet", leadMagnetLimiter, leadMagnetProductLimiter, a
         logger.error("Erreur email lead magnet", emailErr);
       }
 
-      // Sync contact vers l'outil email marketing du vendeur (Brevo, Systeme.io)
-      try {
-        const { syncContactToProvider } = await import("../lib/email-marketing.js");
-        const nameParts = (data.customerName || "").split(" ");
-        await syncContactToProvider(seller.id, {
-          email: data.customerEmail,
-          firstName: nameParts[0] || undefined,
-          lastName: nameParts.slice(1).join(" ") || undefined,
-          tags: [product.block.type.toLowerCase()],
-        });
-      } catch (syncErr) {
-        logger.error(`[LeadMagnet] Erreur sync email marketing ref=${order.reference}`, syncErr);
-      }
+      // NOTE: email marketing sync (Mailchimp/Brevo/Systeme.io) removed for cagnottes.sn fork
     }
 
     res.status(201).json({
