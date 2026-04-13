@@ -16,6 +16,12 @@ import * as logger from "../lib/logger.js";
 import { formatZodError } from "../lib/zodErrors.js";
 import { queueTransactionalEmail } from "../lib/queues/index.js";
 import { parseSource } from "../lib/sources.js";
+import { computeCommission, type FundraiserSubtype } from "../lib/commission.js";
+import {
+  isBictorysCircuitOpen,
+  recordBictorysFailure,
+  recordBictorysSuccess,
+} from "../lib/payments/circuitBreaker.js";
 
 export const ordersRouter = Router();
 
@@ -43,21 +49,69 @@ const createOrderSchema = z.object({
   referrer: z.string().max(2000).optional(),
   timezone: z.string().max(100).optional(),
   otp: z.string().max(10).optional(),
+  // Phase 2 plan 02-01 — cagnottes.sn donor flags. Default false to preserve
+  // backward compatibility with non-cagnotte order types.
+  isAnonymous: z.boolean().default(false),
+  messageIsPrivate: z.boolean().default(false),
+  cagnotteSlug: z.string().min(1).max(120).optional(),
 });
 
 
-// A1: Rate limit order creation (10 per minute per IP) to prevent Bictorys payment flood
-const createOrderLimiter = rateLimit({
+// Phase 2 plan 02-01 — three composed rate limiters replace the single
+// `createOrderLimiter` (10/min IP) per RESEARCH Q2. Mitigates P07 (orders DDoS).
+//
+//   1. orderIpMinuteLimiter — 20/min per IP   (cheapest, fails fast)
+//   2. orderIpHourLimiter   — 100/hour per IP
+//   3. orderEmailMinuteLimiter — 5/min per customerEmail (lowercased)
+//
+// All three are stacked as middlewares on POST /api/orders. The /api/orders
+// skip on the global 300/15min limiter (index.ts:91) is preserved on purpose:
+// the dedicated stack is tighter and the global skip avoids double-counting.
+const orderIpMinuteLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 10,
+  max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  store: new RedisRateLimitStore("create-order"),
-  message: { error: "Trop de commandes. Réessaye dans une minute." },
+  store: new RedisRateLimitStore("order-ip-min"),
+  message: { error: "Trop de commandes, réessaye dans une minute." },
+});
+
+const orderIpHourLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore("order-ip-hour"),
+  message: { error: "Trop de commandes cette heure. Patiente un moment." },
+});
+
+const orderEmailMinuteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore("order-email-min"),
+  // Custom keyGenerator: bucket by lowercased customerEmail. Anonymous donors
+  // (no email) collapse to the single "email:anon" key and are bound by the
+  // IP layers above — accepted v1 collateral per T-02-06.
+  keyGenerator: (req) => {
+    const email = (req.body as { customerEmail?: string })?.customerEmail?.toLowerCase() || "anon";
+    return `email:${email}`;
+  },
+  // Same pattern as leadMagnetProductLimiter (orders.ts:574–583): keyGenerator
+  // doesn't use the default IP, so disable express-rate-limit's singleCount
+  // validation warning.
+  validate: false,
+  message: { error: "Trop de dons depuis cet email. Réessaye dans une minute." },
 });
 
 // ── POST /api/orders — créer commande + lancer paiement Bictorys ──
-ordersRouter.post("/", createOrderLimiter, async (req, res) => {
+ordersRouter.post(
+  "/",
+  orderIpMinuteLimiter,
+  orderIpHourLimiter,
+  orderEmailMinuteLimiter,
+  async (req, res) => {
   try {
     const data = createOrderSchema.parse(req.body);
     data.sellerSlug = data.sellerSlug.toLowerCase();
@@ -146,8 +200,11 @@ ordersRouter.post("/", createOrderLimiter, async (req, res) => {
 
     // DONATION type: same flow as PAYMENT but with separate block type
     // Also handles FUNDRAISER blocks (they use orderType DONATION)
+    // Hoisted out of the if-block so the commission calc downstream can branch
+    // on `donationBlock?.type === "FUNDRAISER"` and read `config.subtype`.
+    let donationBlock: Awaited<ReturnType<typeof prisma.block.findFirst>> = null;
     if (data.orderType === "DONATION") {
-      const donationBlock = await prisma.block.findFirst({
+      donationBlock = await prisma.block.findFirst({
         where: {
           sellerId: seller.id,
           type: { in: ["DONATION", "FUNDRAISER"] },
@@ -207,10 +264,35 @@ ordersRouter.post("/", createOrderLimiter, async (req, res) => {
 
     // C5: Calculer la commission sur le montant attendu (calculé côté serveur), pas data.amount du client
     // D5: commissionRate stocké en basis points (entier) — 800 = 8%, 400 = 4%
-    // Admin peut définir un taux custom via customCommissionRate (basis points)
-    const commissionRate = seller.customCommissionRate ?? (seller.plan === "PRO" ? 400 : 800);
-    const commissionAmount = Math.round(totalExpected * commissionRate / 10000);
-    const sellerAmount = totalExpected - commissionAmount;
+    //
+    // Phase 2 plan 02-01 — FUNDRAISER orders go through computeCommission()
+    // (Phase 1 plan 01-03 helper). Mitigates P03: the legacy Math.round path
+    // could over-collect by 1 FCFA on certain fractional results. The helper
+    // uses Math.floor (favors seller) and asserts the invariant
+    // commission + net === gross internally.
+    //
+    // Non-FUNDRAISER orders (legacy DONATION, SALE, BOOKING, PAYMENT) keep
+    // the existing Math.round path so we don't regress the fari.store fork
+    // surface that's still wired in this codebase.
+    let commissionRate: number;
+    let commissionAmount: number;
+    let sellerAmount: number;
+    if (donationBlock?.type === "FUNDRAISER") {
+      const cfg = donationBlock.config as { subtype?: string };
+      // Defensive: schema enforces subtype is "festive" | "solidaire", but the
+      // DB column is Json so we narrow at the route boundary.
+      const subtype: FundraiserSubtype =
+        cfg.subtype === "festive" ? "festive" : "solidaire";
+      const result = computeCommission(totalExpected, subtype);
+      commissionRate = result.rate;
+      commissionAmount = result.commission;
+      sellerAmount = result.net;
+    } else {
+      // Legacy non-FUNDRAISER path — preserved verbatim.
+      commissionRate = seller.customCommissionRate ?? (seller.plan === "PRO" ? 400 : 800);
+      commissionAmount = Math.round(totalExpected * commissionRate / 10000);
+      sellerAmount = totalExpected - commissionAmount;
+    }
 
     // Générer référence unique (avec retry anti-collision)
     const reference = await generateUniqueReference(prisma);
@@ -289,6 +371,9 @@ ordersRouter.post("/", createOrderLimiter, async (req, res) => {
             blockId: data.blockId || undefined,
             source: parseSource(data.referrer),
             country: getCountryFromRequest(req, data.timezone),
+            // Phase 2 plan 02-01 — cagnottes.sn donor flags (Phase 1 schema cols)
+            isAnonymous: data.isAnonymous,
+            messageIsPrivate: data.messageIsPrivate,
           },
         });
 
@@ -310,24 +395,45 @@ ordersRouter.post("/", createOrderLimiter, async (req, res) => {
       { isolationLevel: "Serializable" }
     );
 
+    // Phase 2 plan 02-01 — circuit breaker fast-fail. If the breaker is OPEN
+    // (5+ Bictorys failures in the last 30s and we're inside the 60s cooldown),
+    // skip the upstream call and return 503 immediately. Mitigates P07.
+    if (isBictorysCircuitOpen()) {
+      res.status(503).json({
+        error: "Paiement temporairement indisponible. Réessaye dans 1 minute.",
+      });
+      return;
+    }
+
     // Lancer le paiement Bictorys
     const provider = getPaymentProvider("bictorys");
-    const transaction = await provider.createTransaction({
-      amount: totalExpected,
-      currency: "XOF",
-      country: normalizeBictorysCountry(data.paymentType, data.paymentCountry || getBictorysCountry(getCountryFromRequest(req, data.timezone), data.paymentType, seller.payoutCountry, data.customerPhone)),
-      paymentType: data.paymentType,
-      reference,
-      successRedirectUrl: `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/success?ref=${reference}&type=${data.orderType}`,
-      errorRedirectUrl: `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/error?ref=${reference}`,
-      ...(data.otp && { otp: data.otp }),
-      customer: {
-        name: data.customerName,
-        phone: cleanPhoneForStorage(data.customerPhone),
-        email: resolvedEmail,
+    let transaction;
+    try {
+      transaction = await provider.createTransaction({
+        amount: totalExpected,
+        currency: "XOF",
         country: normalizeBictorysCountry(data.paymentType, data.paymentCountry || getBictorysCountry(getCountryFromRequest(req, data.timezone), data.paymentType, seller.payoutCountry, data.customerPhone)),
-      },
-    });
+        paymentType: data.paymentType,
+        reference,
+        successRedirectUrl: `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/success?ref=${reference}&type=${data.orderType}`,
+        errorRedirectUrl: `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/error?ref=${reference}`,
+        ...(data.otp && { otp: data.otp }),
+        customer: {
+          name: data.customerName,
+          phone: cleanPhoneForStorage(data.customerPhone),
+          email: resolvedEmail,
+          country: normalizeBictorysCountry(data.paymentType, data.paymentCountry || getBictorysCountry(getCountryFromRequest(req, data.timezone), data.paymentType, seller.payoutCountry, data.customerPhone)),
+        },
+      });
+      // Success — reset the circuit breaker (no-op if already CLOSED).
+      recordBictorysSuccess();
+    } catch (err) {
+      // Record the failure (may transition the circuit to OPEN if this is the
+      // 5th in the rolling 30s window) and re-throw so the existing catch
+      // block at the bottom of the handler returns the standard 500 error.
+      recordBictorysFailure();
+      throw err;
+    }
 
     // Sauvegarder l'ID externe Bictorys
     await prisma.order.update({

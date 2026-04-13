@@ -153,14 +153,18 @@ app.get("/api/queues/stats", requireAuth, async (_req, res) => {
 
 // ── Background jobs (setInterval-based — lost on restart) ──
 
-// Expire PENDING orders > 30min
+// Expire PENDING orders > 10min (Phase 2 plan 02-01: was 30min, reduced to
+// 10min per DONA-05 + P07 mitigation — caps stale-row buildup under DDoS).
+// The 5-minute setInterval tick below is unchanged: a worst-case order can
+// linger ~14m45s before being collected (10min TTL + 5min tick lag), still
+// well under the legacy 30min ceiling.
 async function expirePendingOrders() {
   try {
-    const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000);
     const result = await prisma.order.updateMany({
       where: {
         paymentStatus: "PENDING",
-        createdAt: { lt: thirtyMinAgo },
+        createdAt: { lt: tenMinAgo },
       },
       data: { paymentStatus: "EXPIRED" },
     });
