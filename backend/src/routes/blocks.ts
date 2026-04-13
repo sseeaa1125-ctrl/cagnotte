@@ -8,6 +8,7 @@ import * as logger from "../lib/logger.js";
 import { validateBlockConfig } from "../lib/blocks/schemas.js";
 import { formatZodError } from "../lib/zodErrors.js";
 import { invalidateStoreCache } from "./sellers.js";
+import { slugify, ensureUniqueSlug } from "../lib/cagnottes/slug.js";
 
 export const blocksRouter = Router();
 
@@ -330,16 +331,47 @@ blocksRouter.post("/", verifyCsrf, requireAuth, async (req, res) => {
       ? validateBlockConfig(data.type, data.config)
       : (data.config || {});
 
-    const block = await prisma.block.create({
-      data: {
-        sellerId,
-        type: data.type,
-        title: data.title,
-        config: JSON.parse(JSON.stringify(validatedConfig)),
-        position,
-        isActive: shouldBeActive,
-      },
-    });
+    // Phase 2 plan 02-01 — FUNDRAISER blocks get a unique human-readable slug
+    // generated from the title via the Phase 1 helper. ensureUniqueSlug retries
+    // on P2002 (numeric suffix), and slugify() handles diacritics + reserved-word
+    // collisions are resolved by the helper's internal start-candidate logic.
+    // Non-FUNDRAISER block types skip slug generation entirely (slug stays NULL).
+    let block: Awaited<ReturnType<typeof prisma.block.create>> | null = null;
+    if (data.type === "FUNDRAISER") {
+      const baseSlug = slugify(data.title);
+      const finalSlug = await ensureUniqueSlug(baseSlug, async (candidate) => {
+        block = await prisma.block.create({
+          data: {
+            sellerId,
+            type: data.type,
+            title: data.title,
+            config: JSON.parse(JSON.stringify(validatedConfig)),
+            position,
+            isActive: shouldBeActive,
+            slug: candidate,
+          },
+        });
+      });
+      // finalSlug is captured by ensureUniqueSlug for logging/debug; the block
+      // already has it persisted via the closure above.
+      void finalSlug;
+    } else {
+      block = await prisma.block.create({
+        data: {
+          sellerId,
+          type: data.type,
+          title: data.title,
+          config: JSON.parse(JSON.stringify(validatedConfig)),
+          position,
+          isActive: shouldBeActive,
+        },
+      });
+    }
+    if (!block) {
+      // Defensive — ensureUniqueSlug always either calls createFn successfully
+      // or throws, so this branch should be unreachable. Kept as a tripwire.
+      throw new Error("Block creation closure did not produce a block");
+    }
 
     // Create nested product if SALE, FORMATION, LEAD_MAGNET, or WAITING_LIST
     const typesWithProduct = ["SALE", "FORMATION", "LEAD_MAGNET", "WAITING_LIST"];
