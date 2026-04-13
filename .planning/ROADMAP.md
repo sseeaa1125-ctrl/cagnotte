@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (first phase)
 **Requirements**: SCHM-01, SCHM-02, SCHM-03, SCHM-04, SCHM-05, FUND-01, FUND-02, FUND-03, FUND-04, FUND-05, FUND-06, FUND-07, DONA-04, VERI-03, VERI-04
 **Success Criteria** (what must be TRUE):
-  1. `cd backend && npm run db:push` applies `Block.slug @unique`, `Order.isAnonymous`, `Order.messageIsPrivate`, the `Notification` model with `dedupeKey String @unique`, and `WebhookLog @@unique([externalId, eventType])` against the Neon dev DB with zero errors
+  1. `cd backend && npx prisma migrate dev --name phase1_cagnotte_foundations` applies `Block.slug @unique`, `Order.isAnonymous`, `Order.messageIsPrivate`, the `Notification` model with `dedupeKey String @unique`, and `WebhookLog @@unique([externalId, eventType])` against the Neon dev DB with zero errors, producing a named migration file
   2. `tsx backend/scripts/test-slug.ts` passes 50 French title fixtures including diacritics (`Coumba Ndiaye`, `Fatoumata Dramé`), reserved words (`admin` → `admin-1`), and numeric-suffix collisions (`les-30-ans-de-thomas` → `-2` → `-3`) — never random hex
   3. `tsx backend/scripts/test-commission.ts` passes 100 fixtures for both subtypes and verifies the invariant `commission + net === gross` using `Math.floor` (favor seller) with no drift
   4. `fundraiserBlockConfigSchema.superRefine` rejects `subtype: "festive"` without `occasion`, rejects `subtype: "solidaire"` without `cause` + `beneficiary`, and locks `subtype` once paid orders exist on the block
