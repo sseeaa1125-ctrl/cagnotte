@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { Button, Input, Select } from "@/components/ui";
+import { Button, Combobox, Input } from "@/components/ui";
 import { WIZARD_FIELDS, WIZARD_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 import {
@@ -14,24 +14,56 @@ import {
 } from "@/hooks/useWizardDraft";
 import { StepIndicator, WizardHeader } from "../../_StepIndicator";
 
+// Phase 7 plan 07-03 — Banani solidaire cause + beneficiary Combobox options.
 const CAUSE_OPTIONS = [
-  { value: "sante_medical", label: WIZARD_FIELDS.causeOptions.sante_medical },
-  { value: "education", label: WIZARD_FIELDS.causeOptions.education },
+  {
+    value: "sante_medical",
+    label: WIZARD_FIELDS.causeOptions.sante_medical,
+    icon: <span className="text-2xl">🏥</span>,
+  },
+  {
+    value: "education",
+    label: WIZARD_FIELDS.causeOptions.education,
+    icon: <span className="text-2xl">📚</span>,
+  },
   {
     value: "projet_solidaire",
     label: WIZARD_FIELDS.causeOptions.projet_solidaire,
+    icon: <span className="text-2xl">🤝</span>,
   },
-  { value: "urgence", label: WIZARD_FIELDS.causeOptions.urgence },
-  { value: "animaux", label: WIZARD_FIELDS.causeOptions.animaux },
-  { value: "autre", label: WIZARD_FIELDS.causeOptions.autre },
+  {
+    value: "urgence",
+    label: WIZARD_FIELDS.causeOptions.urgence,
+    icon: <span className="text-2xl">🚨</span>,
+  },
+  {
+    value: "animaux",
+    label: WIZARD_FIELDS.causeOptions.animaux,
+    icon: <span className="text-2xl">🐾</span>,
+  },
+  {
+    value: "autre",
+    label: WIZARD_FIELDS.causeOptions.autre,
+    icon: <span className="text-2xl">✨</span>,
+    separatorBefore: true,
+  },
 ];
 
 const BENEFICIARY_OPTIONS = [
-  { value: "moi_meme", label: WIZARD_FIELDS.beneficiaryOptions.moi_meme },
-  { value: "un_proche", label: WIZARD_FIELDS.beneficiaryOptions.un_proche },
+  {
+    value: "moi_meme",
+    label: WIZARD_FIELDS.beneficiaryOptions.moi_meme,
+    icon: <span className="text-2xl">👤</span>,
+  },
+  {
+    value: "un_proche",
+    label: WIZARD_FIELDS.beneficiaryOptions.un_proche,
+    icon: <span className="text-2xl">👥</span>,
+  },
   {
     value: "une_association",
     label: WIZARD_FIELDS.beneficiaryOptions.une_association,
+    icon: <span className="text-2xl">🏛️</span>,
   },
 ];
 
@@ -123,25 +155,21 @@ export default function SolidaireStep1Page() {
           error={errors.title}
           required
         />
-        <Select
+        <Combobox
           label={WIZARD_FIELDS.causeLabel}
           placeholder={WIZARD_FIELDS.causePlaceholder}
           options={CAUSE_OPTIONS}
           value={cause}
-          onChange={(e) => setCause(e.target.value as SolidaireCause)}
+          onChange={(v) => setCause(v as SolidaireCause)}
           error={errors.cause}
-          required
         />
-        <Select
+        <Combobox
           label={WIZARD_FIELDS.beneficiaryLabel}
           placeholder="Sélectionnez un bénéficiaire…"
           options={BENEFICIARY_OPTIONS}
           value={beneficiary}
-          onChange={(e) =>
-            setBeneficiary(e.target.value as SolidaireBeneficiary)
-          }
+          onChange={(v) => setBeneficiary(v as SolidaireBeneficiary)}
           error={errors.beneficiary}
-          required
         />
         <Input
           label={WIZARD_FIELDS.goalAmountLabel}

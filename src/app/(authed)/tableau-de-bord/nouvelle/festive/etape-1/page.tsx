@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { Button, Input, Select } from "@/components/ui";
+import { Button, Combobox, Input } from "@/components/ui";
 import { WIZARD_FIELDS, WIZARD_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 import {
@@ -16,14 +16,46 @@ import {
   WizardHeader,
 } from "../../_StepIndicator";
 
+// Phase 7 plan 07-03 — Banani festive occasion Combobox options.
+// Emoji is rendered inside a <span> so the ReactNode icon prop of Combobox
+// is happy (hands us full control over sizing / alignment).
 const OCCASION_OPTIONS = [
-  { value: "anniversaire", label: WIZARD_FIELDS.occasionOptions.anniversaire },
-  { value: "pot_de_depart", label: WIZARD_FIELDS.occasionOptions.pot_de_depart },
-  { value: "cadeau_commun", label: WIZARD_FIELDS.occasionOptions.cadeau_commun },
-  { value: "mariage_pacs", label: WIZARD_FIELDS.occasionOptions.mariage_pacs },
-  { value: "naissance", label: WIZARD_FIELDS.occasionOptions.naissance },
-  { value: "voyage", label: WIZARD_FIELDS.occasionOptions.voyage },
-  { value: "autre", label: WIZARD_FIELDS.occasionOptions.autre },
+  {
+    value: "anniversaire",
+    label: WIZARD_FIELDS.occasionOptions.anniversaire,
+    icon: <span className="text-2xl">🎂</span>,
+  },
+  {
+    value: "pot_de_depart",
+    label: WIZARD_FIELDS.occasionOptions.pot_de_depart,
+    icon: <span className="text-2xl">👋</span>,
+  },
+  {
+    value: "cadeau_commun",
+    label: WIZARD_FIELDS.occasionOptions.cadeau_commun,
+    icon: <span className="text-2xl">🎁</span>,
+  },
+  {
+    value: "mariage_pacs",
+    label: WIZARD_FIELDS.occasionOptions.mariage_pacs,
+    icon: <span className="text-2xl">💍</span>,
+  },
+  {
+    value: "naissance",
+    label: WIZARD_FIELDS.occasionOptions.naissance,
+    icon: <span className="text-2xl">👶</span>,
+  },
+  {
+    value: "voyage",
+    label: WIZARD_FIELDS.occasionOptions.voyage,
+    icon: <span className="text-2xl">✈️</span>,
+  },
+  {
+    value: "autre",
+    label: WIZARD_FIELDS.occasionOptions.autre,
+    icon: <span className="text-2xl">✨</span>,
+    separatorBefore: true,
+  },
 ];
 
 export default function FestiveStep1Page() {
@@ -105,14 +137,13 @@ export default function FestiveStep1Page() {
           error={errors.title}
           required
         />
-        <Select
+        <Combobox
           label={WIZARD_FIELDS.occasionLabel}
           placeholder={WIZARD_FIELDS.occasionPlaceholder}
           options={OCCASION_OPTIONS}
           value={occasion}
-          onChange={(e) => setOccasion(e.target.value as FestiveOccasion)}
+          onChange={(v) => setOccasion(v as FestiveOccasion)}
           error={errors.occasion}
-          required
         />
         <Input
           label={WIZARD_FIELDS.goalAmountLabel}
