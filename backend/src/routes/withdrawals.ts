@@ -11,6 +11,8 @@ import { initiatePayout, parseBictorysPayoutError } from "../lib/payout.js";
 import { verifyPassword } from "../lib/auth.js";
 import * as logger from "../lib/logger.js";
 import { formatZodError } from "../lib/zodErrors.js";
+// Phase 2 plan 02-02 — payout state-transition notifications (NOTF-09 / NOTF-10)
+import { firePayoutCompleted, firePayoutFailed } from "../lib/notifications/dispatch.js";
 
 export const withdrawalsRouter = Router();
 
@@ -341,6 +343,18 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
 
       logger.log(`[PAYOUT] Retrait complété — sellerId=${sellerId}, ref=${reference}, amount=${data.amount}`);
 
+      // Phase 2 plan 02-02 — fire-and-forget PAYOUT_COMPLETED notification.
+      // Post-commit only; never inside any $transaction. Caught so a notif
+      // failure cannot 500 the payout response (the user's money already
+      // moved at this point — the response MUST go through).
+      firePayoutCompleted({
+        id: withdrawal.id,
+        sellerId,
+        amount: data.amount,
+        phone: normalizedPhone,
+        provider: data.provider,
+      }).catch((err) => logger.error("[notif] firePayoutCompleted", err));
+
       res.status(201).json({
         success: true,
         message: "Retrait effectué ! Tu vas recevoir l'argent sur ton mobile money.",
@@ -358,16 +372,32 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
 
     // ── 10. Échec Bictorys — marquer le retrait comme REJECTED pour libérer le solde ──
     const userMessage = parseBictorysPayoutError(result.httpStatus, result.error);
+    const failureReason = result.error?.slice(0, 500) || "Erreur Bictorys inconnue";
 
     await prisma.withdrawal.update({
       where: { id: withdrawal.id },
       data: {
         status: "REJECTED",
-        failureReason: result.error?.slice(0, 500) || "Erreur Bictorys inconnue",
+        failureReason,
       },
     });
 
     logger.error(`[PAYOUT] Retrait échoué — sellerId=${sellerId}, ref=${reference}, httpStatus=${result.httpStatus}`, result.error);
+
+    // Phase 2 plan 02-02 — fire-and-forget PAYOUT_FAILED notification (NOTF-10).
+    // attempt=1 constant per T-02-20 accepted risk; v2 will track real attempts
+    // on the Withdrawal model.
+    firePayoutFailed(
+      {
+        id: withdrawal.id,
+        sellerId,
+        amount: data.amount,
+        phone: normalizedPhone,
+        provider: data.provider,
+      },
+      userMessage,
+      1,
+    ).catch((err) => logger.error("[notif] firePayoutFailed", err));
 
     res.status(422).json({ error: userMessage });
   } catch (err) {
