@@ -9,6 +9,8 @@ export { DatePicker } from "./DatePicker";
 export type { DatePickerProps } from "./DatePicker";
 export { Calendar } from "./Calendar";
 export type { CalendarProps } from "./Calendar";
+export { Combobox } from "./Combobox";
+export type { ComboboxProps, ComboboxOption } from "./Combobox";
 export { ImageUpload } from "./ImageUpload";
 export type { ImageUploadProps } from "./ImageUpload";
 
