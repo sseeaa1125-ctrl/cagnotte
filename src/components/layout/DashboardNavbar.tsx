@@ -1,0 +1,149 @@
+"use client";
+
+import * as React from "react";
+import { Bell } from "lucide-react";
+import { Avatar } from "@/components/ui";
+import { NAV_LABELS, MISC } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+export interface DashboardNavbarProps {
+  unreadCount: number;
+  seller: { displayName: string; avatarUrl: string | null } | null;
+  onLogout: () => void;
+  className?: string;
+}
+
+const NAV_ITEMS: Array<{ label: string; href: string }> = [
+  { label: NAV_LABELS.tableauBord, href: "/tableau-de-bord" },
+  { label: NAV_LABELS.mesContributions, href: "/mes-participations" },
+  { label: NAV_LABELS.notifications, href: "/notifications" },
+];
+
+export function DashboardNavbar({
+  unreadCount,
+  seller,
+  onLogout,
+  className,
+}: DashboardNavbarProps) {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        menuRef.current &&
+        e.target instanceof Node &&
+        !menuRef.current.contains(e.target)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [menuOpen]);
+
+  if (!seller) return null;
+
+  const showBadge = unreadCount > 0;
+  const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
+
+  return (
+    <header
+      className={cn(
+        "sticky top-0 z-40 border-b border-border bg-background",
+        className,
+      )}
+    >
+      <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
+        {/* Logo */}
+        <a
+          href="/tableau-de-bord"
+          className="font-headings text-xl font-bold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
+        >
+          {MISC.siteName}
+        </a>
+
+        {/* Center nav (desktop) */}
+        <nav className="hidden items-center gap-6 md:flex">
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* Right: notif bell + avatar */}
+        <div className="flex items-center gap-2">
+          <a
+            href="/notifications"
+            className="relative flex h-12 w-12 items-center justify-center rounded-full text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            aria-label={`${NAV_LABELS.notifications} (${unreadCount})`}
+          >
+            <Bell size={20} />
+            {showBadge ? (
+              <span
+                className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground"
+                aria-hidden
+              >
+                {badgeLabel}
+              </span>
+            ) : null}
+          </a>
+
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex h-12 w-12 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              aria-label="Ouvrir le menu du compte"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+            >
+              <Avatar
+                name={seller.displayName}
+                src={seller.avatarUrl}
+                size="md"
+              />
+            </button>
+
+            {menuOpen ? (
+              <div
+                role="menu"
+                className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-background shadow-lg"
+              >
+                <div className="border-b border-border px-4 py-3">
+                  <p className="text-sm font-semibold text-primary">
+                    {seller.displayName}
+                  </p>
+                </div>
+                <a
+                  href="/profil"
+                  role="menuitem"
+                  className="flex min-h-12 items-center px-4 text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
+                >
+                  {NAV_LABELS.profil}
+                </a>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onLogout();
+                  }}
+                  className="flex min-h-12 w-full items-center px-4 text-left text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
+                >
+                  {NAV_LABELS.seDeconnecter}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
