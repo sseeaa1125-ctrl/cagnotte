@@ -1,0 +1,986 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================
+// SELLER — Vendeur (créateur de page Izy)
+// =============================================
+model Seller {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String?
+  googleId      String?   @unique
+  emailVerified Boolean   @default(false)
+
+  slug         String  @unique
+  displayName  String
+  subtitle     String?
+  bio          String?
+  avatarUrl    String?
+  coverUrl     String?
+  showAvatar   Boolean @default(true)
+
+  instagramUrl   String?
+  tiktokUrl      String?
+  youtubeUrl     String?
+  facebookUrl    String?
+  whatsappNumber String?
+  twitterUrl     String?
+  telegramUrl    String?
+  snapchatUrl    String?
+  websiteUrl     String?
+
+  themeId      String @default("default")
+  themeFont    String @default("inter")
+  themeColors  Json?
+  bgImageUrl   String?
+  headerLayout String @default("centered")
+  imageStyle   String?
+  timezone     String @default("Africa/Dakar")
+
+  payoutPhone    String?
+  payoutProvider String?
+  payoutName     String?
+  payoutCountry  String?
+
+  // KYC — identity verification for withdrawals
+  kycStatus      String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED
+  kycIdUrl       String?  // Photo pièce d'identité
+  kycSelfieUrl   String?  // Selfie avec pièce d'identité
+  kycFullName    String?  // Nom complet sur la pièce
+  kycSubmittedAt DateTime?
+  kycReviewedAt  DateTime?
+
+  onboardingCompleted Boolean @default(false)
+
+  activity     String?
+  phone        String?
+  phoneCountry String?
+  supportPhone String?
+
+  // Tracking pixels
+  metaPixelId        String?
+  googleAdsId        String?
+  googleAnalyticsId  String?
+  tiktokPixelId      String?
+
+  // Notification preferences (JSON: { emailOrders, emailBookings, emailMarketing })
+  notificationPrefs Json?
+
+  lastInboxSeenAt  DateTime?
+  lastOrdersSeenAt DateTime?
+
+  plan          Plan      @default(FREE)
+  planExpiresAt DateTime?
+  deletedAt     DateTime?
+
+  // Email preferences
+  emailUnsubscribed     Boolean   @default(false)
+
+  // Code de retrait (PIN hashé bcrypt)
+  withdrawalPinHash     String?
+
+  // Admin — contrôle plateforme
+  withdrawalBlocked     Boolean   @default(false)
+  withdrawalBlockedAt   DateTime?
+  withdrawalBlockReason String?
+  customCommissionRate  Int?      // Taux personnalisé en basis points (null = taux global)
+  hardDeletedAt         DateTime? // Suppression définitive par admin
+  isFlagged             Boolean   @default(false)
+  flaggedAt             DateTime?
+  flagReason            String?
+
+  blocks      Block[]
+  reports     Report[]
+  orders      Order[]
+  customers   Customer[]
+  fileUploads FileUpload[]
+  withdrawals Withdrawal[]
+  pageViews   PageView[]
+  blockClicks          BlockClick[]
+  partnershipRequests   PartnershipRequest[]
+  telegramBots         TelegramBot[]
+  communities          Community[]
+  googleIntegration    GoogleIntegration?
+  emailMarketing       EmailMarketingIntegration?
+  pushSubscriptions    PushSubscription[]
+  telegramVerifications TelegramVerification[]
+
+  slugHistory          SlugHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // L3+L4: @@index([slug]) et @@index([email]) retirés — @unique crée déjà un index
+  @@index([deletedAt])
+}
+
+// =============================================
+// SLUG HISTORY — Ancien slugs pour redirection 301
+// =============================================
+model SlugHistory {
+  id        String   @id @default(cuid())
+  oldSlug   String
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([oldSlug])
+  @@index([sellerId])
+}
+
+enum Plan {
+  FREE
+  PRO
+}
+
+// =============================================
+// BLOCK — Bloc de contenu (architecture modulaire)
+// =============================================
+model Block {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  type     BlockType
+  title    String   @default("")
+  position Int
+  isActive Boolean @default(true)
+  config   Json
+
+  product             Product?
+  bookingService      BookingService?
+  community           Community?
+  blockClicks         BlockClick[]
+  partnershipRequests PartnershipRequest[]
+  orders              Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId, position])
+  @@index([sellerId, isActive])
+  @@index([sellerId, type])
+}
+
+enum BlockType {
+  LINK
+  SALE
+  BOOKING
+  PAYMENT
+  DONATION
+  FUNDRAISER
+  FORMATION
+  LEAD_MAGNET
+  WAITING_LIST
+  PARTNERSHIP
+  COMMUNITY
+  TEXT
+  VIDEO
+  IMAGE
+  DIVIDER
+  IFRAME
+  VIDEO_EMBED
+}
+
+// =============================================
+// PRODUCT — Produit digital à vendre
+// =============================================
+model Product {
+  id      String @id @default(cuid())
+  blockId String @unique
+  block   Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  title       String
+  subtitle    String?
+  description String?
+  price       Int
+  currency    String @default("XOF")
+
+  coverUrl    String?
+  fileUrl     String?
+  fileName    String?
+  fileSize    Int?
+  files       Json?      // Array of {url, fileName, fileSize?} for multi-file products
+  redirectUrl String?
+
+  buttonText     String @default("Acheter")
+  ctaStyle       String @default("button")
+  discountPrice  Int?
+
+  confirmationEmailSubject String?
+  confirmationEmailBody    String?
+
+  // Checkout page rich content
+  videoUrl          String?
+  checkoutSections  Json?
+
+  // Lead magnet / waiting list: configurable form fields
+  leadFields          Json?
+  maxSubscribers      Int?
+  showSubscriberCount  Boolean @default(true)
+
+  // Systeme.io course enrollment (FORMATION block type)
+  systemeioCourseId String?
+
+  totalSales   Int @default(0)
+  totalRevenue Int @default(0)
+
+  orders     Order[]
+  reviews    Review[]
+  orderBumps OrderBump[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================
+// BOOKING SERVICE — Service réservable
+// =============================================
+model BookingService {
+  id      String @id @default(cuid())
+  blockId String @unique
+  block   Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  price       Int
+  currency    String @default("XOF")
+  duration    Int
+  location    String?
+  coverUrl    String?
+  buttonText  String?
+  ctaStyle    String @default("button")
+
+  minAdvanceHours Int @default(24)
+
+  confirmationEmailSubject String?
+  confirmationEmailBody    String?
+
+  // Checkout page rich content
+  videoUrl          String?
+  checkoutSections  Json?
+
+  slots  BookingSlot[]
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================
+// REVIEW — Avis clients (gérés par le vendeur)
+// =============================================
+model Review {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name      String
+  text      String
+  rating    Int     @default(5)
+  avatarUrl String?
+  position  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+// =============================================
+// ORDER BUMP — Vente additionnelle au checkout
+// =============================================
+model OrderBump {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  price       Int
+  fileUrl     String?
+  fileName    String?
+  isActive    Boolean @default(true)
+
+  selections OrderBumpSelection[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+// =============================================
+// BOOKING SLOT — Créneaux de disponibilité
+// =============================================
+model BookingSlot {
+  id               String         @id @default(cuid())
+  bookingServiceId String
+  bookingService   BookingService @relation(fields: [bookingServiceId], references: [id], onDelete: Cascade)
+
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isRecurring Boolean @default(true)
+  specificDate DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([bookingServiceId, dayOfWeek])
+}
+
+// =============================================
+// ORDER — Commande
+// =============================================
+model Order {
+  id        String @id @default(cuid())
+  reference String @unique
+  sellerId  String
+  seller    Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  orderType OrderType
+
+  amount           Int
+  currency         String @default("XOF")
+  commissionRate   Int
+  commissionAmount Int
+  sellerAmount     Int
+
+  paymentStatus     PaymentStatus @default(PENDING)
+  paymentProvider   String        @default("bictorys")
+  paymentExternalId String?
+  paymentOperator   String?
+  paidAt            DateTime?
+
+  customerId    String?
+  customer      Customer? @relation(fields: [customerId], references: [id])
+  customerEmail String
+  customerName  String?
+  customerPhone String?
+
+  productId        String?
+  product          Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  bookingServiceId String?
+  bookingService   BookingService? @relation(fields: [bookingServiceId], references: [id], onDelete: SetNull)
+
+  blockId          String?
+  block            Block?          @relation(fields: [blockId], references: [id], onDelete: SetNull)
+
+  downloadUrl       String?
+  downloadCount     Int       @default(0)
+  downloadExpiresAt DateTime?
+
+  bookingDate        DateTime?
+  bookingDuration    Int?
+  bookingLocation    String?
+  bookingCancelled   Boolean   @default(false)
+  bookingCancelledAt DateTime?
+
+  // Refund fields (booking refunds via Bictorys payout)
+  refundedAt        DateTime?
+  refundReference   String?
+  refundBictorysId  String?
+
+  // Google Calendar + Meet (auto-created for bookings if seller has Google Calendar connected)
+  meetingUrl    String?
+  googleEventId String?
+
+  paymentNote    String?
+  donorMessage   String?
+  customFields   Json?
+  source         String?
+  country        String?
+
+  bumpSelections OrderBumpSelection[]
+  deletedAt      DateTime?
+
+  inboxReadAt     DateTime?  // Quand le vendeur a lu ce message dans l'inbox
+  inboxArchivedAt DateTime?  // Quand le vendeur a archivé ce message
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId, createdAt])
+  @@index([sellerId, paymentStatus])
+  @@index([customerEmail])
+  @@index([paymentExternalId])
+  @@index([productId])
+  @@index([bookingServiceId])
+  @@index([sellerId, source])
+  @@index([blockId])
+}
+
+// =============================================
+// ORDER BUMP SELECTION — Bumps choisis par le client
+// =============================================
+model OrderBumpSelection {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  orderBumpId String
+  orderBump   OrderBump @relation(fields: [orderBumpId], references: [id], onDelete: Cascade)
+
+  title String
+  price Int
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+}
+
+enum OrderType {
+  SALE
+  BOOKING
+  PAYMENT
+  DONATION
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  EXPIRED
+}
+
+// =============================================
+// CUSTOMER — Client d'un vendeur
+// =============================================
+model Customer {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  email String
+  name  String?
+  phone String?
+
+  totalSpent Int @default(0)
+  orderCount Int @default(0)
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sellerId, email])
+  @@index([sellerId])
+}
+
+// =============================================
+// FILE UPLOAD — Fichiers uploadés
+// =============================================
+model FileUpload {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  url      String
+  fileName String
+  fileSize Int
+  mimeType String
+  purpose  String
+
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
+}
+
+// =============================================
+// WEBHOOK LOG — Journal des webhooks
+// =============================================
+model WebhookLog {
+  id         String  @id @default(cuid())
+  provider   String
+  eventType  String
+  externalId String?
+  payload    Json
+  status     String
+  error      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([provider, externalId])
+  @@index([createdAt])
+}
+
+// =============================================
+// VERIFICATION CODE — Codes email temporaires
+// =============================================
+model VerificationCode {
+  id       String @id @default(cuid())
+  email    String
+  code     String
+  attempts Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([email, code])
+  @@index([expiresAt])
+}
+
+// =============================================
+// WITHDRAWAL — Demandes de retrait vendeur
+// =============================================
+model Withdrawal {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  amount   Int
+  currency String @default("XOF")
+
+  status      WithdrawalStatus @default(PENDING)
+  phone       String
+  provider    String
+  recipientName String?
+  note        String?
+
+  // Bictorys payout fields
+  reference          String  @unique
+  idempotencyKey     String  @unique
+  bictorysTransactionId String?
+  merchantFee        Int?
+  failureReason      String?
+
+  processedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId, status])
+  @@index([sellerId, createdAt])
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+// =============================================
+// PAGE VIEW — Suivi des visites page publique
+// =============================================
+model PageView {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  path      String
+  referrer  String?
+  userAgent String?
+  ip        String?
+  country   String?
+  source    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([sellerId, createdAt])
+  @@index([sellerId, source])
+  @@index([sellerId, country])
+}
+
+// =============================================
+// BLOCK CLICK — Suivi des clics sur les blocs
+// =============================================
+model BlockClick {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  blockId   String
+  block     Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  action    String @default("click")
+  ip        String?
+
+  createdAt DateTime @default(now())
+
+  @@index([sellerId, createdAt])
+  @@index([blockId, createdAt])
+}
+
+// =============================================
+// PARTNERSHIP REQUEST — Demandes de partenariat
+// =============================================
+model PartnershipRequest {
+  id       String @id @default(cuid())
+  blockId  String
+  block    Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  name     String
+  email    String
+  company  String?
+  phone    String?
+  message  String
+  budget   String?
+  status   PartnershipStatus @default(PENDING)
+  readAt     DateTime?
+  archivedAt DateTime?  // Quand le vendeur a archivé cette demande
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId, createdAt])
+  @@index([sellerId, readAt])
+  @@index([blockId, createdAt])
+}
+
+enum PartnershipStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+// =============================================
+// TELEGRAM BOT — Bots Telegram des vendeurs
+// =============================================
+model TelegramBot {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  botToken    String // Chiffré (AES-256-GCM)
+  botUsername String
+  botName    String
+
+  communities Community[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([sellerId])
+  // L5: @@index([sellerId]) retiré — @@unique crée déjà un index
+}
+
+// =============================================
+// COMMUNITY — Communauté Telegram payante
+// =============================================
+model Community {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  blockId String @unique
+  block   Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  telegramBotId String
+  telegramBot   TelegramBot @relation(fields: [telegramBotId], references: [id])
+
+  telegramChatId    BigInt
+  telegramChatTitle String?
+
+  title       String
+  description String?
+  coverUrl    String?
+  priceAmount   Int // En FCFA
+  currency      String @default("XOF")
+  billingPeriod BillingPeriod @default(MONTHLY)
+
+  subscribeFields Json? // Champs personnalisés du formulaire d'abonnement
+
+  isActive    Boolean @default(true)
+  memberCount Int     @default(0)
+
+  subscriptions CommunitySubscription[]
+  payments      CommunityPayment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([telegramChatId])
+  @@index([sellerId])
+}
+
+// =============================================
+// TELEGRAM VERIFICATION — Vérification /connect CODE
+// =============================================
+model TelegramVerification {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  code      String @unique // Code unique (ex: IZY-A7K9)
+  chatId    BigInt?        // Rempli quand le bot reçoit /connect dans un groupe
+  chatTitle String?        // Nom du groupe détecté
+  verified  Boolean @default(false)
+
+  expiresAt DateTime       // Expire après 15 min
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
+  // @unique sur code crée déjà un index — pas besoin de @@index([code])
+}
+
+// =============================================
+// COMMUNITY SUBSCRIPTION — Abonnement membre
+// =============================================
+model CommunitySubscription {
+  id          String    @id @default(cuid())
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  memberEmail    String
+  memberName     String?
+  memberPhone    String?
+  memberCountry      String?  // Pays de l'acheteur (détecté au subscribe) — utilisé pour le renouvellement Bictorys
+  memberPaymentType  String?  // Méthode de paiement utilisée (wave_money, orange_money, card) — pour le renouvellement
+  telegramUserId BigInt?
+  telegramUsername String?
+  customFields   Json? // Champs personnalisés soumis par le membre
+
+  status CommunitySubStatus @default(ACTIVE)
+
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+
+  canceledAt      DateTime?
+  inviteLink      String?
+  inviteLinkExpiresAt DateTime?
+  lastPaymentAt   DateTime?
+  gracePeriodEnd  DateTime?
+
+  // Le prix au moment de la souscription (ne change pas si le vendeur modifie le prix)
+  lockedPrice Int
+
+  payments      CommunityPayment[]
+  notifications CommunityNotification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([communityId])
+  @@index([communityId, status]) // L6: Index composé pour les requêtes cron
+  @@index([status])
+  @@index([currentPeriodEnd])
+  @@unique([communityId, memberEmail])
+  @@unique([communityId, telegramUserId])
+}
+
+// =============================================
+// COMMUNITY PAYMENT — Historique paiements communauté
+// =============================================
+model CommunityPayment {
+  id             String    @id @default(cuid())
+  subscriptionId String
+  subscription   CommunitySubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+
+  amount          Int
+  currency        String @default("XOF")
+  commissionRate   Int    @default(500) // basis points: 500 = 5%, 300 = 3%
+  commissionAmount Int    @default(0)
+  sellerAmount     Int    @default(0)
+
+  provider              String @default("bictorys")
+  providerTransactionId String?
+
+  status CommunityPaymentStatus @default(PENDING)
+
+  paymentUrl  String?
+  reference   String @unique // Référence unique pour Bictorys
+
+  periodStart DateTime
+  periodEnd   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([subscriptionId])
+  // L7: @@index([reference]) retiré — @unique crée déjà un index
+  @@index([communityId])
+  @@index([status])
+}
+
+// =============================================
+// COMMUNITY NOTIFICATION — Notifications envoyées
+// =============================================
+model CommunityNotification {
+  id             String @id @default(cuid())
+  subscriptionId String
+  subscription   CommunitySubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  type    CommunityNotifType
+  channel CommunityNotifChannel
+
+  sentAt DateTime @default(now())
+
+  @@index([subscriptionId, type])
+}
+
+enum CommunitySubStatus {
+  ACTIVE
+  GRACE_PERIOD
+  CANCELED
+  EXPIRED
+  PENDING
+}
+
+enum CommunityPaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum CommunityNotifType {
+  RENEWAL_REMINDER
+  PAYMENT_FAILED
+  GRACE_DAY_1
+  GRACE_DAY_2
+  GRACE_DAY_3
+  KICKED
+  WELCOME
+  CANCELED
+}
+
+enum CommunityNotifChannel {
+  EMAIL
+  TELEGRAM
+}
+
+enum BillingPeriod {
+  WEEKLY      // 7 jours
+  BIWEEKLY    // 15 jours
+  MONTHLY     // 30 jours (défaut)
+  QUARTERLY   // 90 jours
+  YEARLY      // 365 jours
+}
+
+// =============================================
+// GOOGLE INTEGRATION — OAuth Google Calendar + Meet
+// =============================================
+model GoogleIntegration {
+  id       String @id @default(cuid())
+  sellerId String @unique
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  email         String
+  refreshToken  String   // Chiffré (AES-256-GCM)
+  tokenExpiresAt DateTime?
+  calendarId    String   @default("primary")
+  connectedAt   DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================
+// EMAIL MARKETING INTEGRATION — Mailchimp, Brevo, Systeme.io
+// =============================================
+model EmailMarketingIntegration {
+  id       String @id @default(cuid())
+  sellerId String @unique
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  provider     String   // "mailchimp" | "brevo" | "systemeio"
+  apiKey       String   // Chiffré (AES-256-GCM)
+  listId       String?  // Mailchimp audience ID, Brevo list ID, Systeme.io tag
+  serverPrefix String?  // Mailchimp server prefix (ex: "us21")
+  syncEvents   String   @default("all") // "all" | "clients" | "leads"
+  connectedAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =============================================
+// PUSH SUBSCRIPTION — Web Push Notifications (PWA)
+// =============================================
+model PushSubscription {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  endpoint String @unique
+  p256dh   String // Public key
+  auth     String // Auth secret
+
+  createdAt DateTime @default(now())
+
+  @@index([sellerId])
+}
+
+// =============================================
+// ADMIN — Administrateur plateforme
+// =============================================
+model Admin {
+  id       String    @id @default(cuid())
+  email    String    @unique
+  password String    // bcrypt hash
+  name     String
+  role     AdminRole @default(ADMIN)
+  isActive Boolean   @default(true)
+
+  logs AdminLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+}
+
+// =============================================
+// ADMIN LOG — Journal des actions admin
+// =============================================
+model AdminLog {
+  id      String @id @default(cuid())
+  adminId String
+  admin   Admin  @relation(fields: [adminId], references: [id])
+
+  action  String  // "KYC_APPROVED", "SELLER_BANNED", "WITHDRAWAL_APPROVED", etc.
+  target  String  // "seller:cuid123", "order:cuid456"
+  details Json?
+  ip      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([adminId, createdAt])
+  @@index([action])
+  @@index([target])
+}
+
+// =============================================
+// REPORT — Signalement de page
+// =============================================
+model Report {
+  id          String   @id @default(cuid())
+  storeSlug   String
+  reason      String   // SPAM, SCAM, INAPPROPRIATE, IMPERSONATION, OTHER
+  description String?
+  email       String?
+  status      String   @default("PENDING") // PENDING, REVIEWED, DISMISSED
+  sellerId    String?
+  seller      Seller?  @relation(fields: [sellerId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([sellerId])
+  @@index([status])
+}
+
+// =============================================
+// PLATFORM CONFIG — Configuration globale
+// =============================================
+model PlatformConfig {
+  id    String @id @default("global")
+  key   String @unique
+  value Json
+
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "izi-saas": {
+      "command": "node",
+      "args": [
+        "/Users/amadoufall/.windsurf-next/extensions/izisaas.izy-saas-0.15.0/dist/mcp-server.js"
+      ],
+      "env": {
+        "IZI_API_URL": "http://localhost:3000",
+        "IZI_TOKEN": "eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiI1YmM3NjFkNC03MTg4LTRkNWYtOWM2Mi03YzZiMjgxYWE2ZWIiLCJlbWFpbCI6ImFtYWRvdWZpbmFuY2VzQGdtYWlsLmNvbSIsIm5hbWUiOiJhbWFkb3UiLCJhdmF0YXJVcmwiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS9BQ2c4b2NLQXpJbVdQWXhzU2NxeDY2dW9FTG1aX0ZZTnhtWEowXzVMVnFyZ1ZkOEw5QWFzUnVzPXM5Ni1jIiwiaWF0IjoxNzc0MDgzMTMwLCJpc3MiOiJpemlzYWFzIiwiZXhwIjoxNzc2Njc1MTMwfQ.K0uL1S_SfIUJVCsvbJdx0VKB4xiHwpr8u-hedl4yQq8"
+      }
+    }
+  }
+}

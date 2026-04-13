@@ -1,0 +1,836 @@
+import { Router } from "express";
+import { z } from "zod";
+import { prisma } from "../lib/prisma.js";
+import { Prisma } from "../generated/prisma/client.js";
+import { requireAuth } from "../middleware/auth.js";
+import { verifyCsrf } from "../lib/auth.js";
+import * as logger from "../lib/logger.js";
+import { validateBlockConfig } from "../lib/blocks/schemas.js";
+import { formatZodError } from "../lib/zodErrors.js";
+import { invalidateStoreCache } from "./sellers.js";
+
+export const blocksRouter = Router();
+
+const productSchema = z.object({
+  title: z.string().min(1, "Titre requis").max(200, "Titre trop long"),
+  subtitle: z.string().max(200).nullable().optional(),
+  description: z.string().max(5000).nullable().optional(),
+  price: z.number().int().min(0),
+  coverUrl: z.string().url().nullable().optional(),
+  fileUrl: z.string().url().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  files: z.array(z.object({
+    url: z.string().url(),
+    fileName: z.string(),
+    fileSize: z.number().int().optional(),
+  })).nullable().optional(),
+  redirectUrl: z.string().url().nullable().optional(),
+  buttonText: z.string().max(30).optional(),
+  ctaStyle: z.enum(["button", "callout", "preview"]).optional(),
+  discountPrice: z.number().int().min(0).nullable().optional(),
+  confirmationEmailSubject: z.string().nullable().optional(),
+  confirmationEmailBody: z.string().nullable().optional(),
+  leadFields: z.array(z.object({
+    id: z.string(),
+    type: z.enum(["name", "email", "phone", "whatsapp", "custom"]),
+    label: z.string(),
+    placeholder: z.string().optional(),
+    required: z.boolean(),
+  })).nullable().optional(),
+  maxSubscribers: z.number().int().min(1).nullable().optional(),
+  showSubscriberCount: z.boolean().optional(),
+  systemeioCourseId: z.string().nullable().optional(),
+  videoUrl: z.string().url().nullable().optional(),
+  checkoutSections: z.array(z.object({
+    id: z.string().optional(),
+    type: z.enum(["text", "faq", "features", "video"]),
+    title: z.string().max(200).optional(),
+    content: z.string().max(5000).optional(),
+    items: z.array(z.object({
+      question: z.string().max(500).optional(),
+      answer: z.string().max(2000).optional(),
+      text: z.string().max(500).optional(),
+    })).optional(),
+  })).nullable().optional(),
+});
+
+const bookingServiceSchema = z.object({
+  title: z.string().min(1, "Titre requis").max(200, "Titre trop long"),
+  description: z.string().max(2000).nullable().optional(),
+  price: z.number().int().min(500),
+  duration: z.number().int().min(15),
+  location: z.string().nullable().optional(),
+  coverUrl: z.string().url().nullable().optional(),
+  buttonText: z.string().max(30).nullable().optional(),
+  ctaStyle: z.enum(["button", "callout", "preview"]).default("button").optional(),
+  confirmationEmailSubject: z.string().nullable().optional(),
+  confirmationEmailBody: z.string().nullable().optional(),
+  videoUrl: z.string().url().nullable().optional(),
+  checkoutSections: z.array(z.object({
+    id: z.string().optional(),
+    type: z.enum(["text", "faq", "features", "video"]),
+    title: z.string().max(200).optional(),
+    content: z.string().max(5000).optional(),
+    items: z.array(z.object({
+      question: z.string().max(500).optional(),
+      answer: z.string().max(2000).optional(),
+      text: z.string().max(500).optional(),
+    })).optional(),
+  })).nullable().optional(),
+});
+
+const createBlockSchema = z.object({
+  type: z.enum(["LINK", "SALE", "BOOKING", "PAYMENT", "DONATION", "FUNDRAISER", "FORMATION", "LEAD_MAGNET", "WAITING_LIST", "PARTNERSHIP"]),
+  title: z.string().min(1),
+  config: z.record(z.unknown()).default({}),
+  isActive: z.boolean().optional(),
+  product: productSchema.optional(),
+  bookingService: bookingServiceSchema.optional(),
+});
+
+const updateBlockSchema = z.object({
+  title: z.string().min(1).optional(),
+  config: z.record(z.unknown()).optional(),
+  isActive: z.boolean().optional(),
+  product: productSchema.partial().optional(),
+  bookingService: bookingServiceSchema.partial().optional(),
+});
+
+const reorderSchema = z.object({
+  blockIds: z.array(z.string()),
+});
+
+// Shared includes for block queries
+const blockIncludes = {
+  product: {
+    include: {
+      reviews: { orderBy: { position: "asc" as const } },
+      orderBumps: true,
+    },
+  },
+  bookingService: {
+    include: { slots: true },
+  },
+  community: {
+    select: {
+      id: true,
+      sellerId: true,
+      blockId: true,
+      telegramChatTitle: true,
+      title: true,
+      description: true,
+      coverUrl: true,
+      priceAmount: true,
+      currency: true,
+      subscribeFields: true,
+      isActive: true,
+      memberCount: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  },
+};
+
+// GET /api/blocks — liste des blocs du vendeur (auth requise)
+blocksRouter.get("/", requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+
+    const blocks = await prisma.block.findMany({
+      where: { sellerId },
+      orderBy: { position: "asc" },
+      include: blockIncludes,
+    });
+
+    res.json({ blocks });
+  } catch (err) {
+    logger.error("Erreur liste blocs", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// GET /api/blocks/:id — un seul bloc (auth requise)
+blocksRouter.get("/:id", requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+    const block = await prisma.block.findUnique({
+      where: { id: req.params.id as string },
+      include: blockIncludes,
+    });
+    if (!block || block.sellerId !== sellerId) {
+      res.status(404).json({ error: "Bloc introuvable" });
+      return;
+    }
+    res.json({ block });
+  } catch (err) {
+    logger.error("Erreur get bloc", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// GET /api/blocks/:id/progress — progression d'une cagnotte (public, pas d'auth)
+blocksRouter.get("/:id/progress", async (req, res) => {
+  try {
+    const block = await prisma.block.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, type: true, config: true, sellerId: true, isActive: true },
+    });
+
+    if (!block || block.type !== "FUNDRAISER" || !block.isActive) {
+      res.status(404).json({ error: "Cagnotte introuvable" });
+      return;
+    }
+
+    const config = block.config as Record<string, unknown>;
+    const goalAmount = (config.goalAmount as number) || 0;
+
+    const stats = await prisma.order.aggregate({
+      where: {
+        blockId: block.id,
+        orderType: "DONATION",
+        paymentStatus: "PAID",
+      },
+      _sum: { amount: true },
+      _count: true,
+    });
+
+    const collected = stats._sum.amount || 0;
+    const donorCount = stats._count || 0;
+    const percentage = goalAmount > 0 ? Math.min(Math.round((collected / goalAmount) * 100), 100) : 0;
+
+    res.json({
+      goalAmount,
+      collected,
+      donorCount,
+      percentage,
+      endDate: (config.endDate as string) || null,
+      showDonorCount: config.showDonorCount !== false,
+    });
+  } catch (err) {
+    logger.error("Erreur progress cagnotte", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// GET /api/blocks/:id/donations — 10 derniers dons d'une cagnotte (public)
+blocksRouter.get("/:id/donations", async (req, res) => {
+  try {
+    const block = await prisma.block.findUnique({
+      where: { id: req.params.id as string },
+      select: { id: true, type: true, isActive: true },
+    });
+
+    if (!block || block.type !== "FUNDRAISER" || !block.isActive) {
+      res.status(404).json({ error: "Cagnotte introuvable" });
+      return;
+    }
+
+    const donations = await prisma.order.findMany({
+      where: {
+        blockId: block.id,
+        orderType: "DONATION",
+        paymentStatus: "PAID",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        amount: true,
+        customerName: true,
+        donorMessage: true,
+        createdAt: true,
+      },
+    });
+
+    res.json({
+      donations: donations.map((d) => ({
+        id: d.id,
+        amount: d.amount,
+        name: d.customerName || "Anonyme",
+        message: d.donorMessage || null,
+        createdAt: d.createdAt,
+      })),
+    });
+  } catch (err) {
+    logger.error("Erreur donations cagnotte", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// Limites par plan — temporairement désactivées (sera configuré via admin dashboard)
+const PLAN_LIMITS = {
+  FREE: { maxBlocks: Infinity, maxSaleBlocks: Infinity, maxBookingBlocks: Infinity },
+  PRO: { maxBlocks: Infinity, maxSaleBlocks: Infinity, maxBookingBlocks: Infinity },
+} as const;
+
+// POST /api/blocks — créer un bloc (auth requise)
+blocksRouter.post("/", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+    const plan = req.seller!.plan || "FREE";
+    const data = createBlockSchema.parse(req.body);
+
+    // Vérifier les limites du plan
+    const limits = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] || PLAN_LIMITS.FREE;
+    const existingBlocks = await prisma.block.findMany({
+      where: { sellerId },
+      select: { type: true },
+    });
+
+    if (existingBlocks.length >= limits.maxBlocks) {
+      res.status(403).json({
+        error: `Limite atteinte : ${limits.maxBlocks} blocs max sur le plan ${plan}. Passe au Pro pour débloquer.`,
+      });
+      return;
+    }
+
+    if (["SALE", "FORMATION", "LEAD_MAGNET", "WAITING_LIST", "PARTNERSHIP"].includes(data.type)) {
+      const saleCount = existingBlocks.filter((b) => ["SALE", "FORMATION", "LEAD_MAGNET", "WAITING_LIST", "PARTNERSHIP"].includes(b.type)).length;
+      if (saleCount >= limits.maxSaleBlocks) {
+        res.status(403).json({
+          error: `Limite atteinte : ${limits.maxSaleBlocks} bloc(s) vente max sur le plan ${plan}.`,
+        });
+        return;
+      }
+    }
+
+    if (data.type === "BOOKING") {
+      const bookingCount = existingBlocks.filter((b) => b.type === "BOOKING").length;
+      if (bookingCount >= limits.maxBookingBlocks) {
+        res.status(403).json({
+          error: `Limite atteinte : ${limits.maxBookingBlocks} bloc(s) réservation max sur le plan ${plan}.`,
+        });
+        return;
+      }
+    }
+
+    // Bloc SALE actif : le fichier digital est obligatoire (sauf si redirectUrl) — les brouillons passent
+    const hasFiles = data.product?.fileUrl || (data.product?.files && data.product.files.length > 0);
+    if (data.type === "SALE" && data.isActive !== false && data.product && !hasFiles && !data.product.redirectUrl) {
+      res.status(400).json({ error: "Le fichier digital ou l'URL de redirection est obligatoire" });
+      return;
+    }
+
+    // Position = dernier + 1
+    const lastBlock = await prisma.block.findFirst({
+      where: { sellerId },
+      orderBy: { position: "desc" },
+    });
+    const position = (lastBlock?.position ?? -1) + 1;
+
+    // Bloc SALE sans fichier → forcé inactif ; sinon respecter isActive du client (Brouillon)
+    const hasAnyFile = data.product?.fileUrl || (data.product?.files && data.product.files.length > 0);
+    const saleNoFile = data.type === "SALE" && (!hasAnyFile && !data.product?.redirectUrl);
+    const shouldBeActive = saleNoFile ? false : (data.isActive ?? true);
+
+    // S10: Validate config only for types that carry meaningful config data
+    // SALE/BOOKING/LEAD_MAGNET/WAITING_LIST use config: {} at creation (product/service created separately)
+    const typesWithConfig = ["LINK", "PAYMENT", "DONATION", "FUNDRAISER", "PARTNERSHIP"];
+    const validatedConfig = typesWithConfig.includes(data.type)
+      ? validateBlockConfig(data.type, data.config)
+      : (data.config || {});
+
+    const block = await prisma.block.create({
+      data: {
+        sellerId,
+        type: data.type,
+        title: data.title,
+        config: JSON.parse(JSON.stringify(validatedConfig)),
+        position,
+        isActive: shouldBeActive,
+      },
+    });
+
+    // Create nested product if SALE, FORMATION, LEAD_MAGNET, or WAITING_LIST
+    const typesWithProduct = ["SALE", "FORMATION", "LEAD_MAGNET", "WAITING_LIST"];
+    if (typesWithProduct.includes(data.type) && data.product) {
+      const defaultBtn = data.type === "FORMATION" ? "Accéder" : data.type === "LEAD_MAGNET" ? "Recevoir" : data.type === "WAITING_LIST" ? "S'inscrire" : "Acheter";
+      await prisma.product.create({
+        data: {
+          blockId: block.id,
+          title: data.product.title,
+          subtitle: data.product.subtitle || null,
+          description: data.product.description || null,
+          price: data.product.price,
+          coverUrl: data.product.coverUrl || null,
+          fileUrl: data.product.fileUrl || null,
+          fileName: data.product.fileName || null,
+          files: data.product.files ?? undefined,
+          redirectUrl: data.product.redirectUrl || null,
+          buttonText: data.product.buttonText || defaultBtn,
+          ctaStyle: data.product.ctaStyle || "button",
+          discountPrice: data.product.discountPrice ?? null,
+          confirmationEmailSubject: data.product.confirmationEmailSubject || null,
+          confirmationEmailBody: data.product.confirmationEmailBody || null,
+          leadFields: data.product.leadFields ?? undefined,
+          maxSubscribers: data.product.maxSubscribers ?? undefined,
+          showSubscriberCount: data.product.showSubscriberCount ?? true,
+          videoUrl: data.product.videoUrl || null,
+          checkoutSections: data.product.checkoutSections ?? undefined,
+          systemeioCourseId: data.product.systemeioCourseId || null,
+        },
+      });
+    }
+
+    // Create nested bookingService if BOOKING
+    if (data.type === "BOOKING" && data.bookingService) {
+      await prisma.bookingService.create({
+        data: {
+          blockId: block.id,
+          title: data.bookingService.title,
+          description: data.bookingService.description || null,
+          price: data.bookingService.price,
+          duration: data.bookingService.duration,
+          location: data.bookingService.location || null,
+          coverUrl: data.bookingService.coverUrl || null,
+          buttonText: data.bookingService.buttonText || "Réserver",
+          ctaStyle: data.bookingService.ctaStyle || "button",
+          confirmationEmailSubject: data.bookingService.confirmationEmailSubject || null,
+          confirmationEmailBody: data.bookingService.confirmationEmailBody || null,
+          videoUrl: data.bookingService.videoUrl || null,
+          checkoutSections: data.bookingService.checkoutSections ?? undefined,
+        },
+      });
+    }
+
+    // Re-fetch with includes
+    const fullBlock = await prisma.block.findUnique({
+      where: { id: block.id },
+      include: blockIncludes,
+    });
+
+    await invalidateStoreCache(sellerId);
+    res.status(201).json({ block: fullBlock });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      const field = err.errors[0].path.join(".");
+      const msg = err.errors[0].message;
+      logger.error("Zod validation bloc", { field, msg, body: JSON.stringify(req.body).slice(0, 500) });
+      res.status(400).json({ error: formatZodError(err) });
+      return;
+    }
+    logger.error("Erreur création bloc", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// PUT /api/blocks/:id — modifier un bloc (auth requise)
+blocksRouter.put("/:id", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+    const data = updateBlockSchema.parse(req.body);
+
+    const blockId = req.params.id as string;
+    const existing = await prisma.block.findUnique({
+      where: { id: blockId },
+    });
+    if (!existing || existing.sellerId !== sellerId) {
+      res.status(404).json({ error: "Bloc introuvable" });
+      return;
+    }
+
+    // S10: Validate config on update only for types with meaningful config
+    const typesWithConfigUpdate = ["LINK", "PAYMENT", "DONATION", "FUNDRAISER", "FORMATION", "PARTNERSHIP"];
+    const validatedUpdateConfig = data.config && typesWithConfigUpdate.includes(existing.type)
+      ? validateBlockConfig(existing.type, data.config)
+      : data.config;
+
+    const block = await prisma.block.update({
+      where: { id: blockId },
+      data: {
+        ...(data.title && { title: data.title }),
+        ...(validatedUpdateConfig && { config: JSON.parse(JSON.stringify(validatedUpdateConfig)) as never }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+      include: { product: true, bookingService: true },
+    });
+
+    // Update nested product if provided
+    if (data.product && block.product) {
+      await prisma.product.update({
+        where: { id: block.product.id },
+        data: {
+          ...(data.product.title !== undefined && { title: data.product.title }),
+          ...(data.product.subtitle !== undefined && { subtitle: data.product.subtitle }),
+          ...(data.product.description !== undefined && { description: data.product.description }),
+          ...(data.product.price !== undefined && { price: data.product.price }),
+          ...(data.product.coverUrl !== undefined && { coverUrl: data.product.coverUrl }),
+          ...(data.product.fileUrl !== undefined && { fileUrl: data.product.fileUrl }),
+          ...(data.product.fileName !== undefined && { fileName: data.product.fileName }),
+          ...(data.product.files !== undefined && { files: data.product.files === null ? Prisma.JsonNull : data.product.files }),
+          ...(data.product.redirectUrl !== undefined && { redirectUrl: data.product.redirectUrl }),
+          ...(data.product.buttonText !== undefined && { buttonText: data.product.buttonText }),
+          ...(data.product.ctaStyle !== undefined && { ctaStyle: data.product.ctaStyle }),
+          ...(data.product.discountPrice !== undefined && { discountPrice: data.product.discountPrice }),
+          ...(data.product.confirmationEmailSubject !== undefined && { confirmationEmailSubject: data.product.confirmationEmailSubject }),
+          ...(data.product.confirmationEmailBody !== undefined && { confirmationEmailBody: data.product.confirmationEmailBody }),
+          ...(data.product.leadFields !== undefined && { leadFields: data.product.leadFields === null ? Prisma.JsonNull : data.product.leadFields }),
+          ...(data.product.maxSubscribers !== undefined && { maxSubscribers: data.product.maxSubscribers }),
+          ...(data.product.showSubscriberCount !== undefined && { showSubscriberCount: data.product.showSubscriberCount }),
+          ...(data.product.videoUrl !== undefined && { videoUrl: data.product.videoUrl }),
+          ...(data.product.checkoutSections !== undefined && { checkoutSections: data.product.checkoutSections === null ? Prisma.JsonNull : data.product.checkoutSections }),
+          ...(data.product.systemeioCourseId !== undefined && { systemeioCourseId: data.product.systemeioCourseId }),
+        },
+      });
+    }
+
+    // Update nested bookingService if provided
+    if (data.bookingService && block.bookingService) {
+      logger.log("[PUT block] bookingService received:", JSON.stringify(data.bookingService));
+      await prisma.bookingService.update({
+        where: { id: block.bookingService.id },
+        data: {
+          ...(data.bookingService.title !== undefined && { title: data.bookingService.title }),
+          ...(data.bookingService.description !== undefined && { description: data.bookingService.description }),
+          ...(data.bookingService.price !== undefined && { price: data.bookingService.price }),
+          ...(data.bookingService.duration !== undefined && { duration: data.bookingService.duration }),
+          ...(data.bookingService.location !== undefined && { location: data.bookingService.location }),
+          ...(data.bookingService.coverUrl !== undefined && { coverUrl: data.bookingService.coverUrl }),
+          ...(data.bookingService.buttonText !== undefined && { buttonText: data.bookingService.buttonText }),
+          ...(data.bookingService.ctaStyle !== undefined && { ctaStyle: data.bookingService.ctaStyle }),
+          ...(data.bookingService.confirmationEmailSubject !== undefined && { confirmationEmailSubject: data.bookingService.confirmationEmailSubject }),
+          ...(data.bookingService.confirmationEmailBody !== undefined && { confirmationEmailBody: data.bookingService.confirmationEmailBody }),
+          ...(data.bookingService.videoUrl !== undefined && { videoUrl: data.bookingService.videoUrl }),
+          ...(data.bookingService.checkoutSections !== undefined && { checkoutSections: data.bookingService.checkoutSections === null ? Prisma.JsonNull : data.bookingService.checkoutSections }),
+        },
+      });
+    }
+
+    // Re-fetch with updated includes
+    const updatedBlock = await prisma.block.findUnique({
+      where: { id: blockId },
+      include: blockIncludes,
+    });
+
+    await invalidateStoreCache(sellerId);
+    res.json({ block: updatedBlock });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: formatZodError(err) });
+      return;
+    }
+    logger.error("Erreur update bloc", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// DELETE /api/blocks/:id — supprimer un bloc (auth requise)
+blocksRouter.delete("/:id", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+
+    const blockId = req.params.id as string;
+    const existing = await prisma.block.findUnique({
+      where: { id: blockId },
+    });
+    if (!existing || existing.sellerId !== sellerId) {
+      res.status(404).json({ error: "Bloc introuvable" });
+      return;
+    }
+
+    await prisma.block.delete({ where: { id: blockId } });
+
+    await invalidateStoreCache(sellerId);
+    res.json({ success: true });
+  } catch (err) {
+    logger.error("Erreur suppression bloc", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// PUT /api/blocks/:id/slots — gérer les créneaux d'un booking service (auth requise)
+// L6: Compare times numerically, not lexicographically
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+const slotSchema = z.object({
+  dayOfWeek: z.number().min(0).max(6),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/),
+  endTime: z.string().regex(/^\d{2}:\d{2}$/),
+}).refine(
+  (s) => timeToMinutes(s.startTime) < timeToMinutes(s.endTime),
+  { message: "L'heure de début doit être avant l'heure de fin" }
+);
+
+const slotsUpdateSchema = z.object({
+  slots: z.array(slotSchema),
+});
+
+blocksRouter.put("/:id/slots", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+    const blockId = req.params.id as string;
+    const { slots } = slotsUpdateSchema.parse(req.body);
+
+    const block = await prisma.block.findUnique({
+      where: { id: blockId },
+      include: { bookingService: true },
+    });
+
+    if (!block || block.sellerId !== sellerId) {
+      res.status(404).json({ error: "Bloc introuvable" });
+      return;
+    }
+    if (!block.bookingService) {
+      res.status(400).json({ error: "Ce bloc n'a pas de service de réservation" });
+      return;
+    }
+
+    const serviceId = block.bookingService.id;
+
+    // Atomic delete + recreate in a transaction
+    await prisma.$transaction(async (tx) => {
+      await tx.bookingSlot.deleteMany({
+        where: { bookingServiceId: serviceId },
+      });
+
+      if (slots.length > 0) {
+        await tx.bookingSlot.createMany({
+          data: slots.map((s) => ({
+            bookingServiceId: serviceId,
+            dayOfWeek: s.dayOfWeek,
+            startTime: s.startTime,
+            endTime: s.endTime,
+          })),
+        });
+      }
+    });
+
+    const updatedSlots = await prisma.bookingSlot.findMany({
+      where: { bookingServiceId: serviceId },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+    });
+
+    res.json({ slots: updatedSlots });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: formatZodError(err) });
+      return;
+    }
+    logger.error("Erreur update slots", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// PATCH /api/blocks/reorder — réordonner les blocs (auth requise)
+blocksRouter.patch("/reorder", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+    const { blockIds } = reorderSchema.parse(req.body);
+
+    await prisma.$transaction(
+      blockIds.map((id, index) =>
+        prisma.block.updateMany({
+          where: { id, sellerId },
+          data: { position: index },
+        })
+      )
+    );
+
+    await invalidateStoreCache(sellerId);
+    res.json({ success: true });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: formatZodError(err) });
+      return;
+    }
+    logger.error("Erreur reorder blocs", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// =============================================
+// REVIEWS — Avis clients (gérés par le vendeur)
+// =============================================
+
+const reviewSchema = z.object({
+  name: z.string().min(1).max(100),
+  text: z.string().min(1).max(500),
+  rating: z.number().int().min(1).max(5).default(5),
+  avatarUrl: z.string().nullable().optional(),
+});
+
+// Helper: verify block ownership and get product
+async function getOwnedProduct(sellerId: string, blockId: string) {
+  const block = await prisma.block.findUnique({
+    where: { id: blockId },
+    include: { product: true },
+  });
+  if (!block || block.sellerId !== sellerId) return null;
+  return block.product;
+}
+
+// POST /api/blocks/:id/reviews — ajouter un avis
+blocksRouter.post("/:id/reviews", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const product = await getOwnedProduct(req.seller!.sub, req.params.id as string);
+    if (!product) { res.status(404).json({ error: "Produit introuvable" }); return; }
+
+    const data = reviewSchema.parse(req.body);
+
+    const lastReview = await prisma.review.findFirst({
+      where: { productId: product.id },
+      orderBy: { position: "desc" },
+    });
+
+    const review = await prisma.review.create({
+      data: {
+        productId: product.id,
+        name: data.name,
+        text: data.text,
+        rating: data.rating,
+        avatarUrl: data.avatarUrl || null,
+        position: (lastReview?.position ?? -1) + 1,
+      },
+    });
+
+    res.status(201).json({ review });
+  } catch (err) {
+    if (err instanceof z.ZodError) { res.status(400).json({ error: formatZodError(err) }); return; }
+    logger.error("Erreur création review", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// PUT /api/blocks/:id/reviews/:reviewId — modifier un avis
+blocksRouter.put("/:id/reviews/:reviewId", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const product = await getOwnedProduct(req.seller!.sub, req.params.id as string);
+    if (!product) { res.status(404).json({ error: "Produit introuvable" }); return; }
+
+    const data = reviewSchema.partial().parse(req.body);
+    const review = await prisma.review.findFirst({
+      where: { id: req.params.reviewId as string, productId: product.id },
+    });
+    if (!review) { res.status(404).json({ error: "Avis introuvable" }); return; }
+
+    const updated = await prisma.review.update({
+      where: { id: review.id },
+      data: {
+        ...(data.name !== undefined && { name: data.name }),
+        ...(data.text !== undefined && { text: data.text }),
+        ...(data.rating !== undefined && { rating: data.rating }),
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+      },
+    });
+
+    res.json({ review: updated });
+  } catch (err) {
+    if (err instanceof z.ZodError) { res.status(400).json({ error: formatZodError(err) }); return; }
+    logger.error("Erreur update review", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// DELETE /api/blocks/:id/reviews/:reviewId — supprimer un avis
+blocksRouter.delete("/:id/reviews/:reviewId", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const product = await getOwnedProduct(req.seller!.sub, req.params.id as string);
+    if (!product) { res.status(404).json({ error: "Produit introuvable" }); return; }
+
+    const review = await prisma.review.findFirst({
+      where: { id: req.params.reviewId as string, productId: product.id },
+    });
+    if (!review) { res.status(404).json({ error: "Avis introuvable" }); return; }
+
+    await prisma.review.delete({ where: { id: review.id } });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error("Erreur suppression review", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// =============================================
+// ORDER BUMPS — Vente additionnelle au checkout
+// =============================================
+
+const orderBumpSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().nullable().optional(),
+  price: z.number().int().min(0),
+  fileUrl: z.string().nullable().optional(),
+  fileName: z.string().nullable().optional(),
+  isActive: z.boolean().optional(),
+});
+
+// POST /api/blocks/:id/bumps — ajouter un order bump
+blocksRouter.post("/:id/bumps", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const product = await getOwnedProduct(req.seller!.sub, req.params.id as string);
+    if (!product) { res.status(404).json({ error: "Produit introuvable" }); return; }
+
+    const data = orderBumpSchema.parse(req.body);
+
+    const bump = await prisma.orderBump.create({
+      data: {
+        productId: product.id,
+        title: data.title,
+        description: data.description || null,
+        price: data.price,
+        fileUrl: data.fileUrl || null,
+        fileName: data.fileName || null,
+        isActive: data.isActive ?? true,
+      },
+    });
+
+    res.status(201).json({ bump });
+  } catch (err) {
+    if (err instanceof z.ZodError) { res.status(400).json({ error: formatZodError(err) }); return; }
+    logger.error("Erreur création order bump", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// PUT /api/blocks/:id/bumps/:bumpId — modifier un order bump
+blocksRouter.put("/:id/bumps/:bumpId", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const product = await getOwnedProduct(req.seller!.sub, req.params.id as string);
+    if (!product) { res.status(404).json({ error: "Produit introuvable" }); return; }
+
+    const data = orderBumpSchema.partial().parse(req.body);
+    const bump = await prisma.orderBump.findFirst({
+      where: { id: req.params.bumpId as string, productId: product.id },
+    });
+    if (!bump) { res.status(404).json({ error: "Order bump introuvable" }); return; }
+
+    const updated = await prisma.orderBump.update({
+      where: { id: bump.id },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.description !== undefined && { description: data.description }),
+        ...(data.price !== undefined && { price: data.price }),
+        ...(data.fileUrl !== undefined && { fileUrl: data.fileUrl }),
+        ...(data.fileName !== undefined && { fileName: data.fileName }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
+      },
+    });
+
+    res.json({ bump: updated });
+  } catch (err) {
+    if (err instanceof z.ZodError) { res.status(400).json({ error: formatZodError(err) }); return; }
+    logger.error("Erreur update order bump", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// DELETE /api/blocks/:id/bumps/:bumpId — supprimer un order bump
+blocksRouter.delete("/:id/bumps/:bumpId", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    const product = await getOwnedProduct(req.seller!.sub, req.params.id as string);
+    if (!product) { res.status(404).json({ error: "Produit introuvable" }); return; }
+
+    const bump = await prisma.orderBump.findFirst({
+      where: { id: req.params.bumpId as string, productId: product.id },
+    });
+    if (!bump) { res.status(404).json({ error: "Order bump introuvable" }); return; }
+
+    await prisma.orderBump.delete({ where: { id: bump.id } });
+    res.json({ success: true });
+  } catch (err) {
+    logger.error("Erreur suppression order bump", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});

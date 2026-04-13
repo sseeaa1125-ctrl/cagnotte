@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Calque_1" data-name="Calque 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1124.23 428.74">
+  <defs>
+    <style>
+      .cls-1 {
+        letter-spacing: 0em;
+      }
+
+      .cls-2 {
+        font-family: AktivGrotesk-Bold, AktivGrotesk-Bold;
+        font-size: 169.31px;
+        font-weight: 700;
+      }
+
+      .cls-2, .cls-3 {
+        fill: #f4f4f4;
+      }
+
+      .cls-4 {
+        letter-spacing: -.09em;
+      }
+
+      .cls-5 {
+        letter-spacing: 0em;
+      }
+
+      .cls-6 {
+        letter-spacing: -.02em;
+      }
+
+      .cls-3 {
+        stroke-width: 0px;
+      }
+
+      .cls-7 {
+        letter-spacing: 0em;
+      }
+
+      .cls-8 {
+        letter-spacing: .02em;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="cls-3" d="M255.43,140.15v77.36h-22.36v-77.36c0-8.55-3.77-16.65-10.62-22.82-7.17-6.46-16.79-10.02-27.08-10.02-20.79,0-37.7,14.73-37.7,32.84v77.36h-22.36v-77.36c0-30.44,26.95-55.2,60.06-55.2,15.82,0,30.76,5.6,42.05,15.77,11.62,10.46,18.01,24.47,18.01,39.44Z"/>
+    <path class="cls-3" d="M302.06,167.41v73.94c0,44.2-35.96,80.16-80.16,80.16h-53.06c-44.2,0-80.16-35.97-80.16-80.16v-73.94h22.36v73.94c0,31.87,25.93,57.8,57.8,57.8h53.06c31.88,0,57.8-25.93,57.8-57.8v-73.94h22.36Z"/>
+    <rect class="cls-3" x="184.19" y="167.41" width="22.36" height="86.16"/>
+  </g>
+  <text class="cls-2" transform="translate(357.24 258.72)"><tspan x="0" y="0">I</tspan><tspan class="cls-8" x="49.95" y="0">z</tspan><tspan class="cls-4" x="137.48" y="0">y</tspan><tspan x="218.23" y="0">.s</tspan><tspan class="cls-1" x="350.8" y="0">t</tspan><tspan class="cls-7" x="413.27" y="0">o</tspan><tspan class="cls-6" x="517.56" y="0">r</tspan><tspan class="cls-5" x="584.27" y="0">e</tspan></text>
+</svg>

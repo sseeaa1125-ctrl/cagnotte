@@ -1,0 +1,31 @@
+# ═══ Généré automatiquement par Izi PM — ne pas modifier manuellement ═══
+# Ce fichier est mis à jour quand le projet évolue (planning, design, phase).
+# Il donne à ton assistant de code le contexte permanent du projet.
+
+
+## Projet : skool
+## Phase actuelle : discovery
+
+## Documents de planification (source de vérité)
+
+Lis ces fichiers AVANT de coder. Ils contiennent toutes les décisions du projet :
+- **docs/BICTORYS_INTEGRATION.md**
+
+## Règles du projet
+
+1. **Lis d'abord le code existant** avant de modifier quoi que ce soit.
+2. **Suis le IMPLEMENTATION_PLAN.md** étape par étape, dans l'ordre exact.
+3. **Respecte le DESIGN_SYSTEM.md** pour chaque composant UI (couleurs, typo, espacements).
+4. **Respecte le TECH_STACK.md** — ne change pas de framework ou de librairie sauf incompatibilité avérée.
+5. **Valide tous les inputs avec Zod** côté serveur. Ne fais JAMAIS confiance aux données client.
+6. **Mobile-first** : code d'abord pour mobile (< 768px), puis responsive desktop.
+7. **Backend-first, vertical slices** : pour chaque feature → schema DB → API → page → interactivité.
+8. **Git commits à chaque étape** : `git add . && git commit -m "feat: [description]"`
+
+
+## Convention audits/
+
+Quand on te demande un audit ou une correction :
+- Sauvegarde les résultats dans `audits/audit-NNN-titre-court.md` (NNN = numéro séquentiel).
+- Crée le dossier `audits/` s'il n'existe pas.
+- Le PM (Izi) lit automatiquement ces fichiers pour suivre la qualité.
