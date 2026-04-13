@@ -63,6 +63,24 @@ export const donationBlockConfigSchema = z.object({
 });
 
 
+/**
+ * FUNDRAISER block config — cagnottes.sn Phase 1 plan 01-03.
+ *
+ * Locked subtype system (festive | solidaire) + cross-field validation via
+ * `.superRefine()`. Festive cagnottes require an `occasion` (and reject
+ * `cause`/`beneficiary`); solidaire cagnottes require a `cause` and a
+ * `beneficiary` (and reject `occasion`).
+ *
+ * Privacy toggles: `visibility` defaults to "public", `hideAmount` and
+ * `hideDonors` default to false (FUND-04 — most creators want transparency;
+ * the toggles exist for opt-out).
+ *
+ * SUBTYPE-LOCK CONTRACT (Phase 2 plan 02-01 will enforce):
+ *   Once a Block has any Order with paymentStatus = PAID, `subtype` CANNOT change.
+ *   This is enforced in `PATCH /api/blocks/:id` by reading the stored `config.subtype`
+ *   from the DB and comparing to the incoming value — a mismatch returns 422.
+ *   This schema does NOT enforce the lock because Zod has no access to Prisma state.
+ */
 export const fundraiserBlockConfigSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional(),
@@ -87,6 +105,81 @@ export const fundraiserBlockConfigSchema = z.object({
     placeholder: z.string().optional(),
     required: z.boolean(),
   })).nullable().optional(),
+
+  // ----- Phase 1 plan 01-03 additions -----
+  subtype: z.enum(["festive", "solidaire"]),
+  occasion: z.enum([
+    "anniversaire",
+    "pot_de_depart",
+    "cadeau_commun",
+    "mariage_pacs",
+    "naissance",
+    "voyage",
+    "autre",
+  ]).nullable().optional(),
+  cause: z.enum([
+    "sante_medical",
+    "education",
+    "projet_solidaire",
+    "urgence",
+    "animaux",
+    "autre",
+  ]).nullable().optional(),
+  beneficiary: z.enum([
+    "moi_meme",
+    "un_proche",
+    "une_association",
+  ]).nullable().optional(),
+  visibility: z.enum(["public", "private"]).default("public"),
+  hideAmount: z.boolean().default(false),
+  hideDonors: z.boolean().default(false),
+}).superRefine((data, ctx) => {
+  if (data.subtype === "festive") {
+    if (!data.occasion) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["occasion"],
+        message: "L'occasion est requise pour une cagnotte festive.",
+      });
+    }
+    if (data.cause != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cause"],
+        message: "Le champ cause doit être vide pour une cagnotte festive.",
+      });
+    }
+    if (data.beneficiary != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["beneficiary"],
+        message: "Le bénéficiaire doit être vide pour une cagnotte festive.",
+      });
+    }
+  }
+  if (data.subtype === "solidaire") {
+    if (!data.cause) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cause"],
+        message: "La cause est requise pour une cagnotte solidaire.",
+      });
+    }
+    if (!data.beneficiary) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["beneficiary"],
+        message: "Le bénéficiaire est requis pour une cagnotte solidaire.",
+      });
+    }
+    if (data.occasion != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["occasion"],
+        message: "L'occasion doit être vide pour une cagnotte solidaire.",
+      });
+    }
+  }
 });
 
 // FORMATION — like SALE but linked to a Systeme.io course
