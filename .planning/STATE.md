@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-04-13T05:14:00.367Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-04-13T05:56:14.140Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 6
+  completed_plans: 4
+  percent: 67
 ---
 
 # Project State
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 | Phase 01-backend-foundations P01 | 30min | 4 tasks | 3 files |
 | Phase 01-backend-foundations P02 | 10min | 3 tasks | 2 files |
 | Phase 01-backend-foundations P03 | 25min | 3 tasks | 4 files |
+| Phase 02 P01 | 35min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 01-backend-foundations]: Duck-typed Prisma P2002 detection (instanceof OR .code === 'P2002') stays in production for async-boundary safety
 - [Phase 01-backend-foundations]: FUNDRAISER commission rates locked at 6% (solidaire) / 8% (festive) basis points using Math.floor; computeCommission helper enforces commission + net === gross invariant inline
 - [Phase 01-backend-foundations]: fundraiserBlockConfigSchema gates festive/solidaire subtype via Zod superRefine with French error messages; subtype-lock against post-payment changes is comment-only in Phase 1 (Phase 2 PATCH route enforces)
+- [Phase 02]: Slug wired in 02-01 (not 02-03) so cagnottes routes have data to serve in dev/CI
+- [Phase 02]: Circuit breaker at route layer not Bictorys lib (avoid double retry policy)
+- [Phase 02]: 10min PENDING TTL with 5min cron tick (worst case ~14m45s stale)
 
 ### Pending Todos
 
@@ -98,6 +102,6 @@ None yet. Capture ideas via `/gsd-add-todo` during execution.
 
 ## Session Continuity
 
-Last session: 2026-04-13T05:13:49.539Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-04-13T05:56:05.739Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: None

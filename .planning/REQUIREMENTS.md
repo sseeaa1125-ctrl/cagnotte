@@ -27,21 +27,21 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Public Discovery (DISC)
 
-- [ ] **DISC-01**: A visitor can load `GET /api/cagnottes` to retrieve a paginated list of **public** cagnottes with search + subtype filter + cursor pagination
-- [ ] **DISC-02**: A visitor can load `GET /api/cagnottes/:slug` to retrieve a full cagnotte detail payload (metadata + organizer + progress + stats) in one call
-- [ ] **DISC-03**: A visitor can load `GET /api/cagnottes/:slug/participants` to retrieve a paginated participants list, with anonymous donors masked and private messages omitted
-- [ ] **DISC-04**: A private cagnotte does **not** appear in the list endpoint, is excluded from any sitemap, and returns `Cache-Control: private, no-store` on its detail endpoint
-- [ ] **DISC-05**: A public cagnotte detail page is cacheable (SSR + revalidation on payment webhook) for viral moments without staleness on progress
+- [x] **DISC-01**: A visitor can load `GET /api/cagnottes` to retrieve a paginated list of **public** cagnottes with search + subtype filter + cursor pagination
+- [x] **DISC-02**: A visitor can load `GET /api/cagnottes/:slug` to retrieve a full cagnotte detail payload (metadata + organizer + progress + stats) in one call
+- [x] **DISC-03**: A visitor can load `GET /api/cagnottes/:slug/participants` to retrieve a paginated participants list, with anonymous donors masked and private messages omitted
+- [x] **DISC-04**: A private cagnotte does **not** appear in the list endpoint, is excluded from any sitemap, and returns `Cache-Control: private, no-store` on its detail endpoint
+- [x] **DISC-05**: A public cagnotte detail page is cacheable (SSR + revalidation on payment webhook) for viral moments without staleness on progress
 
 ### Donation Flow (DONA)
 
-- [ ] **DONA-01**: A donor can submit a donation via `POST /api/orders` for a FUNDRAISER block, specifying amount, first name, last name, email, optional phone, and optional message
-- [ ] **DONA-02**: A donor can opt to hide their identity publicly (`isAnonymous: true`) while the organizer can still see the real name
-- [ ] **DONA-03**: A donor can opt to keep their message private so it's not displayed on the public wall (`messageIsPrivate: true`)
+- [x] **DONA-01**: A donor can submit a donation via `POST /api/orders` for a FUNDRAISER block, specifying amount, first name, last name, email, optional phone, and optional message
+- [x] **DONA-02**: A donor can opt to hide their identity publicly (`isAnonymous: true`) while the organizer can still see the real name
+- [x] **DONA-03**: A donor can opt to keep their message private so it's not displayed on the public wall (`messageIsPrivate: true`)
 - [x] **DONA-04**: The platform commission is **6% for solidaire** and **8% for festive** cagnottes, computed server-side with a pure helper that satisfies `commission + net === gross` (basis points on `Order.commissionRate`)
-- [ ] **DONA-05**: Donation creation is rate-limited: 20/min per IP, 100/hour per IP, 5/min per customer email, with a circuit breaker on Bictorys upstream failures
+- [x] **DONA-05**: Donation creation is rate-limited: 20/min per IP, 100/hour per IP, 5/min per customer email, with a circuit breaker on Bictorys upstream failures
 - [ ] **DONA-06**: A donor in a TikTok / Instagram / Facebook in-app browser is routed through the existing audit-008/009 workaround (base64-encoded proxied redirect) without regression
-- [ ] **DONA-07**: A donor can poll `GET /api/orders/:ref/status` to check payment status from the thank-you page
+- [x] **DONA-07**: A donor can poll `GET /api/orders/:ref/status` to check payment status from the thank-you page
 - [ ] **DONA-08**: On `PaymentStatus: PAID`, the webhook handler credits the order exactly once even under double delivery (pessimistic lock + `@@unique` webhook log constraint)
 
 ### Notifications (NOTF)
@@ -231,16 +231,16 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | DONA-04 | Phase 1 | Complete |
 | VERI-03 | Phase 1 | Complete |
 | VERI-04 | Phase 1 | Complete |
-| DISC-01 | Phase 2 | Pending |
-| DISC-02 | Phase 2 | Pending |
-| DISC-03 | Phase 2 | Pending |
-| DISC-04 | Phase 2 | Pending |
-| DISC-05 | Phase 2 | Pending |
-| DONA-01 | Phase 2 | Pending |
-| DONA-02 | Phase 2 | Pending |
-| DONA-03 | Phase 2 | Pending |
-| DONA-05 | Phase 2 | Pending |
-| DONA-07 | Phase 2 | Pending |
+| DISC-01 | Phase 2 | Complete |
+| DISC-02 | Phase 2 | Complete |
+| DISC-03 | Phase 2 | Complete |
+| DISC-04 | Phase 2 | Complete |
+| DISC-05 | Phase 2 | Complete |
+| DONA-01 | Phase 2 | Complete |
+| DONA-02 | Phase 2 | Complete |
+| DONA-03 | Phase 2 | Complete |
+| DONA-05 | Phase 2 | Complete |
+| DONA-07 | Phase 2 | Complete |
 | DONA-08 | Phase 2 | Pending |
 | NOTF-01 | Phase 2 | Pending |
 | NOTF-02 | Phase 2 | Pending |

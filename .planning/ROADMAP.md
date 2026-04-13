@@ -58,7 +58,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: `routes/cagnottes.ts` (GET-only public trio, mounted before CSRF group, SQL-level `visibility='public'` filter on list, `Cache-Control` branch on detail) + `routes/orders.ts` extension (`isAnonymous`/`messageIsPrivate`/`cagnotteSlug`, commission per subtype via `computeCommission()`, dedicated per-email+IP rate limiter replacing the `/api/orders` skip, Bictorys circuit breaker).
+- [x] 02-01: `routes/cagnottes.ts` (GET-only public trio, mounted before CSRF group, SQL-level `visibility='public'` filter on list, `Cache-Control` branch on detail) + `routes/orders.ts` extension (`isAnonymous`/`messageIsPrivate`/`cagnotteSlug`, commission per subtype via `computeCommission()`, dedicated per-email+IP rate limiter replacing the `/api/orders` skip, Bictorys circuit breaker).
 - [ ] 02-02: `lib/notifications/` rebuild (index + templates + dispatch + milestones, French templates from Banani screen 20 copy, `createNotification()` enforces `dedupeKey`, email dispatch enqueued via `emailQueue` with `jobKey = dedupeKey`) + hooks into `routes/webhooks.ts` (PAID → DONATION_RECEIVED + MILESTONE + DONATION_MESSAGE, post-transaction milestone diff), `routes/withdrawals.ts` (PAYOUT_COMPLETED/FAILED with attempt counter), ending-soon cron with `Block.endingSoonNotifiedAt` dedupe field + `routes/notifications.ts` (authed feed + count + mark-read + prefs).
 - [ ] 02-03: Auth gap-fill (`change-password`, `forgot-password`, `reset-password`, `verify-email` end-to-end) + KYC/withdrawal verification (KYC gate 403, `POST /api/sellers/withdrawal-pin`, `GET /api/withdrawals/balance`) + `backend/scripts/seed-dev.ts` + `backend/scripts/smoke-test.ts` (asserts P01/P03/P05) + `CLAUDE.md` refresh. **Exit gate for Phase 0.**
 
