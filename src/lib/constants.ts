@@ -176,10 +176,50 @@ export const COMMISSION_LABELS = {
 } as const;
 
 // ── Misc ──
+// Phase 7 plan 07-01 — lowercase two-tone wordmark.
+// `brandMark` + `brandSuffix` are the two halves used by the navbar JSX.
+// `siteName` is the full lowercase form kept for OG/meta/aria contexts.
+// Legal / marketing prose in FAQ, footer, etc. may still reference the
+// title-case brand name "Cagnottes.sn" intentionally.
 export const MISC = {
   devise: "FCFA",
   prefixTelephone: "+221",
-  siteName: "Cagnottes.sn",
+  siteName: "cagnotte.sn",
+  brandMark: "cagnotte",
+  brandSuffix: ".sn",
+} as const;
+
+// ── Phase 7 plan 07-01 — Creator cagnotte detail page (verbatim Banani FR) ──
+export const CREATOR_DETAIL_LABELS = {
+  statusOnline: "En ligne",
+  subtypeFestive: "Cagnotte Festive",
+  subtypeSolidaire: "Cagnotte Solidaire",
+  kpiCollected: "Montant récolté",
+  kpiParticipants: "Participations",
+  kpiAvailableFunds: "Fonds disponibles",
+  withdrawCta: "Retirer les fonds",
+  withdrawHelper:
+    "Transférez ce montant sur votre compte Mobile Money en quelques clics.",
+  recentParticipations: "Participations récentes",
+  viewAllParticipations: "Voir toutes",
+  shareLinkTitle: "Lien de la cagnotte",
+  visibilityTitle: "Visibilité",
+  dangerZoneTitle: "Zone de danger",
+  closeCagnotte: "Clôturer la cagnotte",
+  manageCta: "Gérer",
+  shareCta: "Partager",
+  backToDashboard: "Retour à mes cagnottes",
+  emptyParticipations: "Aucune participation pour l'instant.",
+  visibilityPublic: "Publique",
+  visibilityPrivate: "Privée",
+  visibilityEditCta: "Modifier",
+  dangerZoneHelper:
+    "Clôturer la cagnotte empêchera de nouvelles participations. Cette action est réversible.",
+  copyLinkCta: "Copier",
+  copyLinkSuccess: "Copié !",
+  anonymousDonor: "Anonyme",
+  kycNotApprovedNote:
+    "Vérifiez votre identité pour activer les retraits.",
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
