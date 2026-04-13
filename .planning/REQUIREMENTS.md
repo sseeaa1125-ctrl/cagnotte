@@ -84,11 +84,11 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Frontend Foundation (FNDN)
 
-- [ ] **FNDN-01**: The Next.js app loads **Poppins** (headings) and **Inter** (body) via `next/font/google` with French locale
-- [ ] **FNDN-02**: `src/app/globals.css` contains a Tailwind v4 `@theme` block with navy `#172866` primary, pink `#FBE6ED` accent, navy-hover `#121F4E`, footer `#0E1A40`, and all radii (sm/md/lg/xl/2xl) from the Banani `/style.css`
-- [ ] **FNDN-03**: `src/lib/utils.ts` exports a `cn()` helper combining `clsx` + `tailwind-merge`
-- [ ] **FNDN-04**: `src/lib/format.ts` exports `formatPrice(n)` → `"1 000 FCFA"`, `formatPhone(n)` with `+221` prefix, and `formatRelativeTime()` for participants list
-- [ ] **FNDN-05**: `src/lib/constants.ts` centralizes all French UI labels; zero English strings in any JSX file
+- [x] **FNDN-01**: The Next.js app loads **Poppins** (headings) and **Inter** (body) via `next/font/google` with French locale
+- [x] **FNDN-02**: `src/app/globals.css` contains a Tailwind v4 `@theme` block with navy `#172866` primary, pink `#FBE6ED` accent, navy-hover `#121F4E`, footer `#0E1A40`, and all radii (sm/md/lg/xl/2xl) from the Banani `/style.css`
+- [x] **FNDN-03**: `src/lib/utils.ts` exports a `cn()` helper combining `clsx` + `tailwind-merge`
+- [x] **FNDN-04**: `src/lib/format.ts` exports `formatPrice(n)` → `"1 000 FCFA"`, `formatPhone(n)` with `+221` prefix, and `formatRelativeTime()` for participants list
+- [x] **FNDN-05**: `src/lib/constants.ts` centralizes all French UI labels; zero English strings in any JSX file
 
 ### UI Primitives (PRIM)
 
@@ -266,11 +266,11 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | VERI-05 | Phase 2 | Pending |
 | VERI-06 | Phase 2 | Pending |
 | VERI-07 | Phase 2 | Pending |
-| FNDN-01 | Phase 3 | Pending |
-| FNDN-02 | Phase 3 | Pending |
-| FNDN-03 | Phase 3 | Pending |
-| FNDN-04 | Phase 3 | Pending |
-| FNDN-05 | Phase 3 | Pending |
+| FNDN-01 | Phase 3 | Complete |
+| FNDN-02 | Phase 3 | Complete |
+| FNDN-03 | Phase 3 | Complete |
+| FNDN-04 | Phase 3 | Complete |
+| FNDN-05 | Phase 3 | Complete |
 | PRIM-01 | Phase 3 | Pending |
 | PRIM-02 | Phase 3 | Pending |
 | PRIM-03 | Phase 3 | Pending |
