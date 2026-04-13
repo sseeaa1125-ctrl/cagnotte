@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-authed-money-screens-01-PLAN.md
-last_updated: "2026-04-13T19:39:28.237Z"
+stopped_at: Completed 06-02-PLAN.md (Phase 6 exit-gate ready)
+last_updated: "2026-04-13T20:04:26.793Z"
 last_activity: 2026-04-13
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 14
-  completed_plans: 13
-  percent: 93
+  completed_plans: 14
+  percent: 100
 ---
 
 # Project State
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 | Phase 04-public-donor-revenue-path P01 | 1 session | 10 tasks | 20 files |
 | Phase 05 P02 | 75 | 6 tasks | 18 files |
 | Phase 06-authed-money-screens P01 | 10m | 6 tasks | 15 files |
+| Phase 06 P02 | 60 | 8 tasks | 24 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,12 @@ Recent decisions affecting current work:
 - [Phase 05]: Frontend NEVER generates cagnotte slugs — backend ensureUniqueSlug owns the invariant, wizard POSTs {type, title, config} only
 - [Phase 06-authed-money-screens]: Profile writes use PUT /api/sellers/profile not /api/sellers/me (plan contract was wrong)
 - [Phase 06-authed-money-screens]: Notifications tab filter is client-side on readAt===null (backend has no filter param)
+- [Phase 06]: Bank page PUT /api/sellers/profile with payoutPhone/Provider/Name/Country (D-18 single payout record)
+- [Phase 06]: Withdrawal flow split into 4 routes (amount → PIN → confirm → success) not single-page
+- [Phase 06]: PIN is 4 digits everywhere via OTP-style 4-box input
+- [Phase 06]: Stats timeline is a pure CSS bar chart (no Recharts dep)
+- [Phase 06]: Cagnotte edit destructures slug out of config + runtime delete guard
+- [Phase 06]: Widened GET /api/auth/me select with KYC + phone fields (D-29)
 
 ### Pending Todos
 
@@ -125,6 +132,6 @@ None yet. Capture ideas via `/gsd-add-todo` during execution.
 
 ## Session Continuity
 
-Last session: 2026-04-13T19:39:20.708Z
-Stopped at: Completed 06-authed-money-screens-01-PLAN.md
+Last session: 2026-04-13T20:04:26.591Z
+Stopped at: Completed 06-02-PLAN.md (Phase 6 exit-gate ready)
 Resume file: None

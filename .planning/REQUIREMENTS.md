@@ -143,12 +143,12 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Money Screens (MNYS) — we design
 
-- [ ] **MNYS-01**: Bank details form page — creator sets `payoutPhone`, `payoutProvider`, `payoutName` for Bictorys payouts
-- [ ] **MNYS-02**: Withdrawal flow page — amount input + recipient summary + PIN entry + confirmation
-- [ ] **MNYS-03**: KYC upload page — ID photo + selfie upload (R2 proxy), full name input, status pill (NONE / PENDING / APPROVED / REJECTED)
-- [ ] **MNYS-04**: Cagnotte statistics page — per-cagnotte breakdown (donors, average, top message, timeline chart)
-- [ ] **MNYS-05**: Cagnotte edit page — edit title / description / cover / goal / end date / suggested amounts (but not slug)
-- [ ] **MNYS-06**: Security / password change page — current password + new password + confirm
+- [x] **MNYS-01**: Bank details form page — creator sets `payoutPhone`, `payoutProvider`, `payoutName` for Bictorys payouts
+- [x] **MNYS-02**: Withdrawal flow page — amount input + recipient summary + PIN entry + confirmation
+- [x] **MNYS-03**: KYC upload page — ID photo + selfie upload (R2 proxy), full name input, status pill (NONE / PENDING / APPROVED / REJECTED)
+- [x] **MNYS-04**: Cagnotte statistics page — per-cagnotte breakdown (donors, average, top message, timeline chart)
+- [x] **MNYS-05**: Cagnotte edit page — edit title / description / cover / goal / end date / suggested amounts (but not slug)
+- [x] **MNYS-06**: Security / password change page — current password + new password + confirm
 
 ## v2 Requirements
 
@@ -305,12 +305,12 @@ Every v1 requirement maps to exactly one phase. See `.planning/ROADMAP.md` for p
 | ATHD-02 | Phase 6 | Complete |
 | ATHD-03 | Phase 6 | Complete |
 | ATHD-04 | Phase 6 | Complete |
-| MNYS-01 | Phase 6 | Pending |
-| MNYS-02 | Phase 6 | Pending |
-| MNYS-03 | Phase 6 | Pending |
-| MNYS-04 | Phase 6 | Pending |
-| MNYS-05 | Phase 6 | Pending |
-| MNYS-06 | Phase 6 | Pending |
+| MNYS-01 | Phase 6 | Complete |
+| MNYS-02 | Phase 6 | Complete |
+| MNYS-03 | Phase 6 | Complete |
+| MNYS-04 | Phase 6 | Complete |
+| MNYS-05 | Phase 6 | Complete |
+| MNYS-06 | Phase 6 | Complete |
 
 **Coverage:**
 - v1 requirements: **95 total** (SCHM 5 + FUND 7 + DISC 5 + DONA 8 + NOTF 12 + AUTH 3 + KYC 4 + VERI 7 + FNDN 5 + PRIM 8 + COMP 5 + DONF 7 + AUTF 4 + CRET 5 + ATHD 4 + MNYS 6). *(Note: an earlier draft of this file stated "78 total" — that was a miscount. The category-by-category sum is 95.)*

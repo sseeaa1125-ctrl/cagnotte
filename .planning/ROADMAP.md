@@ -153,7 +153,7 @@ Plans:
 
 Plans:
 - [x] 06-01: Authed screens (4 pages) — profile, notification preferences, participations table with mobile-card fallback, notifications feed with tabs + "Tout marquer comme lu".
-- [ ] 06-02: Money screens (6 pages we design from scratch) — bank details, withdrawal flow with PIN entry, KYC upload with R2 proxy, cagnotte stats, cagnotte edit (no slug), security/password change.
+- [x] 06-02: Money screens (6 pages we design from scratch) — bank details, withdrawal flow with PIN entry, KYC upload with R2 proxy, cagnotte stats, cagnotte edit (no slug), security/password change.
 
 **Watch out for**:
 - Slug rename is v2 — the cagnotte edit page must NOT expose a slug field even though the underlying `PATCH /api/blocks/:id` would technically accept it.
