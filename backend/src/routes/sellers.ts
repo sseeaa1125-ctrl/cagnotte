@@ -315,6 +315,67 @@ sellersRouter.post("/kyc", verifyCsrf, requireAuth, async (req, res) => {
   }
 });
 
+// ── GET /api/sellers/me/participations — donor-side view of paid donations ──
+// Phase 6 plan 06-01 (ATHD-03). MUST be registered BEFORE the /:slug catch-all
+// at the bottom of this router, otherwise Express matches "me" as a slug.
+// The endpoint joins Order by the authed seller's email (since every signup
+// uses the same email as customerEmail on their future donations).
+sellersRouter.get("/me/participations", requireAuth, async (req, res) => {
+  try {
+    const sellerId = req.seller!.sub;
+    const seller = await prisma.seller.findUnique({
+      where: { id: sellerId },
+      select: { email: true },
+    });
+    if (!seller) {
+      res.status(404).json({ error: "Compte introuvable" });
+      return;
+    }
+
+    const rawLimit = parseInt((req.query.limit as string) || "20", 10);
+    const limit = Math.min(Math.max(isNaN(rawLimit) ? 20 : rawLimit, 1), 50);
+    const cursor = (req.query.cursor as string) || undefined;
+
+    const orders = await prisma.order.findMany({
+      where: {
+        customerEmail: seller.email,
+        paymentStatus: "PAID",
+        orderType: "DONATION",
+        blockId: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        reference: true,
+        amount: true,
+        customerName: true,
+        isAnonymous: true,
+        createdAt: true,
+        paidAt: true,
+        block: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            isActive: true,
+            config: true,
+            seller: { select: { displayName: true, slug: true } },
+          },
+        },
+      },
+    });
+    const hasMore = orders.length > limit;
+    const items = hasMore ? orders.slice(0, limit) : orders;
+    const nextCursor = hasMore ? items[items.length - 1].id : null;
+    res.json({ items, nextCursor, hasMore });
+  } catch (err) {
+    logger.error("Erreur /me/participations", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
 // GET /api/sellers/dashboard/stats — stats vendeur (auth requise)
 // ⚠️ DOIT être AVANT /:slug sinon Express matche "dashboard" comme slug
 sellersRouter.get("/dashboard/stats", requireAuth, async (req, res) => {

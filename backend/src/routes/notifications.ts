@@ -152,7 +152,13 @@ notificationsRouter.get("/prefs", async (req, res) => {
 });
 
 // ── PATCH /prefs — merge JSON patch into Seller.notificationPrefs ──
+// Phase 6 plan 06-01 widens the schema to accept the 6 Banani screen-19 keys
+// (newParticipation / milestoneReached / endingSoonReminder / organizerUpdates
+// / paymentReceipts / newsletter) in addition to the 7 legacy Phase 2 keys so
+// both dispatch-side (backend wrappers read legacy keys) and UI-side (frontend
+// writes Banani keys) coexist during the v1 → v2 transition.
 const prefsSchema = z.object({
+  // Legacy Phase 2 (read by lib/notifications/dispatch.ts)
   donations: z.boolean().optional(),
   milestones: z.boolean().optional(),
   payouts: z.boolean().optional(),
@@ -160,6 +166,13 @@ const prefsSchema = z.object({
   endingSoon: z.boolean().optional(),
   cagnotteEnded: z.boolean().optional(),
   donationMessages: z.boolean().optional(),
+  // Phase 6 Banani screen-19 (written by /profil/preferences)
+  newParticipation: z.boolean().optional(),
+  milestoneReached: z.boolean().optional(),
+  endingSoonReminder: z.boolean().optional(),
+  organizerUpdates: z.boolean().optional(),
+  paymentReceipts: z.boolean().optional(),
+  newsletter: z.boolean().optional(),
 });
 
 notificationsRouter.patch("/prefs", async (req, res) => {
