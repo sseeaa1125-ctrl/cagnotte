@@ -179,7 +179,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: P0 gap fixes — creator cagnotte detail page (`/tableau-de-bord/cagnottes/[slug]`) from `DashboardCagnotteDetail.jsx` + `CampaignCard` `linkVariant` prop to fix dashboard link bug + logo swap (navbars + `MISC.siteName` → `cagnotte.sn`).
+- [x] 07-01: P0 gap fixes — creator cagnotte detail page (`/tableau-de-bord/cagnottes/[slug]`) from `DashboardCagnotteDetail.jsx` + `CampaignCard` `linkVariant` prop to fix dashboard link bug + logo swap (navbars + `MISC.siteName` → `cagnotte.sn`).
 - [ ] 07-02: P1 polish — withdraw flow visual parity (`/retraits`, `/retraits/pin`, `/retraits/succes`) + `/profil/coordonnees-bancaires` rewrite from `UserPaymentMethods.jsx` + `VisibilityCard` lift-to-primitive + wizard step-3 copy refresh + `DatePicker` wrapper restyle.
 - [ ] 07-03: P1 new primitives + thank-you feature — `<Calendar>` popover primitive (Ring 1) + `<Combobox>` primitive (Ring 1) + wizard etape-1 occasion dropdown rewrite + `Block.config.thankYouMessage` schema additive migration + wizard etape-3 capture + `/c/[slug]/merci` render + `/modifier` page field + micro-interactions polish sweep.
 

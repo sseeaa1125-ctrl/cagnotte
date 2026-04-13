@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: verifying
-stopped_at: Completed 06-02-PLAN.md (Phase 6 exit-gate ready)
-last_updated: "2026-04-13T20:04:26.793Z"
+stopped_at: Completed 07-01-PLAN.md
+last_updated: "2026-04-13T21:54:00.195Z"
 last_activity: 2026-04-13
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 14
-  completed_plans: 14
-  percent: 100
+  total_plans: 17
+  completed_plans: 15
+  percent: 88
 ---
 
 # Project State
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0% (0/14 plans)
 | Phase 05 P02 | 75 | 6 tasks | 18 files |
 | Phase 06-authed-money-screens P01 | 10m | 6 tasks | 15 files |
 | Phase 06 P02 | 60 | 8 tasks | 24 files |
+| Phase 07 P01 | 35min | 4 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,8 @@ Recent decisions affecting current work:
 - [Phase 06]: Stats timeline is a pure CSS bar chart (no Recharts dep)
 - [Phase 06]: Cagnotte edit destructures slug out of config + runtime delete guard
 - [Phase 06]: Widened GET /api/auth/me select with KYC + phone fields (D-29)
+- [Phase 07]: CampaignCard.linkVariant defaults to 'public' to preserve every public discovery call-site; only dashboard island opts into 'creator'
+- [Phase 07]: Creator detail page uses notFound()-based owner gate (no 403) so non-owners cannot probe cagnotte existence
 
 ### Pending Todos
 
@@ -132,6 +135,6 @@ None yet. Capture ideas via `/gsd-add-todo` during execution.
 
 ## Session Continuity
 
-Last session: 2026-04-13T20:04:26.591Z
-Stopped at: Completed 06-02-PLAN.md (Phase 6 exit-gate ready)
+Last session: 2026-04-13T21:54:00.191Z
+Stopped at: Completed 07-01-PLAN.md
 Resume file: None

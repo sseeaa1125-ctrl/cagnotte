@@ -152,9 +152,9 @@ This milestone covers the backend extensions and frontend build-out needed to sh
 
 ### Banani Delta + Polish (PLSH) — gap closure pass
 
-- [ ] **PLSH-01**: Creator cagnotte detail page at `/tableau-de-bord/cagnottes/[slug]` — rendered from Banani `DashboardCagnotteDetail.jsx`, shows KPIs + "Retirer les fonds" CTA + recent participations + sidebar (share link + visibility toggles + zone de danger). Dashboard `CampaignCard` click routes here, NOT `/c/[slug]`.
-- [ ] **PLSH-02**: `CampaignCard` `linkVariant` prop — default `"public"` → `/c/[slug]`, `"creator"` → `/tableau-de-bord/cagnottes/[slug]`. Dashboard island passes `creator`.
-- [ ] **PLSH-03**: Logo swap — both navbars render lowercase two-tone `cagnotte.sn` (`.sn` in `text-gray-400`, `font-black tracking-tighter`), `MISC.siteName` updated.
+- [x] **PLSH-01**: Creator cagnotte detail page at `/tableau-de-bord/cagnottes/[slug]` — rendered from Banani `DashboardCagnotteDetail.jsx`, shows KPIs + "Retirer les fonds" CTA + recent participations + sidebar (share link + visibility toggles + zone de danger). Dashboard `CampaignCard` click routes here, NOT `/c/[slug]`.
+- [x] **PLSH-02**: `CampaignCard` `linkVariant` prop — default `"public"` → `/c/[slug]`, `"creator"` → `/tableau-de-bord/cagnottes/[slug]`. Dashboard island passes `creator`.
+- [x] **PLSH-03**: Logo swap — both navbars render lowercase two-tone `cagnotte.sn` (`.sn` in `text-gray-400`, `font-black tracking-tighter`), `MISC.siteName` updated.
 - [ ] **PLSH-04**: Withdraw flow visual parity — `/retraits` dark-navy hero + numbered steps + Wave/Orange operator tiles; `/retraits/pin` shield hero + `rounded-[2.5rem]` + `animate-pulse` caret + `focus-within:ring-blue-50` (persistent 4-digit PIN kept, no SMS OTP); `/retraits/succes` `animate-ping` green ring.
 - [ ] **PLSH-05**: `/profil/coordonnees-bancaires` rewrite from `UserPaymentMethods.jsx` — Mobile Money card with colored-initial tiles, Bank Accounts empty-state with dashed border + landmark icon, footer security notice.
 - [ ] **PLSH-06**: New `<Calendar>` primitive (Ring 1, popover, custom month grid, navy/pink tokens, ≥48px touch targets) replaces native `<input type="date">` in wizard festive/solidaire étape 2 via the Banani button-shell trigger. Pure primitive, click-outside close, no new npm dep.
