@@ -722,7 +722,9 @@ export const PARTICIPATIONS_LABELS = {
   loading: "Chargement…",
   empty: "Vous n'avez encore participé à aucune cagnotte.",
   emptyCta: "Découvrir les cagnottes",
-} as const;
+  emailMatchNotice: (email: string) =>
+    `Seules les participations effectuées avec votre email (${email}) sont affichées ici.`,
+};
 
 export const NOTIF_FEED_LABELS = {
   h1: "Vos notifications",

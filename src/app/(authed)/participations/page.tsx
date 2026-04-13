@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Gift } from "lucide-react";
+import { Gift, Info } from "lucide-react";
 import { Button, EmptyState } from "@/components/ui";
 import { PARTICIPATIONS_LABELS } from "@/lib/constants";
 import { ParticipationsClient } from "./_ParticipationsClient";
@@ -57,6 +57,22 @@ async function fetchParticipations(
   }
 }
 
+async function fetchSellerEmail(token: string): Promise<string | null> {
+  const backendUrl =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  try {
+    const res = await fetch(`${backendUrl}/api/auth/me`, {
+      headers: { cookie: `izy-token=${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { seller?: { email?: string } };
+    return data.seller?.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const dynamic = "force-dynamic";
 
 export default async function ParticipationsPage() {
@@ -64,7 +80,10 @@ export default async function ParticipationsPage() {
   const token = cookieStore.get("izy-token")?.value;
   if (!token) redirect("/connexion?next=/participations");
 
-  const payload = await fetchParticipations(token);
+  const [payload, sellerEmail] = await Promise.all([
+    fetchParticipations(token),
+    fetchSellerEmail(token),
+  ]);
   const items = payload?.items ?? [];
   const nextCursor = payload?.nextCursor ?? null;
   const hasMore = payload?.hasMore ?? false;
@@ -79,6 +98,13 @@ export default async function ParticipationsPage() {
           {PARTICIPATIONS_LABELS.subtitle}
         </p>
       </header>
+
+      {sellerEmail ? (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
+          <Info size={16} className="mt-0.5 flex-shrink-0" aria-hidden />
+          <p>{PARTICIPATIONS_LABELS.emailMatchNotice(sellerEmail)}</p>
+        </div>
+      ) : null}
 
       {items.length === 0 ? (
         <EmptyState

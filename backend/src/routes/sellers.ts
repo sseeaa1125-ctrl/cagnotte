@@ -318,8 +318,13 @@ sellersRouter.post("/kyc", verifyCsrf, requireAuth, async (req, res) => {
 // ── GET /api/sellers/me/participations — donor-side view of paid donations ──
 // Phase 6 plan 06-01 (ATHD-03). MUST be registered BEFORE the /:slug catch-all
 // at the bottom of this router, otherwise Express matches "me" as a slug.
-// The endpoint joins Order by the authed seller's email (since every signup
-// uses the same email as customerEmail on their future donations).
+//
+// Email-match strategy: joins Order.customerEmail against the authed seller's
+// email. A signed-up creator who donates with a DIFFERENT email (guest
+// checkout with a family/shared email, etc.) won't see those donations here.
+// This is a best-effort v1 feature — v2 will add a donor account system or
+// an explicit email-linking flow to cover alternate emails. The UI includes
+// an info notice that clarifies which email is being matched.
 sellersRouter.get("/me/participations", requireAuth, async (req, res) => {
   try {
     const sellerId = req.seller!.sub;
