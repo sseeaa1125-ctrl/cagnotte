@@ -163,18 +163,49 @@ Plans:
 
 ---
 
+### Phase 7: Banani Delta + Polish Pass
+**Goal**: Close the gaps discovered during manual QA — creator-side cagnotte detail page + link-target bug fix + logo swap + withdraw flow visual parity + new Calendar & Combobox primitives + thank-you message feature + micro-interactions polish sweep. Every discrepancy against the Banani source of truth gets fixed or explicitly deferred.
+**Depends on**: Phase 6
+**Requirements**: PLSH-01, PLSH-02, PLSH-03, PLSH-04, PLSH-05, PLSH-06, PLSH-07, PLSH-08
+**Success Criteria** (what must be TRUE):
+  1. Clicking a cagnotte card on `/tableau-de-bord` opens `/tableau-de-bord/cagnottes/[slug]` (creator detail page rendered from Banani `DashboardCagnotteDetail`), NOT the public `/c/[slug]` page. The creator detail page shows KPIs, "Retirer les fonds" CTA, recent participations, sidebar (share link + visibility toggles + zone de danger).
+  2. Both navbars (`PublicNavbar` + `DashboardNavbar`) render the lowercase two-tone `cagnotte.sn` logo (`font-black tracking-tighter`, `.sn` in `text-gray-400`) matching Banani verbatim; `MISC.siteName` updated.
+  3. `/retraits` (amount step) matches Banani chrome: dark-navy hero, numbered step markers with pink circles, Wave/Orange Money cards with colored-initial tiles, uppercase tracking summary label, `lock` icon footer. `/retraits/pin` matches `WithdrawOTP.jsx` visual: shield hero, `rounded-[2.5rem]` card, `animate-pulse` caret, `focus-within:ring-blue-50` — persistent 4-digit PIN kept (no SMS OTP), no countdown/resend. `/retraits/succes` has `animate-ping` green ring behind the check icon.
+  4. `/profil/coordonnees-bancaires` fully rewritten from `UserPaymentMethods.jsx`: "Comptes Mobile Money" card with Wave/Orange colored-initial tiles + trash buttons, "Comptes Bancaires" empty-state card with dashed border + landmark icon, footer security notice.
+  5. New `<Calendar>` primitive (Ring 1, popover, custom-drawn month grid, navy/pink tokens, click-outside close, ≥48px touch targets, mobile-friendly) replaces the native `<input type="date">` in wizard festive/solidaire étape 2. The existing `DatePicker` primitive stays available for other uses but wizard pages use `<Calendar>` via the button-shell trigger from Banani.
+  6. New `<Combobox>` primitive (Ring 1, custom dropdown rendering emoji rows + hover check icons + keyboard nav) replaces the native `<select>` for the "Occasion" field in wizard festive étape 1. Matches `CreateFestiveCagnotteStep1OccasionOpen.jsx`.
+  7. New `Block.config.thankYouMessage: string | null` field (max 500 chars). Captured in wizard festive + solidaire étape 3 as optional Textarea with `0/500 caractères` counter. Rendered on `/c/[slug]/merci` below the "Merci ! 🎉" hero alongside the donor's `order.reference` (their transaction receipt code). Creator edit page `/tableau-de-bord/cagnottes/[slug]/modifier` also exposes the field.
+  8. Wizard step-3 inline `VisibilityCard` lifted to `src/components/ui/VisibilityCard.tsx` as a shared primitive; copy updated verbatim from Banani ("Idéal pour maximiser les dons." for public). Micro-interactions polish: `CampaignCard` hover-border, `Button` transition-colors parity, `animate-ping` on success pages, `focus-within:ring-blue-50` on OTP/date inputs. Zero Framer Motion.
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01: P0 gap fixes — creator cagnotte detail page (`/tableau-de-bord/cagnottes/[slug]`) from `DashboardCagnotteDetail.jsx` + `CampaignCard` `linkVariant` prop to fix dashboard link bug + logo swap (navbars + `MISC.siteName` → `cagnotte.sn`).
+- [ ] 07-02: P1 polish — withdraw flow visual parity (`/retraits`, `/retraits/pin`, `/retraits/succes`) + `/profil/coordonnees-bancaires` rewrite from `UserPaymentMethods.jsx` + `VisibilityCard` lift-to-primitive + wizard step-3 copy refresh + `DatePicker` wrapper restyle.
+- [ ] 07-03: P1 new primitives + thank-you feature — `<Calendar>` popover primitive (Ring 1) + `<Combobox>` primitive (Ring 1) + wizard etape-1 occasion dropdown rewrite + `Block.config.thankYouMessage` schema additive migration + wizard etape-3 capture + `/c/[slug]/merci` render + `/modifier` page field + micro-interactions polish sweep.
+
+**Watch out for**:
+- `CampaignCard` is used in BOTH public (`/toutes-les-cagnottes`, `/`) and authed (dashboard) contexts — the `linkVariant` prop must default to `"public"` to preserve existing behavior.
+- The `<Calendar>` primitive is a new Ring 1 element — must stay pure (no `api()`/`useApi()` imports), composable with `<Input>` or standalone button trigger.
+- `Block.config.thankYouMessage` is an additive schema migration (Zod `superRefine` already passes it through `config` JSON) — NO Prisma migration needed if `Block.config` is already `Json` type. Verify before running `prisma migrate dev`.
+- The PIN decision is **option A minimal**: persistent 4-digit PIN (already shipped). `/retraits/pin` ONLY gets visual restyle — no countdown/resend, no SMS OTP backend.
+- Banani shows `€` on mockups; every translation goes to FCFA via `formatPrice()`.
+**UI hint**: yes
+
+---
+
 ## Progress
 
 **Execution Order:**
-Phases execute in strict numeric order: 1 → 2 → 3 → 4 → 5 → 6. Phase 4 (revenue path) MUST ship before Phases 5-6 even though they depend only on Phase 3 technically.
+Phases execute in strict numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7. Phase 4 (revenue path) MUST ship before Phases 5-6. Phase 7 closes gaps discovered during manual QA against the Banani source of truth.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Backend Foundations | 0/3 | Not started | - |
-| 2. Backend Surfaces & Exit Gate | 0/3 | Not started | - |
-| 3. Frontend Foundations | 0/3 | Not started | - |
-| 4. Public Donor Revenue Path | 0/1 | Not started | - |
-| 5. Auth + Creator Flow | 0/2 | Not started | - |
-| 6. Authed + Money Screens | 0/2 | Not started | - |
+| 1. Backend Foundations | 3/3 | Complete | 2026-04-13 |
+| 2. Backend Surfaces & Exit Gate | 3/3 | Complete | 2026-04-13 |
+| 3. Frontend Foundations | 3/3 | Complete | 2026-04-13 |
+| 4. Public Donor Revenue Path | 1/1 | Complete | 2026-04-13 |
+| 5. Auth + Creator Flow | 2/2 | Complete | 2026-04-13 |
+| 6. Authed + Money Screens | 2/2 | Complete | 2026-04-13 |
+| 7. Banani Delta + Polish Pass | 0/3 | Not started | - |
 
-**Totals:** 6 phases, 14 plans, 78 v1 requirements (100% coverage).
+**Totals:** 7 phases, 17 plans, 103 v1 requirements (100% coverage — 95 original + 8 new PLSH-01..08).
