@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Poppins } from "next/font/google";
 import { ToastProvider } from "@/contexts/ToastContext";
 import "./globals.css";
 
@@ -8,13 +8,19 @@ const inter = Inter({
   variable: "--font-inter",
 });
 
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-poppins",
+});
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#0D9488",
+  themeColor: "#172866",
 };
 
 export const metadata: Metadata = {
@@ -52,7 +58,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body suppressHydrationWarning className={`${inter.variable} font-sans antialiased bg-gray-50`}>
+      <body suppressHydrationWarning className={`${inter.variable} ${poppins.variable} font-sans antialiased bg-background`}>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
