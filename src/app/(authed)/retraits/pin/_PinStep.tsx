@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Lock } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui";
-import { WITHDRAWAL_LABELS } from "@/lib/constants";
+import { WITHDRAW_PIN_LABELS } from "@/lib/constants";
+import { formatPrice } from "@/lib/format";
 import { useWithdrawalDraft } from "@/hooks/useWithdrawalDraft";
 import {
   PIN_LENGTH,
@@ -28,6 +29,7 @@ export function PinStep() {
   const inputsRef = React.useRef<Array<HTMLInputElement | null>>([]);
   const [pin, setPin] = React.useState<string>("");
   const [error, setError] = React.useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = React.useState<number>(0);
 
   // Guard: incomplete draft → bounce to step 1.
   React.useEffect(() => {
@@ -78,7 +80,7 @@ export function PinStep() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validatePin(pin)) {
-      setError("Le code doit contenir 4 chiffres");
+      setError(WITHDRAW_PIN_LABELS.pinError);
       return;
     }
     setError(null);
@@ -88,84 +90,115 @@ export function PinStep() {
 
   if (!isReady) {
     return (
-      <div className="mx-auto max-w-md text-center text-sm text-muted-foreground">
+      <div className="mx-auto max-w-lg text-center text-sm text-muted-foreground">
         Chargement…
       </div>
     );
   }
 
   const digits = pin.padEnd(PIN_LENGTH, " ").split("").slice(0, PIN_LENGTH);
+  const amountLabel = formatPrice(draft.amount ?? 0);
 
   return (
-    <div className="mx-auto max-w-md">
-      <button
-        type="button"
-        onClick={() => router.replace("/retraits")}
-        className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-      >
-        <ArrowLeft size={14} aria-hidden />
-        {WITHDRAWAL_LABELS.back}
-      </button>
-
+    <div className="mx-auto max-w-lg">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-6 rounded-3xl bg-white p-6 shadow-sm md:p-10"
+        className="flex flex-col gap-6 rounded-[2.5rem] bg-white p-8 shadow-sm md:p-10"
       >
-        <div className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-pink text-primary">
-            <Lock size={28} aria-hidden />
+        {/* Shield hero — Banani WithdrawOTP */}
+        <div className="relative mb-2 mt-2 inline-flex items-center justify-center self-center">
+          <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-blue-50">
+            <ShieldCheck size={40} className="text-primary" aria-hidden />
           </div>
-          <h2 className="mb-2 font-headings text-xl font-bold text-primary md:text-2xl">
-            {WITHDRAWAL_LABELS.pinTitle}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {WITHDRAWAL_LABELS.pinHelper}
+        </div>
+
+        {/* Heading + persistent-PIN helper (NO phone-masked text) */}
+        <div className="text-center">
+          <h1 className="mb-2 font-headings text-2xl font-black text-primary md:text-3xl">
+            {WITHDRAW_PIN_LABELS.pageTitle}
+          </h1>
+          <p className="text-sm text-gray-500 md:text-base">
+            {WITHDRAW_PIN_LABELS.pageHelperPrefix}
+            <strong className="font-bold text-primary">{amountLabel}</strong>
+            {WITHDRAW_PIN_LABELS.pageHelperSuffix}
           </p>
         </div>
 
-        <div className="flex justify-center gap-3">
+        {/* 4-cell PIN grid with animate-pulse caret */}
+        <div
+          className="mt-2 flex justify-center gap-3 md:gap-4"
+          role="group"
+          aria-label={WITHDRAW_PIN_LABELS.pageTitle}
+        >
           {Array.from({ length: PIN_LENGTH }).map((_, index) => {
             const ch = digits[index]?.trim() ?? "";
+            const isActive = index === activeIndex && !ch;
             return (
-              <input
+              <div
                 key={index}
-                ref={(el) => {
-                  inputsRef.current[index] = el;
-                }}
-                type="password"
-                inputMode="numeric"
-                pattern="[0-9]"
-                maxLength={1}
-                autoComplete="off"
-                value={ch}
-                onChange={(e) => handleChange(index, e)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                onPaste={index === 0 ? handlePaste : undefined}
-                aria-label={`Chiffre ${index + 1}`}
                 className={cn(
-                  "h-16 w-14 rounded-lg border bg-background text-center font-mono text-3xl text-primary",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                  error ? "border-red-500" : "border-border",
+                  "relative flex h-16 w-14 items-center justify-center rounded-2xl border-2 bg-white font-mono text-3xl font-black text-primary transition-all md:h-[72px] md:w-16",
+                  "focus-within:border-primary focus-within:ring-4 focus-within:ring-blue-50",
+                  error
+                    ? "border-red-500"
+                    : isActive
+                      ? "border-primary animate-pulse"
+                      : "border-gray-200",
                 )}
-              />
+              >
+                <input
+                  ref={(el) => {
+                    inputsRef.current[index] = el;
+                  }}
+                  type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]"
+                  maxLength={1}
+                  autoComplete="off"
+                  value={ch}
+                  onChange={(e) => handleChange(index, e)}
+                  onKeyDown={(e) => handleKeyDown(index, e)}
+                  onFocus={() => setActiveIndex(index)}
+                  onPaste={index === 0 ? handlePaste : undefined}
+                  aria-label={`Chiffre ${index + 1}`}
+                  className="absolute inset-0 h-full w-full rounded-2xl bg-transparent text-center text-3xl font-black text-primary outline-none"
+                />
+                {ch ? null : isActive ? (
+                  <span className="pointer-events-none ml-0.5 h-8 w-0.5 animate-pulse bg-primary" />
+                ) : null}
+              </div>
             );
           })}
         </div>
 
         {error ? (
-          <p className="text-center text-sm text-red-500" role="alert">
+          <p
+            className="text-center text-sm font-semibold text-red-500"
+            role="alert"
+          >
             {error}
           </p>
         ) : null}
 
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          disabled={!validatePin(pin)}
-        >
-          {WITHDRAWAL_LABELS.pinContinue}
-        </Button>
+        {/* Stacked CTAs — NO resend, NO countdown */}
+        <div className="mt-2 flex flex-col gap-3">
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={!validatePin(pin)}
+          >
+            {WITHDRAW_PIN_LABELS.submitCta}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            onClick={() => router.back()}
+          >
+            {WITHDRAW_PIN_LABELS.cancelCta}
+          </Button>
+        </div>
       </form>
     </div>
   );
