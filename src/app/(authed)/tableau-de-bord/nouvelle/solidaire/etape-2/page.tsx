@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import {
   Button,
-  DatePicker,
+  Calendar,
   ImageUpload,
   Textarea,
   useToast,
@@ -140,11 +140,21 @@ export default function SolidaireStep2Page() {
           onChange={(e) => setThankYouMessage(e.target.value)}
           maxLength={500}
         />
-        <DatePicker
+        <Calendar
           label={`${WIZARD_FIELDS.endDateLabel} (${WIZARD_FIELDS.endDateOptional})`}
           helper={WIZARD_FIELDS.endDateHelpSolidaire}
-          value={endDate}
-          onChange={setEndDate}
+          value={endDate ? new Date(`${endDate}T00:00:00`) : null}
+          onChange={(d) => {
+            if (!d) {
+              setEndDate("");
+              return;
+            }
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            setEndDate(`${y}-${m}-${day}`);
+          }}
+          minDate={new Date()}
           clearable
         />
 
