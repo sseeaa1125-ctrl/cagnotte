@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSeller(res.seller);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        router.replace("/login");
+        router.replace("/connexion");
       } else if (err instanceof ApiError && err.status === 429) {
         setError("Trop de requêtes. Patiente quelques minutes puis réessaye.");
       } else {

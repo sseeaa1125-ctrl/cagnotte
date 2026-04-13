@@ -312,6 +312,116 @@ export const IN_APP_LABELS = {
   copiedToast: "Lien copié dans le presse-papiers",
 } as const;
 
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 5 plan 05-01 — public auth labels
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── /inscription + /connexion (Banani screens 3, 4, 5) ──
+export const AUTH_LABELS = {
+  // Signup
+  signupTitle: "Créer ma cagnotte",
+  signupSubtitle:
+    "Crée ton compte en quelques secondes pour lancer ta collecte.",
+  firstNameLabel: "Prénom",
+  firstNamePlaceholder: "Amadou",
+  lastNameLabel: "Nom",
+  lastNamePlaceholder: "Fall",
+  emailLabel: "Adresse e-mail",
+  emailPlaceholder: "exemple@email.com",
+  passwordLabel: "Mot de passe",
+  passwordPlaceholder: "••••••••",
+  passwordHint: "8 caractères minimum, dont un chiffre et une majuscule.",
+  slugPreviewLabel: "Ton espace sera",
+  slugPreviewPlaceholder: "ton-prenom-nom",
+  tosLabel:
+    "J'accepte les conditions générales d'utilisation de Cagnottes.sn",
+  tosError: "Tu dois accepter les conditions pour continuer.",
+  signupCta: "Créer mon compte",
+  signupLoading: "Création du compte…",
+  alreadyAccount: "Vous avez déjà un compte ? Se connecter",
+  // Login
+  loginTitle: "Bon retour !",
+  loginSubtitle:
+    "Connecte-toi pour gérer tes cagnottes et suivre tes participations.",
+  loginCta: "Se connecter",
+  loginLoading: "Connexion…",
+  forgotPasswordCta: "Oublié ?",
+  noAccountYet: "Pas encore de compte ? S'inscrire",
+  // Shared
+  orContinueWith: "ou continuer avec",
+  socialGoogleLabel: "Google",
+  socialAppleLabel: "Apple",
+  // Errors
+  errorGeneric: "Une erreur est survenue. Réessaye.",
+  errorEmailTaken: "Cet email est déjà utilisé.",
+  errorSlugTaken: "Ce nom d'espace est déjà pris.",
+  errorInvalidCredentials: "E-mail ou mot de passe incorrect.",
+  errorEmailUnverified:
+    "Email non vérifié — un nouveau code vient d'être envoyé.",
+  errorRateLimit: "Trop de tentatives. Réessaye dans quelques minutes.",
+  errorDisplayNameTooShort: "Prénom et nom requis (minimum 2 caractères).",
+  errorSlugUnavailable:
+    "Aucun nom d'espace disponible — essaie un autre prénom/nom.",
+  // Toasts
+  toastVerifiedPleaseLogin: "Email vérifié — connecte-toi pour continuer.",
+  toastPasswordReset: "Mot de passe réinitialisé — connecte-toi.",
+} as const;
+
+// ── /verification-email (gap screen, we design) ──
+export const VERIFY_EMAIL_LABELS = {
+  title: "Vérifie ton email",
+  subtitlePrefix: "Un code à 6 chiffres a été envoyé à ",
+  subtitleSuffix: ". Entre-le ci-dessous pour activer ton compte.",
+  codeLabel: "Code à 6 chiffres",
+  verifyCta: "Vérifier",
+  verifyLoading: "Vérification…",
+  resendCta: "Renvoyer le code",
+  resendCooldown: "Renvoyer dans {s}s",
+  resendSuccessToast: "Nouveau code envoyé.",
+  backToSignup: "Revenir à l'inscription",
+  errorInvalid: "Code invalide. Vérifie et réessaye.",
+  errorExpired: "Code expiré. Demande un nouveau code.",
+  errorRateLimit: "Trop de tentatives — patiente 15 minutes.",
+  missingEmailRedirect: "Email manquant — redirection…",
+} as const;
+
+// ── /mot-de-passe-oublie (gap screen, we design) ──
+export const FORGOT_PASSWORD_LABELS = {
+  title: "Mot de passe oublié ?",
+  subtitle:
+    "Entre ton email et nous t'enverrons un code à 6 chiffres pour réinitialiser ton mot de passe.",
+  emailLabel: "Adresse e-mail",
+  emailPlaceholder: "exemple@email.com",
+  submitCta: "Envoyer le code",
+  submitLoading: "Envoi en cours…",
+  successTitle: "Vérifie ton email",
+  successBody:
+    "Si cet email est enregistré, tu recevras un code à 6 chiffres. Utilise-le pour définir un nouveau mot de passe.",
+  enterCodeCta: "Entrer le code",
+  backToLoginCta: "Retour à la connexion",
+  errorGeneric: "Impossible d'envoyer le code. Réessaye.",
+} as const;
+
+// ── /mot-de-passe-reinitialiser (gap screen, we design) ──
+export const RESET_PASSWORD_LABELS = {
+  title: "Nouveau mot de passe",
+  subtitlePrefix: "Entre le code reçu à ",
+  subtitleSuffix: " et choisis un nouveau mot de passe.",
+  codeLabel: "Code à 6 chiffres",
+  newPasswordLabel: "Nouveau mot de passe",
+  newPasswordPlaceholder: "••••••••",
+  newPasswordHint: "8 caractères minimum, dont un chiffre et une majuscule.",
+  confirmPasswordLabel: "Confirmer le mot de passe",
+  confirmPasswordPlaceholder: "••••••••",
+  submitCta: "Réinitialiser",
+  submitLoading: "Mise à jour…",
+  successToast: "Mot de passe mis à jour — connecte-toi.",
+  errorMismatch: "Les mots de passe ne correspondent pas.",
+  errorInvalid: "Code invalide ou expiré.",
+  errorTooShort: "Minimum 8 caractères.",
+  backToLoginCta: "Retour à la connexion",
+} as const;
+
 // ── All-cagnottes page labels ──
 export const ALL_CAGNOTTES_LABELS = {
   pageTitle: "Toutes les cagnottes",

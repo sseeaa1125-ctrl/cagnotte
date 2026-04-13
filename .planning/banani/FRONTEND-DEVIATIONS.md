@@ -62,6 +62,27 @@ Running log of intentional deviations between the Banani design export and the s
 - **Enforcement:** Phase 4 plan 04-01 task T3 ships ONE component at `src/app/(public)/c/[slug]/page.tsx`. No variant flag, no toggle.
 - **Introduced by:** Plan 04-01
 
+### D-08 — Social login CTAs hidden behind FEATURE_SOCIAL_AUTH (Phase 5)
+- **Banani:** Signup (screen 3) and login (screen 4) show Google + Apple social CTAs directly under the primary submit button.
+- **cagnottes.sn:** The JSX for Google + Apple `<Button variant="social" socialProvider="...">` is **retained** in `src/app/(auth)/inscription/page.tsx` and `src/app/(auth)/connexion/page.tsx`, wrapped in `{FEATURE_SOCIAL_AUTH && ...}`. Since `FEATURE_SOCIAL_AUTH = false` in `src/lib/features.ts`, the buttons never render in v1.
+- **Rationale:** v1 backend has no OAuth plumbing (confirmed in `backend/src/routes/auth.ts` — only email/password). Keeping the JSX tree means v2 ships OAuth with a 1-line flag flip, not a rewrite. Extends D-05 with the concrete plan 05-01 enforcement point.
+- **Enforcement:** Plan 05-01 tasks T2+T3 gate the social button block with `FEATURE_SOCIAL_AUTH &&`. Lint guard: a grep in task T6 asserts `FEATURE_SOCIAL_AUTH` is present in both auth pages.
+- **Introduced by:** Plan 05-01
+
+### D-09 — Signup: Prénom + Nom merged client-side into displayName
+- **Banani:** Screen 3 shows two separate inputs (Prénom, Nom) as a 2-column grid.
+- **cagnottes.sn:** The two inputs are kept for UX symmetry with Banani, but the frontend merges them into `displayName = (firstName.trim() + " " + lastName.trim()).trim()` and ONLY `displayName` is sent in the `POST /api/auth/signup` body (backend schema at `backend/src/routes/auth.ts:37-46` expects `displayName: string`, NOT firstName/lastName). The frontend also auto-generates a seller `slug` via `src/lib/slug.ts::slugifySellerName()` + `ensureAvailableSellerSlug()` — Banani screen 3 has no slug field.
+- **Rationale:** The `Seller` Prisma model has a single `displayName` column. Adding firstName/lastName columns is a schema migration; we avoid the rabbit hole and respect the locked decision "Don't try to clean the schema as a side task." The two-input UI is kept for familiarity.
+- **Enforcement:** Plan 05-01 task T2 verify step greps `! grep -qE "tosAccepted.*body|body.*tosAccepted"` to ensure the request body NEVER contains firstName/lastName/tosAccepted fields.
+- **Introduced by:** Plan 05-01
+
+### D-10 — Verify-email uses 6-digit CODE, not URL token
+- **Banani:** No verify-email, forgot-password, or reset-password screens were exported at all — Banani shipped only signup + login.
+- **cagnottes.sn:** We design `/verification-email`, `/mot-de-passe-oublie`, `/mot-de-passe-reinitialiser` in Banani visual language (navy primary, pink accent, Poppins headings, `max-w-md` centered card). The key contract: all three flows use a **6-digit numeric code** typed manually into 6 separate `<Input maxLength={1}>` boxes with auto-advance + paste support — NOT a URL token like `?token=abc123`. This is locked by the backend schemas at `auth.ts:53-57`, `auth.ts:638-642`.
+- **Rationale:** Backend sends a 6-digit code via email (`generateVerificationCode()`), never a link. Frontend must match. This also enables offline/cross-device recovery (user can read the code on their phone and type it into their laptop).
+- **Enforcement:** Plan 05-01 tasks T4+T5 implement 6-input OTP pattern inline (no new OTP npm dep). Verify step greps for `inputMode="numeric"` and `storeCsrfToken` (verify-email is a login — it issues cookies, reset-password is NOT — user logs in fresh).
+- **Introduced by:** Plan 05-01
+
 ***
 
 ## Deviation Template (for future entries)
