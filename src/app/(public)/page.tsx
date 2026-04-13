@@ -80,7 +80,7 @@ function HeroSection() {
               </Button>
               <Button
                 as="a"
-                href="/toutes-les-cagnottes"
+                href="/cagnottes"
                 variant="ghost"
                 size="lg"
                 className="border border-white/40 text-white hover:bg-white/10"
@@ -138,7 +138,7 @@ function FeaturedSection({ cagnottes }: { cagnottes: ApiCagnotte[] }) {
             ))}
           </div>
           <div className="mt-10 flex justify-center">
-            <Button as="a" href="/toutes-les-cagnottes" variant="outline" size="lg">
+            <Button as="a" href="/cagnottes" variant="outline" size="lg">
               {HOME_COPY.featuredViewAllCta}
             </Button>
           </div>

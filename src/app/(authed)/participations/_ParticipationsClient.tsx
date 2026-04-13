@@ -154,7 +154,7 @@ export function ParticipationsClient({
               {items.map((row) => {
                 const href = row.block?.slug
                   ? `/c/${row.block.slug}`
-                  : "/toutes-les-cagnottes";
+                  : "/cagnottes";
                 return (
                   <tr key={row.id} className="hover:bg-muted/30">
                     <td className="px-6 py-4">
@@ -204,7 +204,7 @@ export function ParticipationsClient({
         {items.map((row) => {
           const href = row.block?.slug
             ? `/c/${row.block.slug}`
-            : "/toutes-les-cagnottes";
+            : "/cagnottes";
           return (
             <a
               key={row.id}

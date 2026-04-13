@@ -87,7 +87,7 @@ export default async function ParticipationsPage() {
           cta={
             <Button
               as="a"
-              href="/toutes-les-cagnottes"
+              href="/cagnottes"
               variant="primary"
               size="lg"
             >

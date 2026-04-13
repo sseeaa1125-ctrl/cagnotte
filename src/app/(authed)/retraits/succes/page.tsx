@@ -124,7 +124,7 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
               {WITHDRAW_SUCCESS_LABELS.backCta}
             </Button>
           </Link>
-          <Link href="/toutes-les-cagnottes">
+          <Link href="/cagnottes">
             <Button type="button" variant="outline" size="lg">
               {WITHDRAWAL_LABELS.successBackToCagnottes}
             </Button>

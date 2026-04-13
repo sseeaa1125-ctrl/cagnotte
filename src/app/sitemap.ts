@@ -15,7 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
-      url: `${BASE_URL}/toutes-les-cagnottes`,
+      url: `${BASE_URL}/cagnottes`,
       lastModified: new Date(),
       changeFrequency: "daily",
       priority: 0.8,

@@ -76,7 +76,7 @@ export function LoadMoreCagnottes({
       params.set("subtype", subtype);
     }
     const qs = params.toString();
-    router.replace(qs ? `/toutes-les-cagnottes?${qs}` : "/toutes-les-cagnottes", {
+    router.replace(qs ? `/cagnottes?${qs}` : "/cagnottes", {
       scroll: false,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
