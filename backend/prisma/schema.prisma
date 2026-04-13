@@ -11,19 +11,19 @@ datasource db {
 // SELLER — Vendeur (créateur de page Izy)
 // =============================================
 model Seller {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String  @id @default(cuid())
+  email         String  @unique
   password      String?
-  googleId      String?   @unique
-  emailVerified Boolean   @default(false)
+  googleId      String? @unique
+  emailVerified Boolean @default(false)
 
-  slug         String  @unique
-  displayName  String
-  subtitle     String?
-  bio          String?
-  avatarUrl    String?
-  coverUrl     String?
-  showAvatar   Boolean @default(true)
+  slug        String  @unique
+  displayName String
+  subtitle    String?
+  bio         String?
+  avatarUrl   String?
+  coverUrl    String?
+  showAvatar  Boolean @default(true)
 
   instagramUrl   String?
   tiktokUrl      String?
@@ -35,13 +35,13 @@ model Seller {
   snapchatUrl    String?
   websiteUrl     String?
 
-  themeId      String @default("default")
-  themeFont    String @default("inter")
+  themeId      String  @default("default")
+  themeFont    String  @default("inter")
   themeColors  Json?
   bgImageUrl   String?
-  headerLayout String @default("centered")
+  headerLayout String  @default("centered")
   imageStyle   String?
-  timezone     String @default("Africa/Dakar")
+  timezone     String  @default("Africa/Dakar")
 
   payoutPhone    String?
   payoutProvider String?
@@ -49,10 +49,10 @@ model Seller {
   payoutCountry  String?
 
   // KYC — identity verification for withdrawals
-  kycStatus      String   @default("NONE") // NONE | PENDING | APPROVED | REJECTED
-  kycIdUrl       String?  // Photo pièce d'identité
-  kycSelfieUrl   String?  // Selfie avec pièce d'identité
-  kycFullName    String?  // Nom complet sur la pièce
+  kycStatus      String    @default("NONE") // NONE | PENDING | APPROVED | REJECTED
+  kycIdUrl       String? // Photo pièce d'identité
+  kycSelfieUrl   String? // Selfie avec pièce d'identité
+  kycFullName    String? // Nom complet sur la pièce
   kycSubmittedAt DateTime?
   kycReviewedAt  DateTime?
 
@@ -64,10 +64,10 @@ model Seller {
   supportPhone String?
 
   // Tracking pixels
-  metaPixelId        String?
-  googleAdsId        String?
-  googleAnalyticsId  String?
-  tiktokPixelId      String?
+  metaPixelId       String?
+  googleAdsId       String?
+  googleAnalyticsId String?
+  tiktokPixelId     String?
 
   // Notification preferences (JSON: { emailOrders, emailBookings, emailMarketing })
   notificationPrefs Json?
@@ -80,38 +80,39 @@ model Seller {
   deletedAt     DateTime?
 
   // Email preferences
-  emailUnsubscribed     Boolean   @default(false)
+  emailUnsubscribed Boolean @default(false)
 
   // Code de retrait (PIN hashé bcrypt)
-  withdrawalPinHash     String?
+  withdrawalPinHash String?
 
   // Admin — contrôle plateforme
   withdrawalBlocked     Boolean   @default(false)
   withdrawalBlockedAt   DateTime?
   withdrawalBlockReason String?
-  customCommissionRate  Int?      // Taux personnalisé en basis points (null = taux global)
+  customCommissionRate  Int? // Taux personnalisé en basis points (null = taux global)
   hardDeletedAt         DateTime? // Suppression définitive par admin
   isFlagged             Boolean   @default(false)
   flaggedAt             DateTime?
   flagReason            String?
 
-  blocks      Block[]
-  reports     Report[]
-  orders      Order[]
-  customers   Customer[]
-  fileUploads FileUpload[]
-  withdrawals Withdrawal[]
-  pageViews   PageView[]
-  blockClicks          BlockClick[]
+  blocks                Block[]
+  reports               Report[]
+  orders                Order[]
+  customers             Customer[]
+  fileUploads           FileUpload[]
+  withdrawals           Withdrawal[]
+  pageViews             PageView[]
+  blockClicks           BlockClick[]
   partnershipRequests   PartnershipRequest[]
-  telegramBots         TelegramBot[]
-  communities          Community[]
-  googleIntegration    GoogleIntegration?
-  emailMarketing       EmailMarketingIntegration?
-  pushSubscriptions    PushSubscription[]
+  telegramBots          TelegramBot[]
+  communities           Community[]
+  googleIntegration     GoogleIntegration?
+  emailMarketing        EmailMarketingIntegration?
+  pushSubscriptions     PushSubscription[]
   telegramVerifications TelegramVerification[]
+  notifications         Notification[]
 
-  slugHistory          SlugHistory[]
+  slugHistory SlugHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -148,10 +149,11 @@ model Block {
   seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   type     BlockType
-  title    String   @default("")
+  title    String    @default("")
   position Int
-  isActive Boolean @default(true)
+  isActive Boolean   @default(true)
   config   Json
+  slug     String?   @unique
 
   product             Product?
   bookingService      BookingService?
@@ -166,6 +168,7 @@ model Block {
   @@index([sellerId, position])
   @@index([sellerId, isActive])
   @@index([sellerId, type])
+  @@index([slug])
 }
 
 enum BlockType {
@@ -200,30 +203,30 @@ model Product {
   subtitle    String?
   description String?
   price       Int
-  currency    String @default("XOF")
+  currency    String  @default("XOF")
 
   coverUrl    String?
   fileUrl     String?
   fileName    String?
   fileSize    Int?
-  files       Json?      // Array of {url, fileName, fileSize?} for multi-file products
+  files       Json? // Array of {url, fileName, fileSize?} for multi-file products
   redirectUrl String?
 
-  buttonText     String @default("Acheter")
-  ctaStyle       String @default("button")
-  discountPrice  Int?
+  buttonText    String @default("Acheter")
+  ctaStyle      String @default("button")
+  discountPrice Int?
 
   confirmationEmailSubject String?
   confirmationEmailBody    String?
 
   // Checkout page rich content
-  videoUrl          String?
-  checkoutSections  Json?
+  videoUrl         String?
+  checkoutSections Json?
 
   // Lead magnet / waiting list: configurable form fields
   leadFields          Json?
   maxSubscribers      Int?
-  showSubscriberCount  Boolean @default(true)
+  showSubscriberCount Boolean @default(true)
 
   // Systeme.io course enrollment (FORMATION block type)
   systemeioCourseId String?
@@ -250,12 +253,12 @@ model BookingService {
   title       String
   description String?
   price       Int
-  currency    String @default("XOF")
+  currency    String  @default("XOF")
   duration    Int
   location    String?
   coverUrl    String?
   buttonText  String?
-  ctaStyle    String @default("button")
+  ctaStyle    String  @default("button")
 
   minAdvanceHours Int @default(24)
 
@@ -263,8 +266,8 @@ model BookingService {
   confirmationEmailBody    String?
 
   // Checkout page rich content
-  videoUrl          String?
-  checkoutSections  Json?
+  videoUrl         String?
+  checkoutSections Json?
 
   slots  BookingSlot[]
   orders Order[]
@@ -324,10 +327,10 @@ model BookingSlot {
   bookingServiceId String
   bookingService   BookingService @relation(fields: [bookingServiceId], references: [id], onDelete: Cascade)
 
-  dayOfWeek   Int
-  startTime   String
-  endTime     String
-  isRecurring Boolean @default(true)
+  dayOfWeek    Int
+  startTime    String
+  endTime      String
+  isRecurring  Boolean   @default(true)
   specificDate DateTime?
 
   createdAt DateTime @default(now())
@@ -369,8 +372,8 @@ model Order {
   bookingServiceId String?
   bookingService   BookingService? @relation(fields: [bookingServiceId], references: [id], onDelete: SetNull)
 
-  blockId          String?
-  block            Block?          @relation(fields: [blockId], references: [id], onDelete: SetNull)
+  blockId String?
+  block   Block?  @relation(fields: [blockId], references: [id], onDelete: SetNull)
 
   downloadUrl       String?
   downloadCount     Int       @default(0)
@@ -383,25 +386,27 @@ model Order {
   bookingCancelledAt DateTime?
 
   // Refund fields (booking refunds via Bictorys payout)
-  refundedAt        DateTime?
-  refundReference   String?
-  refundBictorysId  String?
+  refundedAt       DateTime?
+  refundReference  String?
+  refundBictorysId String?
 
   // Google Calendar + Meet (auto-created for bookings if seller has Google Calendar connected)
   meetingUrl    String?
   googleEventId String?
 
-  paymentNote    String?
-  donorMessage   String?
-  customFields   Json?
-  source         String?
-  country        String?
+  paymentNote      String?
+  donorMessage     String?
+  isAnonymous      Boolean @default(false)
+  messageIsPrivate Boolean @default(false)
+  customFields     Json?
+  source           String?
+  country          String?
 
   bumpSelections OrderBumpSelection[]
   deletedAt      DateTime?
 
-  inboxReadAt     DateTime?  // Quand le vendeur a lu ce message dans l'inbox
-  inboxArchivedAt DateTime?  // Quand le vendeur a archivé ce message
+  inboxReadAt     DateTime? // Quand le vendeur a lu ce message dans l'inbox
+  inboxArchivedAt DateTime? // Quand le vendeur a archivé ce message
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -507,18 +512,63 @@ model WebhookLog {
 
   createdAt DateTime @default(now())
 
+  @@unique([externalId, eventType])
   @@index([provider, externalId])
   @@index([createdAt])
+}
+
+// =============================================
+// NOTIFICATION — In-app notifications (cagnottes.sn, Phase 1 schema, Phase 2 consumer)
+// =============================================
+model Notification {
+  id       String @id @default(cuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  type  NotificationType
+  title String
+  body  String?
+  icon  String? // lucide name: "heart" | "clock" | "check-square" | "credit-card" | "message-circle"
+
+  // Soft links to domain objects (nullable, for deep-linking from the feed)
+  blockId      String?
+  orderId      String?
+  withdrawalId String?
+
+  // Metadata for rendering variants — Phase 2 owns the JSON shape
+  data Json?
+
+  // At-most-once delivery guard (P06). Phase 1 declares the column; Phase 2 writes to it.
+  dedupeKey String @unique
+
+  readAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([sellerId, createdAt])
+  @@index([sellerId, readAt])
+}
+
+enum NotificationType {
+  DONATION_RECEIVED
+  MILESTONE_REACHED
+  CAGNOTTE_ENDING_SOON
+  CAGNOTTE_ENDED
+  DONATION_MESSAGE
+  PAYOUT_COMPLETED
+  PAYOUT_FAILED
+  KYC_APPROVED
+  KYC_REJECTED
 }
 
 // =============================================
 // VERIFICATION CODE — Codes email temporaires
 // =============================================
 model VerificationCode {
-  id       String @id @default(cuid())
-  email    String
-  code     String
-  attempts Int       @default(0)
+  id        String    @id @default(cuid())
+  email     String
+  code      String
+  attempts  Int       @default(0)
   expiresAt DateTime
   usedAt    DateTime?
 
@@ -539,18 +589,18 @@ model Withdrawal {
   amount   Int
   currency String @default("XOF")
 
-  status      WithdrawalStatus @default(PENDING)
-  phone       String
-  provider    String
+  status        WithdrawalStatus @default(PENDING)
+  phone         String
+  provider      String
   recipientName String?
-  note        String?
+  note          String?
 
   // Bictorys payout fields
-  reference          String  @unique
-  idempotencyKey     String  @unique
+  reference             String  @unique
+  idempotencyKey        String  @unique
   bictorysTransactionId String?
-  merchantFee        Int?
-  failureReason      String?
+  merchantFee           Int?
+  failureReason         String?
 
   processedAt DateTime?
 
@@ -598,11 +648,11 @@ model BlockClick {
   sellerId String
   seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
-  blockId   String
-  block     Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  blockId String
+  block   Block  @relation(fields: [blockId], references: [id], onDelete: Cascade)
 
-  action    String @default("click")
-  ip        String?
+  action String  @default("click")
+  ip     String?
 
   createdAt DateTime @default(now())
 
@@ -620,15 +670,15 @@ model PartnershipRequest {
   sellerId String
   seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
-  name     String
-  email    String
-  company  String?
-  phone    String?
-  message  String
-  budget   String?
-  status   PartnershipStatus @default(PENDING)
+  name       String
+  email      String
+  company    String?
+  phone      String?
+  message    String
+  budget     String?
+  status     PartnershipStatus @default(PENDING)
   readAt     DateTime?
-  archivedAt DateTime?  // Quand le vendeur a archivé cette demande
+  archivedAt DateTime? // Quand le vendeur a archivé cette demande
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -654,14 +704,14 @@ model TelegramBot {
 
   botToken    String // Chiffré (AES-256-GCM)
   botUsername String
-  botName    String
+  botName     String
 
   communities Community[]
 
   createdAt DateTime @default(now())
+  // L5: @@index([sellerId]) retiré — @@unique crée déjà un index
 
   @@unique([sellerId])
-  // L5: @@index([sellerId]) retiré — @@unique crée déjà un index
 }
 
 // =============================================
@@ -681,11 +731,11 @@ model Community {
   telegramChatId    BigInt
   telegramChatTitle String?
 
-  title       String
-  description String?
-  coverUrl    String?
+  title         String
+  description   String?
+  coverUrl      String?
   priceAmount   Int // En FCFA
-  currency      String @default("XOF")
+  currency      String        @default("XOF")
   billingPeriod BillingPeriod @default(MONTHLY)
 
   subscribeFields Json? // Champs personnalisés du formulaire d'abonnement
@@ -711,16 +761,16 @@ model TelegramVerification {
   sellerId String
   seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
-  code      String @unique // Code unique (ex: IZY-A7K9)
-  chatId    BigInt?        // Rempli quand le bot reçoit /connect dans un groupe
-  chatTitle String?        // Nom du groupe détecté
+  code      String  @unique // Code unique (ex: IZY-A7K9)
+  chatId    BigInt? // Rempli quand le bot reçoit /connect dans un groupe
+  chatTitle String? // Nom du groupe détecté
   verified  Boolean @default(false)
 
-  expiresAt DateTime       // Expire après 15 min
+  expiresAt DateTime // Expire après 15 min
   createdAt DateTime @default(now())
+  // @unique sur code crée déjà un index — pas besoin de @@index([code])
 
   @@index([sellerId])
-  // @unique sur code crée déjà un index — pas besoin de @@index([code])
 }
 
 // =============================================
@@ -731,25 +781,25 @@ model CommunitySubscription {
   communityId String
   community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
-  memberEmail    String
-  memberName     String?
-  memberPhone    String?
-  memberCountry      String?  // Pays de l'acheteur (détecté au subscribe) — utilisé pour le renouvellement Bictorys
-  memberPaymentType  String?  // Méthode de paiement utilisée (wave_money, orange_money, card) — pour le renouvellement
-  telegramUserId BigInt?
-  telegramUsername String?
-  customFields   Json? // Champs personnalisés soumis par le membre
+  memberEmail       String
+  memberName        String?
+  memberPhone       String?
+  memberCountry     String? // Pays de l'acheteur (détecté au subscribe) — utilisé pour le renouvellement Bictorys
+  memberPaymentType String? // Méthode de paiement utilisée (wave_money, orange_money, card) — pour le renouvellement
+  telegramUserId    BigInt?
+  telegramUsername  String?
+  customFields      Json? // Champs personnalisés soumis par le membre
 
   status CommunitySubStatus @default(ACTIVE)
 
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
 
-  canceledAt      DateTime?
-  inviteLink      String?
+  canceledAt          DateTime?
+  inviteLink          String?
   inviteLinkExpiresAt DateTime?
-  lastPaymentAt   DateTime?
-  gracePeriodEnd  DateTime?
+  lastPaymentAt       DateTime?
+  gracePeriodEnd      DateTime?
 
   // Le prix au moment de la souscription (ne change pas si le vendeur modifie le prix)
   lockedPrice Int
@@ -760,38 +810,38 @@ model CommunitySubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([communityId, memberEmail])
+  @@unique([communityId, telegramUserId])
   @@index([communityId])
   @@index([communityId, status]) // L6: Index composé pour les requêtes cron
   @@index([status])
   @@index([currentPeriodEnd])
-  @@unique([communityId, memberEmail])
-  @@unique([communityId, telegramUserId])
 }
 
 // =============================================
 // COMMUNITY PAYMENT — Historique paiements communauté
 // =============================================
 model CommunityPayment {
-  id             String    @id @default(cuid())
+  id             String                @id @default(cuid())
   subscriptionId String
   subscription   CommunitySubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   communityId String
   community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
 
-  amount          Int
-  currency        String @default("XOF")
+  amount           Int
+  currency         String @default("XOF")
   commissionRate   Int    @default(500) // basis points: 500 = 5%, 300 = 3%
   commissionAmount Int    @default(0)
   sellerAmount     Int    @default(0)
 
-  provider              String @default("bictorys")
+  provider              String  @default("bictorys")
   providerTransactionId String?
 
   status CommunityPaymentStatus @default(PENDING)
 
-  paymentUrl  String?
-  reference   String @unique // Référence unique pour Bictorys
+  paymentUrl String?
+  reference  String  @unique // Référence unique pour Bictorys
 
   periodStart DateTime
   periodEnd   DateTime
@@ -809,7 +859,7 @@ model CommunityPayment {
 // COMMUNITY NOTIFICATION — Notifications envoyées
 // =============================================
 model CommunityNotification {
-  id             String @id @default(cuid())
+  id             String                @id @default(cuid())
   subscriptionId String
   subscription   CommunitySubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
@@ -852,11 +902,11 @@ enum CommunityNotifChannel {
 }
 
 enum BillingPeriod {
-  WEEKLY      // 7 jours
-  BIWEEKLY    // 15 jours
-  MONTHLY     // 30 jours (défaut)
-  QUARTERLY   // 90 jours
-  YEARLY      // 365 jours
+  WEEKLY // 7 jours
+  BIWEEKLY // 15 jours
+  MONTHLY // 30 jours (défaut)
+  QUARTERLY // 90 jours
+  YEARLY // 365 jours
 }
 
 // =============================================
@@ -867,11 +917,11 @@ model GoogleIntegration {
   sellerId String @unique
   seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
-  email         String
-  refreshToken  String   // Chiffré (AES-256-GCM)
+  email          String
+  refreshToken   String // Chiffré (AES-256-GCM)
   tokenExpiresAt DateTime?
-  calendarId    String   @default("primary")
-  connectedAt   DateTime @default(now())
+  calendarId     String    @default("primary")
+  connectedAt    DateTime  @default(now())
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -885,10 +935,10 @@ model EmailMarketingIntegration {
   sellerId String @unique
   seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
-  provider     String   // "mailchimp" | "brevo" | "systemeio"
-  apiKey       String   // Chiffré (AES-256-GCM)
-  listId       String?  // Mailchimp audience ID, Brevo list ID, Systeme.io tag
-  serverPrefix String?  // Mailchimp server prefix (ex: "us21")
+  provider     String // "mailchimp" | "brevo" | "systemeio"
+  apiKey       String // Chiffré (AES-256-GCM)
+  listId       String? // Mailchimp audience ID, Brevo list ID, Systeme.io tag
+  serverPrefix String? // Mailchimp server prefix (ex: "us21")
   syncEvents   String   @default("all") // "all" | "clients" | "leads"
   connectedAt  DateTime @default(now())
 
@@ -919,7 +969,7 @@ model PushSubscription {
 model Admin {
   id       String    @id @default(cuid())
   email    String    @unique
-  password String    // bcrypt hash
+  password String // bcrypt hash
   name     String
   role     AdminRole @default(ADMIN)
   isActive Boolean   @default(true)
@@ -944,8 +994,8 @@ model AdminLog {
   adminId String
   admin   Admin  @relation(fields: [adminId], references: [id])
 
-  action  String  // "KYC_APPROVED", "SELLER_BANNED", "WITHDRAWAL_APPROVED", etc.
-  target  String  // "seller:cuid123", "order:cuid456"
+  action  String // "KYC_APPROVED", "SELLER_BANNED", "WITHDRAWAL_APPROVED", etc.
+  target  String // "seller:cuid123", "order:cuid456"
   details Json?
   ip      String?
 
@@ -962,7 +1012,7 @@ model AdminLog {
 model Report {
   id          String   @id @default(cuid())
   storeSlug   String
-  reason      String   // SPAM, SCAM, INAPPROPRIATE, IMPERSONATION, OTHER
+  reason      String // SPAM, SCAM, INAPPROPRIATE, IMPERSONATION, OTHER
   description String?
   email       String?
   status      String   @default("PENDING") // PENDING, REVIEWED, DISMISSED
