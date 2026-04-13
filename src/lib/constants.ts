@@ -332,6 +332,9 @@ export const MERCI_LABELS = {
   headingTimeout: "Vérification en cours",
   amountPrefix: "Ton don de",
   thankYouFallback: "Merci de faire avancer cette cagnotte.",
+  // Phase 7 plan 07-03 — PLSH-08. Banani participation-success reference.
+  thankYouMessageEyebrow: "Un mot de l'organisateur",
+  confirmationCodeLabel: "Code de confirmation",
   shareCtaTitle: "Partage cette cagnotte",
   shareCtaText:
     "Aide à faire avancer cette cagnotte en la partageant autour de toi.",
@@ -1014,6 +1017,12 @@ export const EDIT_LABELS = {
   goalLabel: "Objectif (FCFA)",
   endDateLabel: "Date de fin",
   endDateHelper: "Laissez vide pour une cagnotte sans échéance.",
+  // Phase 7 plan 07-03 — PLSH-08. Editable thank-you message.
+  thankYouMessageLabel: "Message de remerciement (facultatif)",
+  thankYouMessagePlaceholder:
+    "Merci du fond du cœur pour ta contribution !",
+  thankYouMessageHelper:
+    "Affiché aux contributeurs après leur participation (500 caractères max).",
   suggestedAmountsLabel: "Montants suggérés (FCFA)",
   suggestedAmountsHelper:
     "Séparez par une virgule. 3 à 4 montants, minimum 500 FCFA.",

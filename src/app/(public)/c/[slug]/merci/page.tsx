@@ -164,14 +164,29 @@ export default function MerciPage() {
             </p>
           )}
           {order?.thankYouMessage ? (
-            <blockquote className="mx-auto max-w-md rounded-lg border border-border bg-muted/40 p-4 text-sm italic text-primary/90">
-              « {order.thankYouMessage} »
-            </blockquote>
+            <section className="mx-auto max-w-md rounded-2xl border border-pink-200 bg-pink/40 p-6 text-left">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wider text-primary/60">
+                {MERCI_LABELS.thankYouMessageEyebrow}
+              </p>
+              <p className="text-base italic leading-relaxed text-primary">
+                &ldquo;{order.thankYouMessage}&rdquo;
+              </p>
+            </section>
           ) : (
             <p className="text-sm text-muted-foreground">
               {MERCI_LABELS.thankYouFallback}
             </p>
           )}
+          {order?.reference ? (
+            <section className="mx-auto max-w-md rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-400">
+                {MERCI_LABELS.confirmationCodeLabel}
+              </p>
+              <p className="font-mono text-xl font-bold text-primary">
+                {order.reference}
+              </p>
+            </section>
+          ) : null}
           <div className="space-y-4 pt-2">
             <p className="text-sm font-medium text-primary">
               {MERCI_LABELS.shareCtaTitle}

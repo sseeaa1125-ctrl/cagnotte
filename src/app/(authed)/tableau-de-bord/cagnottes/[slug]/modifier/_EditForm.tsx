@@ -112,6 +112,11 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
   const [endDate, setEndDate] = React.useState<string>(
     toDateInputValue(safeConfig.endDate),
   );
+  const [thankYouMessage, setThankYouMessage] = React.useState<string>(
+    typeof safeConfig.thankYouMessage === "string"
+      ? safeConfig.thankYouMessage
+      : "",
+  );
   const [suggestedAmounts, setSuggestedAmounts] = React.useState<string>(
     formatSuggestedAmounts(safeConfig.suggestedAmounts),
   );
@@ -157,12 +162,16 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
     // Build the next config by MERGING the preserved safeConfig (subtype,
     // occasion, cause, beneficiary, visibility, showDonorCount, minAmount,
     // checkoutFields, etc.) with the editable fields.
+    const trimmedThankYou = thankYouMessage.trim();
     const nextConfig: Record<string, unknown> = {
       ...safeConfig,
       description: description.trim() || undefined,
       coverUrl: coverUrl ?? null,
       goalAmount: parsedGoal,
       endDate: endDate ? new Date(endDate).toISOString() : null,
+      // Phase 7 plan 07-03 — PLSH-08. Explicit null clears the server-side
+      // field so creators can wipe a previously-set message.
+      thankYouMessage: trimmedThankYou.length > 0 ? trimmedThankYou : null,
       suggestedAmounts: parseSuggestedAmounts(suggestedAmounts),
       hideAmount,
       hideDonors,
@@ -279,6 +288,15 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
         type="date"
         value={endDate}
         onChange={(e) => setEndDate(e.target.value)}
+      />
+
+      <Textarea
+        label={EDIT_LABELS.thankYouMessageLabel}
+        placeholder={EDIT_LABELS.thankYouMessagePlaceholder}
+        helper={EDIT_LABELS.thankYouMessageHelper}
+        value={thankYouMessage}
+        onChange={(e) => setThankYouMessage(e.target.value)}
+        maxLength={500}
       />
 
       <Input
