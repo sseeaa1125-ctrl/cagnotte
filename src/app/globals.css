@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@plugin "@tailwindcss/typography";
-@plugin "tailwindcss-animate";
 
 /* Prevent browser native pull-to-refresh on PWA/mobile */
 html, body {
