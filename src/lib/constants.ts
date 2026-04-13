@@ -180,3 +180,148 @@ export const MISC = {
   prefixTelephone: "+221",
   siteName: "Cagnottes.sn",
 } as const;
+
+// ─────────────────────────────────────────────────────────────────────────
+// Phase 4 plan 04-01 — public donor revenue path labels
+// All French strings. No hardcoded copy in JSX — import from here.
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── Home (screen 1) ──
+export const HOME_COPY = {
+  heroTitle: "Crée ta cagnotte, partage, collecte.",
+  heroSubtitle:
+    "La plateforme sénégalaise pour lever des fonds entre amis, en famille ou pour une cause. Wave, Orange Money, Free Money, carte bancaire.",
+  heroCtaCreate: "Créer ma cagnotte",
+  heroCtaDiscover: "Découvrir les cagnottes",
+  featuredTitle: "Les cagnottes du moment",
+  featuredSubtitle: "Soutiens une initiative près de chez toi.",
+  featuredEmpty: "Aucune cagnotte publiée pour le moment.",
+  featuredEmptyCta: "Sois le premier à créer une cagnotte",
+  featuredViewAllCta: "Voir toutes les cagnottes",
+  featuresTitle: "Pourquoi Cagnottes.sn",
+  featuresList: [
+    {
+      title: "Commission transparente",
+      body: "6% pour les causes solidaires, 8% pour les cagnottes festives. Tout est affiché avant le paiement.",
+    },
+    {
+      title: "Mobile money d'abord",
+      body: "Wave, Orange Money, Free Money. Tes contributeurs paient en deux taps.",
+    },
+    {
+      title: "Paiements sécurisés",
+      body: "Paiements traités par notre partenaire Bictorys. Tes fonds sont protégés.",
+    },
+  ],
+  trustTitle: "Ils nous font confiance",
+  faqTitle: "Questions fréquentes",
+  faqItems: [
+    {
+      q: "Comment récupérer les fonds collectés ?",
+      a: "Une fois ton identité vérifiée, tu peux demander un retrait vers ton Wave, Orange Money, Free Money ou ton compte bancaire. Le transfert arrive sous 24 à 72 heures selon l'opérateur.",
+    },
+    {
+      q: "Quelle commission prélève Cagnottes.sn ?",
+      a: "6% pour les cagnottes solidaires (santé, éducation, urgence) et 8% pour les cagnottes festives (mariage, anniversaire, cadeau commun). La commission est affichée au donateur avant le paiement.",
+    },
+    {
+      q: "Mes donateurs peuvent-ils rester anonymes ?",
+      a: "Oui. Chaque donateur peut cocher une case pour masquer son nom. Son message reste visible sauf s'il choisit aussi de le rendre privé.",
+    },
+    {
+      q: "Combien de temps dure une cagnotte ?",
+      a: "Tu choisis la date de fin à la création. Après cette date, la cagnotte n'accepte plus de contributions mais reste visible pour tes donateurs.",
+    },
+  ],
+} as const;
+
+// ── /c/[slug]/participer (screen 23) ──
+export const PARTICIPER_LABELS = {
+  pageTitle: "Je participe",
+  stepAmount: "Ton montant",
+  stepInfo: "Tes informations",
+  stepMessage: "Ton message",
+  suggestedAmounts: [1000, 2500, 5000, 10000, 25000] as readonly number[],
+  customAmountLabel: "Autre montant (FCFA)",
+  customAmountPlaceholder: "Ex : 7 500",
+  firstNameLabel: "Prénom",
+  lastNameLabel: "Nom",
+  emailLabel: "Email (facultatif)",
+  phoneLabel: "Téléphone",
+  phonePlaceholder: "+221 77 XXX XX XX",
+  messageLabel: "Message au créateur (facultatif)",
+  messagePlaceholder: "Ajoute un mot d'encouragement…",
+  anonymousLabel: "Faire un don anonyme",
+  anonymousHelp: "Ton nom ne sera pas affiché sur la page publique.",
+  privateMessageLabel: "Message privé",
+  privateMessageHelp: "Seul le créateur pourra lire ton message.",
+  tosLabel: "J'accepte les conditions générales d'utilisation",
+  submitCta: "Continuer vers le paiement",
+  errorAmountMin: "Le montant minimum est 500 FCFA",
+  errorAmountMax: "Le montant maximum est 10 000 000 FCFA",
+  errorFirstNameRequired: "Prénom requis",
+  errorLastNameRequired: "Nom requis",
+  errorPhoneRequired: "Téléphone requis",
+  errorMessageTooLong: "Message trop long (max 500 caractères)",
+  errorTosRequired: "Vous devez accepter les conditions",
+} as const;
+
+// ── /c/[slug]/paiement (screen 24) ──
+export const PAIEMENT_LABELS = {
+  pageTitle: "Mode de paiement",
+  pageSubtitle: "Choisis ton moyen de paiement pour continuer.",
+  methodWave: "Wave",
+  methodOrange: "Orange Money",
+  methodFree: "Free Money",
+  methodCard: "Carte bancaire",
+  payWithPrefix: "Payer avec",
+  processingLabel: "Traitement…",
+  errorRateLimit: "Trop de tentatives, réessaye dans 1 minute.",
+  errorCircuitBreaker: "Paiement temporairement indisponible. Réessaye dans 1 minute.",
+  errorGeneric: "Erreur lors de la création de l'ordre. Réessaye.",
+  errorMissingSession:
+    "Informations de contribution introuvables. Reprends depuis le début.",
+} as const;
+
+// ── /c/[slug]/merci ──
+export const MERCI_LABELS = {
+  headingPending: "Paiement en cours…",
+  headingPaid: "Merci pour ta contribution !",
+  headingFailed: "Paiement non abouti",
+  headingTimeout: "Vérification en cours",
+  amountPrefix: "Ton don de",
+  thankYouFallback: "Merci de faire avancer cette cagnotte.",
+  shareCtaTitle: "Partage cette cagnotte",
+  shareCtaText:
+    "Aide à faire avancer cette cagnotte en la partageant autour de toi.",
+  viewCagnotteCta: "Voir la cagnotte",
+  retryPaymentCta: "Réessayer le paiement",
+  manualRetryCta: "Vérifier à nouveau",
+  backCta: "Retour à la cagnotte",
+} as const;
+
+// ── In-app browser helpers (TikTok / IG / FB WebViews) ──
+export const IN_APP_LABELS = {
+  tiktokHelp:
+    "Ce navigateur ne peut pas ouvrir Wave directement. Utilise le bouton ci-dessous pour continuer dans Safari ou Chrome.",
+  tiktokButton: "Ouvrir dans Safari / Chrome",
+  metaHelp:
+    "Le paiement s'ouvre dans un nouvel onglet pour compléter ta contribution.",
+  metaButton: "Ouvrir Wave",
+  copyFallback: "Copier le lien de paiement",
+  copiedToast: "Lien copié dans le presse-papiers",
+} as const;
+
+// ── All-cagnottes page labels ──
+export const ALL_CAGNOTTES_LABELS = {
+  pageTitle: "Toutes les cagnottes",
+  pageSubtitle: "Découvre et soutiens les cagnottes publiées sur Cagnottes.sn.",
+  filterAll: "Toutes",
+  filterFestive: "Festives",
+  filterSolidaire: "Solidaires",
+  loadMoreCta: "Charger plus",
+  loadingLabel: "Chargement…",
+  emptyTitle: "Aucune cagnotte ne correspond",
+  emptyBody: "Essaye un autre filtre ou reviens plus tard.",
+  emptyResetCta: "Réinitialiser le filtre",
+} as const;

@@ -415,7 +415,9 @@ ordersRouter.post(
         country: normalizeBictorysCountry(data.paymentType, data.paymentCountry || getBictorysCountry(getCountryFromRequest(req, data.timezone), data.paymentType, seller.payoutCountry, data.customerPhone)),
         paymentType: data.paymentType,
         reference,
-        successRedirectUrl: `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/success?ref=${reference}&type=${data.orderType}`,
+        successRedirectUrl: data.cagnotteSlug
+          ? `${BICTORYS_REDIRECT_URL}/c/${data.cagnotteSlug}/merci?ref=${reference}`
+          : `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/success?ref=${reference}&type=${data.orderType}`,
         errorRedirectUrl: `${BICTORYS_REDIRECT_URL}/${data.sellerSlug}/error?ref=${reference}`,
         ...(data.otp && { otp: data.otp }),
         customer: {

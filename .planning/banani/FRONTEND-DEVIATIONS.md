@@ -48,6 +48,20 @@ Running log of intentional deviations between the Banani design export and the s
 - **Enforcement:** Plan 03-02 `Button` primitive implements the full social variant. Plan 05-01 (signup/login pages) MUST NOT render the social button JSX (hidden via feature flag `NEXT_PUBLIC_ENABLE_SOCIAL_LOGIN === "true"` which is never set in v1).
 - **Introduced by:** Plan 03-01
 
+### D-06 — All-cagnottes pagination: numeric → "Charger plus" (cursor)
+- **Banani:** Numeric pagination (page 1, 2, 3, ... at the bottom of the grid)
+- **cagnottes.sn:** "Charger plus" button using cursor-based pagination
+- **Rationale:** Backend `/api/cagnottes` is cursor-paginated (no count query — see [backend/src/routes/cagnottes.ts](../../backend/src/routes/cagnottes.ts) list handler which uses `take: limit+1` to detect `hasMore` without a count). Numeric pagination over cursors would require an extra count query that's expensive on growing tables. "Load more" is also more mobile-friendly and matches the social-feed mental model donors already have.
+- **Enforcement:** Phase 4 plan 04-01 task T2 ships the cursor pattern. The `Pagination` Phase 3 primitive remains available for authed paginated tables in Phase 6.
+- **Introduced by:** Plan 04-01
+
+### D-07 — Cagnotte detail: ship variant A only
+- **Banani:** Two variants of the cagnotte detail page (screens 21 + 22) — variant A (full description, standard layout) vs variant B (collapsed description, expanded participants wall).
+- **cagnottes.sn:** Single variant (variant A only). Variant B is deferred.
+- **Rationale:** The variant delta was not crisply specified during Banani export. Shipping ONE clean implementation faster, layering variant B post-launch if user feedback demands it.
+- **Enforcement:** Phase 4 plan 04-01 task T3 ships ONE component at `src/app/(public)/c/[slug]/page.tsx`. No variant flag, no toggle.
+- **Introduced by:** Plan 04-01
+
 ***
 
 ## Deviation Template (for future entries)
