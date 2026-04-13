@@ -160,6 +160,62 @@ Running log of intentional deviations between the Banani design export and the s
 - **Enforcement:** Plan 06-01 T2 `_ProfileForm.tsx` uses `api("/api/sellers/profile", { method: "PUT", ... })`. Server-side page reads via raw fetch to `/api/auth/me` (cookie forwarded). Grep guard in 06-01 T6 asserts `! grep -r "/api/sellers/me[^/]" src/app/(authed)/profil/`.
 - **Introduced by:** Plan 06-01 (discovered during T2 implementation — Rule 1 auto-fix on incorrect plan contract)
 
+### D-18 — Single payout account per seller (v1) — columns on Seller, no PayoutAccount model
+- **Banani:** Screen 18 shows a CRUD list of payout accounts (add/delete multiple Wave / Orange / bank tiles) backed by an imagined `PayoutAccount` Prisma model and `/api/sellers/me/payout-accounts` REST surface.
+- **cagnottes.sn:** v1 ships a single pre-registered payout method per seller stored as 4 columns on `Seller` (`payoutProvider`, `payoutPhone`, `payoutName`, `payoutCountry`). The "Coordonnées bancaires" page is a simple form (2 provider RadioCards + phone + name), saved via `PUT /api/sellers/profile` with those 4 fields. No list UI, no add/delete actions, no `PayoutAccount` table.
+- **Rationale:** Backend already exposes `Seller.payout*` (schema.prisma:46-49) and both `GET /api/withdrawals/balance` and `POST /api/withdrawals` consume them directly. Adding a `PayoutAccount` model would be a 4-8h surgical refactor for zero v1 user value (the vast majority of creators have one payout method). v2 can migrate to a 1-to-many relation when use-cases appear.
+- **Enforcement:** `src/app/(authed)/profil/coordonnees-bancaires/_BankForm.tsx` calls `api("/api/sellers/profile", { method: "PUT", body: { payoutProvider, payoutPhone, payoutName, payoutCountry } })`. No new endpoints created. `PayoutAccount` appears nowhere in `src/`.
+- **Introduced by:** Plan 06-02 (design-time decision, confirmed against backend research)
+
+### D-19 — Participations PDF export deferred to v2
+- **Banani:** Screen 16 shows an "Exporter en PDF" button next to the Filter chip.
+- **cagnottes.sn:** Both buttons are omitted in 06-01; creators who need an export can contact support. No jsPDF / @react-pdf/renderer dependency is added.
+- **Rationale:** PDF export requires either a server-side renderer (Playwright / PDFKit) or a ~300KB client library. Both are out of scope for the v1 Phase 6 surface; the feed is already paginated and searchable from the DB if needed.
+- **Enforcement:** `_ParticipationsClient.tsx` (06-01) has no export CTA. Zero PDF dependency in `package.json`.
+- **Introduced by:** Plan 06-01 (surfaced again in 06-02 audit)
+
+### D-20 — Withdrawal is seller-level, not per-cagnotte — route is /retraits (not /cagnottes/:slug/retrait)
+- **Banani:** Withdrawal screens show a "Depuis la cagnotte" strip with a single cagnotte thumbnail; the target route is `/cagnottes/:slug/retrait`.
+- **cagnottes.sn:** Withdrawals live at `/retraits` and operate on the seller-level aggregated balance (`GET /api/withdrawals/balance` returns `balance` across ALL cagnottes minus already-withdrawn/pending). There is no per-cagnotte retrait route. The balance strip reads "Solde disponible (toutes cagnottes confondues)".
+- **Rationale:** The backend balance is computed seller-wide (`withdrawals.ts:95` — sum of `Order.sellerAmount` minus `Withdrawal` COMPLETED+PROCESSING minus PENDING). There is no per-block withdrawal accounting. Splitting the UX by cagnotte would require backend changes for zero functional gain.
+- **Enforcement:** Route is `src/app/(authed)/retraits/page.tsx` (no `[slug]` segment). The avatar dropdown `Retirer mes fonds` entry added by 06-01 links to `/retraits`.
+- **Introduced by:** Plan 06-02
+
+### D-21 — Withdrawal flow is 4 routes (amount → PIN → confirm → success), not single-page
+- **Banani:** Screen shows one long scrolling card with amount + destination + summary + confirm button all on the same page.
+- **cagnottes.sn:** The flow is split into 4 dedicated routes for cleaner mobile UX and an explicit PIN gate: `/retraits` (amount + recipient), `/retraits/pin` (4-digit PIN entry), `/retraits/confirmation` (summary + `POST /api/withdrawals`), `/retraits/succes` (success screen). State persists across steps via `useWithdrawalDraft()` sessionStorage hook (key `cagnotte.withdrawal.draft.v1`).
+- **Rationale:** Banani's long-scroll layout hides the PIN requirement (plan gap) and makes it hard to recover on error (the whole form rebuilds). Splitting into focused steps mirrors Phase 5 wizard (D-12 `useWizardDraft`), gives each step a single responsibility, and lets router `replace()` prevent back-button double-submits on success.
+- **Enforcement:** 4 separate `page.tsx` files under `src/app/(authed)/retraits/`. `useWithdrawalDraft` cleared on success mount. Draft completeness checked on mount of pin/confirmation steps — incomplete draft → `router.replace("/retraits")`.
+- **Introduced by:** Plan 06-02
+
+### D-22 — Free Money excluded from payout recipient picker
+- **Banani:** Screens hint at Wave / Orange Money / bank tiles (and CLAUDE.md calls for 3 providers: Wave / Orange / Free).
+- **cagnottes.sn:** Only `wave_money` and `orange_money` are shown in the payout provider picker (both on `/profil/coordonnees-bancaires` and inside `/retraits`). Free Money option is excluded entirely.
+- **Rationale:** `backend/src/routes/withdrawals.ts:42` enforces `provider: z.enum(["wave_money", "orange_money"])` — Bictorys payouts do not currently support Free Money disbursement. Exposing a Free Money tile in the UI would break at the API call. Bank RIB/IBAN is also excluded (covered by D-18 deferral).
+- **Enforcement:** Grep guard `grep -rn "free_money" src/app/(authed)/profil/coordonnees-bancaires/ src/app/(authed)/retraits/` must return empty. `PayoutProvider` TS union in `src/lib/withdrawal/schema.ts` is explicitly `"wave_money" | "orange_money"`.
+- **Introduced by:** Plan 06-02
+
+### D-23 — Cagnotte stats uses a pure CSS bar chart (no Recharts)
+- **Banani:** N/A — there is no Banani stats screen. Designed ourselves.
+- **cagnottes.sn:** `/tableau-de-bord/cagnottes/[slug]/stats` renders the "Dons au fil du temps" timeline as a pure Tailwind CSS bar chart — each bucket is a `<div>` with an inline `style={{ height }}` percentage, bucketed by day from the raw `Order.paidAt` timestamps returned by `GET /api/cagnottes/:slug/participants`.
+- **Rationale:** Recharts adds ~90 KB gzipped for a single chart on a single page. The v1 chart needs only simple daily bars — CSS is sufficient. Zero new deps is a hard constraint (see `package.json` guard in the plan).
+- **Enforcement:** `src/app/(authed)/tableau-de-bord/cagnottes/[slug]/stats/_TimelineChart.tsx` contains no `recharts` import. `git diff package.json package-lock.json` must be empty.
+- **Introduced by:** Plan 06-02
+
+### D-24 — Cagnotte edit never exposes or submits `slug`
+- **Banani:** N/A — there is no Banani edit screen.
+- **cagnottes.sn:** `/tableau-de-bord/cagnottes/[slug]/modifier` shows the current slug as a disabled readonly field for orientation, but the `PUT /api/blocks/:id` body NEVER contains a `slug` key (neither at the top level nor inside `config`). Slug rename is a v2 feature (see D-13 for slug ownership).
+- **Rationale:** Slug renames would break every previously shared link and QR code. The backend accepts only `title`, `config`, `isActive` on `PUT /api/blocks/:id` anyway — even if a rogue client sent `slug`, it would be ignored by the zod schema, but defending in depth prevents accidental drift.
+- **Enforcement:** Grep guard `grep -rn '"slug":' src/app/(authed)/tableau-de-bord/cagnottes/\[slug\]/modifier/` must return empty. `_EditForm.tsx` destructures `const { slug: _ignored, ...safeConfig } = initial.config` before building the PUT body, and has a runtime `delete nextConfig.slug` defensive guard.
+- **Introduced by:** Plan 06-02
+
+### D-29 — `/api/auth/me` select widened to include KYC document URLs + phone
+- **Banani:** N/A — routing architecture.
+- **cagnottes.sn:** Phase 6 plan 06-02 needs the `/profil/kyc` server component to read `kycStatus`, `kycFullName`, `kycIdUrl`, `kycSelfieUrl` to render the status pill + existing document previews, and `/profil` already renders the phone input. The original `GET /api/auth/me` select (auth.ts:443) did not include these columns. Widened the select to add `phone`, `phoneCountry`, `kycFullName`, `kycIdUrl`, `kycSelfieUrl`.
+- **Rationale:** Adding a second `/api/sellers/me/kyc` round-trip would be extra network work for data that already lives on `Seller`. The widen is additive (no removed fields) and only exposes data the authenticated seller already owns.
+- **Enforcement:** Server read path in `/profil/kyc/page.tsx` uses `fetch(${BACKEND}/api/auth/me)` with cookie forward and reads the KYC fields directly. Grep guard in T3: `grep -rn "r2\\.cloudflarestorage\\|\\.r2\\.dev" src/app/(authed)/profil/kyc/` must return empty — we only render via `/api/files/:key` proxy URLs.
+- **Introduced by:** Plan 06-02 (Rule 2 auto-widen: missing critical read path)
+
 ***
 
 ## Deviation Template (for future entries)

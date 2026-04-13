@@ -480,6 +480,12 @@ authRouter.get("/me", requireAuth, async (req, res) => {
         payoutName: true,
         payoutCountry: true,
         kycStatus: true,
+        // Phase 6 plan 06-02 (D-29): widen for /profil/kyc + /profil phone input
+        phone: true,
+        phoneCountry: true,
+        kycFullName: true,
+        kycIdUrl: true,
+        kycSelfieUrl: true,
       },
     });
 

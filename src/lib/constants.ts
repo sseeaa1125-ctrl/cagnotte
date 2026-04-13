@@ -705,3 +705,197 @@ export const ALL_CAGNOTTES_LABELS = {
   emptyBody: "Essaye un autre filtre ou reviens plus tard.",
   emptyResetCta: "Réinitialiser le filtre",
 } as const;
+
+// ── Phase 6 plan 06-02 — money screens labels ──
+// Shared across /profil/coordonnees-bancaires, /profil/securite, /profil/kyc,
+// /retraits/**, /tableau-de-bord/cagnottes/[slug]/stats,
+// /tableau-de-bord/cagnottes/[slug]/modifier.
+
+export const BANK_LABELS = {
+  h1: "Coordonnées bancaires",
+  subtitle: "Choisissez le moyen de recevoir vos fonds.",
+  providerLabel: "Moyen de paiement",
+  providerWave: "Wave Sénégal",
+  providerWaveHelper: "Transfert instantané sur votre compte Wave.",
+  providerOrange: "Orange Money",
+  providerOrangeHelper: "Transfert instantané sur votre compte Orange Money.",
+  phoneLabel: "Numéro Mobile Money",
+  phoneHelper: "Exemple : 77 123 45 67",
+  nameLabel: "Nom du titulaire",
+  nameHelper: "Tel qu'inscrit chez votre opérateur.",
+  save: "Enregistrer",
+  saving: "Enregistrement…",
+  saved: "Coordonnées enregistrées",
+  errorGeneric: "Impossible d'enregistrer, réessayez.",
+  noFreeMoneyNotice:
+    "Free Money n'est pas disponible pour les retraits pour le moment.",
+  securityNoticeTitle: "Sécurité de vos coordonnées",
+  securityNoticeBody:
+    "Vos numéros Mobile Money sont stockés de manière sécurisée et ne servent qu'à vous verser les fonds récoltés.",
+} as const;
+
+export const SECURITY_LABELS = {
+  h1: "Sécurité & Mot de passe",
+  subtitle: "Protégez votre compte et vos retraits.",
+  passwordSection: "Changer mon mot de passe",
+  passwordDescription:
+    "Choisissez un mot de passe d'au moins 8 caractères, différent de l'ancien.",
+  currentPassword: "Mot de passe actuel",
+  newPassword: "Nouveau mot de passe",
+  confirmPassword: "Confirmer le nouveau mot de passe",
+  passwordSave: "Mettre à jour le mot de passe",
+  passwordSaving: "Mise à jour…",
+  passwordSuccess: "Mot de passe mis à jour",
+  passwordError: "Mot de passe actuel incorrect",
+  passwordTooShort: "Minimum 8 caractères",
+  passwordMismatch: "Les mots de passe ne correspondent pas",
+  pinSection: "Code de retrait (4 chiffres)",
+  pinDescription:
+    "Ce code est demandé à chaque retrait de fonds. Il est distinct de votre mot de passe.",
+  pinCurrent: "Code actuel",
+  pinNew: "Nouveau code",
+  pinConfirm: "Confirmer le code",
+  pinSet: "Définir mon code",
+  pinChange: "Changer mon code",
+  pinSaving: "Enregistrement…",
+  pinSuccess: "Code de retrait enregistré",
+  pinError: "Code de retrait incorrect",
+  pinMismatch: "Les codes ne correspondent pas",
+  pinInvalid: "Le code doit contenir exactement 4 chiffres",
+  pinAlreadySet: "Un code est actuellement défini.",
+  pinNotSetYet: "Aucun code n'est défini pour le moment.",
+} as const;
+
+export const KYC_LABELS = {
+  h1: "Vérification d'identité",
+  subtitle:
+    "Téléversez votre pièce d'identité pour activer les retraits de fonds.",
+  fullNameLabel: "Nom complet sur la pièce",
+  fullNameHelper: "Tel qu'il apparaît sur votre pièce d'identité.",
+  idLabel: "Pièce d'identité (recto)",
+  idHelper: "JPG ou PNG, 5 Mo maximum.",
+  selfieLabel: "Selfie avec votre pièce",
+  selfieHelper:
+    "Tenez votre pièce à côté de votre visage, bien visible, sans reflets.",
+  submit: "Soumettre pour vérification",
+  submitting: "Envoi en cours…",
+  uploadFailed: "L'envoi du fichier a échoué, réessayez.",
+  missingFiles: "Veuillez téléverser les deux documents.",
+  statusNone: "Non vérifié",
+  statusPending: "En cours de vérification",
+  statusApproved: "Identité vérifiée",
+  statusRejected: "Vérification refusée",
+  noneBanner:
+    "Votre identité n'a pas encore été vérifiée. Téléversez votre pièce d'identité pour activer les retraits.",
+  pendingBanner:
+    "Vos documents sont en cours de vérification. Vous recevrez une notification dès qu'ils seront validés.",
+  approvedBanner:
+    "Votre identité a été vérifiée. Vous pouvez maintenant retirer vos fonds.",
+  rejectedBanner:
+    "La vérification a été refusée. Vous pouvez soumettre à nouveau votre pièce et un selfie.",
+  approvedFullName: "Nom vérifié",
+} as const;
+
+export const WITHDRAWAL_LABELS = {
+  h1: "Retirer mes fonds",
+  subtitle:
+    "Transférez l'argent récolté vers votre compte Mobile Money en toute sécurité.",
+  balanceLabel: "Solde disponible",
+  balanceHelper: "Toutes cagnottes confondues.",
+  amountLabel: "Montant à retirer",
+  amountMin: "Minimum 1 000 FCFA.",
+  maxChip: "Max",
+  maxHelper: "Vous retirez la totalité du solde disponible.",
+  destLabel: "Où envoyer l'argent ?",
+  phoneLabel: "Numéro Mobile Money",
+  nameLabel: "Nom du titulaire",
+  continue: "Continuer",
+  back: "Retour",
+  pinTitle: "Entrez votre code à 4 chiffres",
+  pinHelper: "Ce code protège vos retraits.",
+  pinForgot: "Code oublié ?",
+  pinContinue: "Continuer",
+  confirmTitle: "Confirmer le retrait",
+  confirmSubtitle: "Vérifiez les informations avant de valider.",
+  confirmAmount: "Montant retiré",
+  confirmFees: "Frais de virement",
+  confirmFeesFree: "Gratuit",
+  confirmDelay: "Délai estimé",
+  confirmDelayInstant: "Immédiat",
+  confirmNet: "Vous allez recevoir",
+  confirmCta: "Confirmer le retrait",
+  confirmSubmitting: "Traitement en cours…",
+  secured: "Transaction sécurisée",
+  successH1: "Retrait en cours !",
+  successBodyPrefix: "Votre demande de retrait de ",
+  successBodySuffix: " a bien été prise en compte.",
+  successToLabel: "Vers le compte",
+  successDelayLabel: "Délai estimé",
+  successDelayInstant: "Immédiat",
+  successStatusLabel: "Statut",
+  successStatusPending: "En cours de traitement",
+  successInfoTitle: "Un SMS de confirmation arrive",
+  successInfo:
+    "Vous allez recevoir un SMS de confirmation de notre partenaire de paiement d'ici quelques minutes.",
+  successBackToDashboard: "Aller au tableau de bord",
+  successBackToCagnottes: "Voir mes cagnottes",
+  kycBlockedTitle: "Vérifiez votre identité",
+  kycBlockedBody:
+    "Avant d'effectuer un retrait, nous devons vérifier votre identité.",
+  kycBlockedCta: "Vérifier mon identité",
+  pinMissingTitle: "Créez votre code de retrait",
+  pinMissingBody:
+    "Définissez un code à 4 chiffres dans les paramètres de sécurité pour protéger vos retraits.",
+  pinMissingCta: "Définir mon code",
+  blockedTitle: "Retraits temporairement indisponibles",
+  blockedBody:
+    "Nos équipes ont suspendu les retraits sur votre compte. Contactez le support pour plus d'informations.",
+  insufficientBalance: "Solde insuffisant",
+  rateLimited: "Trop de demandes. Réessayez dans quelques minutes.",
+  circuitOpen:
+    "Le service de paiement est momentanément indisponible. Réessayez dans quelques instants.",
+  pinIncorrect: "Code de retrait incorrect",
+  pinLocked: "Trop de tentatives. Votre code est temporairement bloqué.",
+  draftExpired: "Votre demande a expiré, veuillez recommencer.",
+  submitError: "Le retrait n'a pas pu être effectué. Réessayez.",
+} as const;
+
+export const STATS_LABELS = {
+  h1: "Statistiques",
+  subtitle: "Un résumé de l'activité de votre cagnotte.",
+  kpiRaised: "Total collecté",
+  kpiDonors: "Contributeurs",
+  kpiAverage: "Don moyen",
+  topMessages: "Messages marquants",
+  topMessagesEmpty: "Aucun message public pour l'instant.",
+  timeline: "Dons au fil du temps",
+  timelineEmpty: "Aucune donnée à afficher pour l'instant.",
+  backToDashboard: "Retour au tableau de bord",
+  viewCagnotte: "Voir la cagnotte",
+} as const;
+
+export const EDIT_LABELS = {
+  h1: "Modifier ma cagnotte",
+  subtitle: "Mettez à jour le contenu sans changer l'URL.",
+  urlSection: "URL de votre cagnotte",
+  slugLocked: "L'URL de votre cagnotte ne peut pas être modifiée.",
+  titleLabel: "Titre",
+  descriptionLabel: "Description",
+  coverLabel: "Image de couverture",
+  coverHelper: "JPG ou PNG, 5 Mo maximum.",
+  goalLabel: "Objectif (FCFA)",
+  endDateLabel: "Date de fin",
+  endDateHelper: "Laissez vide pour une cagnotte sans échéance.",
+  suggestedAmountsLabel: "Montants suggérés (FCFA)",
+  suggestedAmountsHelper:
+    "Séparez par une virgule. 3 à 4 montants, minimum 500 FCFA.",
+  hideAmount: "Masquer le montant collecté",
+  hideAmountDescription: "Les contributeurs ne voient pas le total récolté.",
+  hideDonors: "Masquer la liste des donateurs",
+  hideDonorsDescription: "La liste des participants reste privée.",
+  save: "Enregistrer les modifications",
+  saving: "Enregistrement…",
+  saved: "Modifications enregistrées",
+  errorGeneric: "Impossible d'enregistrer, réessayez.",
+  backToDashboard: "Retour au tableau de bord",
+} as const;
