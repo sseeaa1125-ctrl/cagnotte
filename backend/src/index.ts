@@ -14,12 +14,15 @@ import { uploadRouter } from "./routes/upload.js";
 import { sellersRouter } from "./routes/sellers.js";
 import { withdrawalsRouter } from "./routes/withdrawals.js";
 import { filesRouter } from "./routes/files.js";
+import { notificationsRouter } from "./routes/notifications.js";
 import { verifyCsrf } from "./lib/auth.js";
 import { RedisRateLimitStore } from "./lib/rateLimitStore.js";
 import { requireAuth } from "./middleware/auth.js";
 import { getEmailQueueStats } from "./lib/queues/index.js";
 import { prisma } from "./lib/prisma.js";
 import * as logger from "./lib/logger.js";
+// Phase 2 plan 02-02 — ending-soon cron (NOTF-04 + P14 boot catch-up)
+import { runEndingSoonSweep } from "./lib/notifications/endingSoonCron.js";
 
 const app = express();
 // Trust first proxy (Railway) — needed for rate limiting + secure cookies in production
@@ -106,6 +109,7 @@ const writeLimiter = rateLimit({
 // Routes
 app.use("/api/auth", authRouter);
 app.use("/api/sellers", writeLimiter, verifyCsrf, sellersRouter);
+app.use("/api/notifications", writeLimiter, verifyCsrf, notificationsRouter); // Phase 2 02-02
 app.use("/api/blocks", writeLimiter, verifyCsrf, blocksRouter);
 app.use("/api/orders", ordersRouter); // Public order creation — CSRF not needed
 app.use("/api/cagnottes", cagnottesRouter); // Phase 2 02-01 — public GET-only, picks up global limiter
@@ -214,6 +218,17 @@ setInterval(cleanupOldWebhookLogs, 6 * 60 * 60 * 1000);
 setTimeout(expirePendingOrders, 10_000);
 setTimeout(cleanupExpiredCodes, 15_000);
 setTimeout(cleanupOldWebhookLogs, 45_000);
+
+// Phase 2 plan 02-02 — ending-soon notification sweep (NOTF-04).
+// Hourly + 30s boot catch-up so cagnottes that entered the J-3 window during
+// downtime are still picked up on next start (P14 mitigation). Block.endingSoonNotifiedAt
+// is the dedupe field; Notification.dedupeKey is the secondary safety net.
+setInterval(() => {
+  runEndingSoonSweep().catch((err) => logger.error("[ending-soon-cron]", err));
+}, 60 * 60 * 1000);
+setTimeout(() => {
+  runEndingSoonSweep().catch((err) => logger.error("[ending-soon-boot-catchup]", err));
+}, 30_000);
 
 app.listen(PORT, () => {
   console.log(`🚀 Cagnottes.sn Backend running on http://localhost:${PORT}`);
