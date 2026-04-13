@@ -40,6 +40,22 @@ async function main() {
   const prisma = new PrismaClient({ adapter });
 
   try {
+    // ── Guard 0: detect fresh DB (no tables yet) — vacuous-pass mode ──
+    const tableCheck = await prisma.$queryRawUnsafe<{ c: number }[]>(
+      `SELECT COUNT(*)::int AS c FROM information_schema.tables
+       WHERE table_schema = 'public' AND table_name IN ('Block', 'WebhookLog')`,
+    );
+    const tablesPresent = tableCheck[0]?.c ?? 0;
+    if (tablesPresent === 0) {
+      console.log(
+        "FRESH_DB_DETECTED: Block and WebhookLog tables do not exist yet — pre-flight guards are vacuously satisfied. Safe to run `prisma migrate dev`.",
+      );
+      console.log(
+        "\n✅ Phase 1 pre-flight PASSED (fresh DB) — safe to run `prisma migrate dev`",
+      );
+      process.exit(0);
+    }
+
     // ── Guard 2: Block row count < 1000 ──
     const blockCountRows = await prisma.$queryRawUnsafe<{ c: number }[]>(
       'SELECT COUNT(*)::int AS c FROM "Block"',
