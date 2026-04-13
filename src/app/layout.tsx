@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ToastProvider } from "@/contexts/ToastContext";
-import { PWARegister } from "@/components/PWARegister";
 import "./globals.css";
 
 const inter = Inter({
@@ -15,60 +14,36 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#009b8d",
+  themeColor: "#0D9488",
 };
 
 export const metadata: Metadata = {
   title: {
-    default: "Izy — Ta boutique dans ta bio",
-    template: "%s | Izy",
+    default: "Cagnottes.sn — Crée ta cagnotte, partage, collecte",
+    template: "%s | Cagnottes.sn",
   },
   description:
-    "Le link-in-bio avec paiement mobile money pour les créateurs d'Afrique. Vends tes produits, services et communautés depuis un seul lien.",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://izy.store"),
+    "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money. La façon la plus simple de lever des fonds au Sénégal.",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://cagnottes.sn"),
   openGraph: {
-    title: "Izy — Ta boutique dans ta bio",
+    title: "Cagnottes.sn",
     description:
-      "Le link-in-bio avec paiement mobile money pour les créateurs d'Afrique. Vends tes produits, services et communautés depuis un seul lien.",
-    siteName: "Izy",
+      "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money.",
+    siteName: "Cagnottes.sn",
     locale: "fr_FR",
     type: "website",
-    images: [
-      {
-        url: "/izy-store-og-green.png",
-        width: 1200,
-        height: 630,
-        alt: "Izy.store — Votre link-in-bio avec paiement Mobile Money intégré",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Izy — Ta boutique dans ta bio",
+    title: "Cagnottes.sn",
     description:
-      "Le link-in-bio avec paiement mobile money pour les créateurs d'Afrique.",
-    images: ["/izy-store-og-green.png"],
-  },
-  icons: {
-    icon: "/icon-192x192.png",
-    apple: "/apple-touch-icon.png",
-  },
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Izy",
-  },
-  other: {
-    "mobile-web-app-capable": "yes",
+      "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money.",
   },
   robots: {
     index: true,
     follow: true,
   },
 };
-
-import { SmoothScroll } from "@/components/SmoothScroll";
 
 export default function RootLayout({
   children,
@@ -78,12 +53,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body suppressHydrationWarning className={`${inter.variable} font-sans antialiased bg-gray-50`}>
-        <PWARegister />
-        <SmoothScroll>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
-        </SmoothScroll>
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );
