@@ -8,15 +8,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-/**
- * Formate un prix en FCFA avec séparateur de milliers
- * formatPrice(15000) → "15 000 FCFA"
- */
-export function formatPrice(amount: number): string {
-  const formatted = new Intl.NumberFormat("fr-FR").format(amount);
-  return `${formatted} FCFA`;
-}
-
 const BILLING_PERIOD_LABELS: Record<string, string> = {
   WEEKLY: "/sem.",
   BIWEEKLY: "/15j",
