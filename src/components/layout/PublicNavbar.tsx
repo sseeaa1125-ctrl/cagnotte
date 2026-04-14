@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { Menu } from "lucide-react";
-import { Avatar, Button, Modal } from "@/components/ui";
+import { Avatar, Button, ConfirmDialog, Modal } from "@/components/ui";
 import { NAV_LABELS, MISC } from "@/lib/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -23,8 +23,15 @@ const NAV_ITEMS: Array<{ label: string; href: string }> = [
 export function PublicNavbar({ className }: PublicNavbarProps) {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const { seller, loading, logout } = useAuth();
+
+  function openLogoutConfirm() {
+    setMenuOpen(false);
+    setMobileOpen(false);
+    setLogoutConfirmOpen(true);
+  }
 
   React.useEffect(() => {
     if (!menuOpen) return;
@@ -135,10 +142,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
                     <button
                       type="button"
                       role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        logout();
-                      }}
+                      onClick={openLogoutConfirm}
                       className="flex min-h-12 w-full items-center px-4 text-left text-sm text-primary hover:bg-muted focus-visible:outline-none focus-visible:bg-muted"
                     >
                       {NAV_LABELS.seDeconnecter}
@@ -211,10 +215,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
                   type="button"
                   variant="ghost"
                   fullWidth
-                  onClick={() => {
-                    setMobileOpen(false);
-                    logout();
-                  }}
+                  onClick={openLogoutConfirm}
                 >
                   {NAV_LABELS.seDeconnecter}
                 </Button>
@@ -232,6 +233,20 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
           </div>
         </nav>
       </Modal>
+
+      <ConfirmDialog
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        title="Se déconnecter ?"
+        message="Tu vas être redirigé·e vers la page d'accueil."
+        confirmLabel="Se déconnecter"
+        cancelLabel="Annuler"
+        tone="primary"
+        onConfirm={async () => {
+          await logout();
+          setLogoutConfirmOpen(false);
+        }}
+      />
     </header>
   );
 }

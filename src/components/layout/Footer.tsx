@@ -10,15 +10,26 @@ export interface FooterProps {
 
 const LEGAL_LINKS: Array<{ label: string; href: string }> = [
   { label: "Conditions générales", href: "/cgu" },
-  { label: "Confidentialité", href: "/confidentialite" },
+  { label: "Politique de confidentialité", href: "/confidentialite" },
   { label: "Mentions légales", href: "/mentions-legales" },
+  { label: "RGPD", href: "/rgpd" },
+  { label: "Cookies", href: "/cookies" },
 ];
 
 const PRODUCT_LINKS: Array<{ label: string; href: string }> = [
   { label: NAV_LABELS.cagnottes, href: "/cagnottes" },
   { label: NAV_LABELS.comment, href: "/comment" },
-  { label: NAV_LABELS.aide, href: "/aide" },
+  { label: "Tarifs", href: "/tarifs" },
   { label: NAV_LABELS.creerCagnotte, href: "/inscription" },
+];
+
+const HELP_LINKS: Array<{ label: string; href: string }> = [
+  { label: "Centre d'aide", href: "/aide" },
+  { label: "Mon compte & Sécurité", href: "/aide#compte-securite" },
+  { label: "Créer une cagnotte", href: "/aide#creer-gerer-cagnotte" },
+  { label: "Participer à une cagnotte", href: "/aide#participer" },
+  { label: "Retirer mes fonds", href: "/aide#utiliser-argent" },
+  { label: "Problèmes techniques", href: "/aide#technique" },
 ];
 
 export function Footer({ className }: FooterProps) {
@@ -36,7 +47,18 @@ export function Footer({ className }: FooterProps) {
               {MISC.siteName}
             </p>
             <p className="text-sm leading-relaxed">
-              {"La plateforme de cagnottes en ligne du Sénégal. Wave, Orange Money, Free Money, carte bancaire."}
+              La plateforme de cagnottes en ligne du Sénégal. Wave, Orange
+              Money, Free Money, carte bancaire.
+            </p>
+            <p className="pt-2 text-xs text-white/60">
+              Dakar, Sénégal
+              <br />
+              <a
+                href="mailto:contact@cagnottes.sn"
+                className="hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
+              >
+                contact@cagnottes.sn
+              </a>
             </p>
           </div>
 
@@ -50,7 +72,7 @@ export function Footer({ className }: FooterProps) {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
+                    className="text-sm transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
                   >
                     {link.label}
                   </Link>
@@ -59,7 +81,26 @@ export function Footer({ className }: FooterProps) {
             </ul>
           </div>
 
-          {/* Col 3: Légal */}
+          {/* Col 3: Aide (grouped FAQ sections for quick access) */}
+          <div className="space-y-3">
+            <p className="text-sm font-semibold uppercase tracking-wide text-white">
+              Aide
+            </p>
+            <ul className="space-y-2">
+              {HELP_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Col 4: Légal */}
           <div className="space-y-3">
             <p className="text-sm font-semibold uppercase tracking-wide text-white">
               Légal
@@ -69,30 +110,12 @@ export function Footer({ className }: FooterProps) {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
+                    className="text-sm transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
                   >
                     {link.label}
                   </Link>
                 </li>
               ))}
-            </ul>
-          </div>
-
-          {/* Col 4: Contact */}
-          <div className="space-y-3">
-            <p className="text-sm font-semibold uppercase tracking-wide text-white">
-              Contact
-            </p>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a
-                  href="mailto:contact@cagnottes.sn"
-                  className="hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-footer rounded-sm"
-                >
-                  contact@cagnottes.sn
-                </a>
-              </li>
-              <li>Dakar, Sénégal</li>
             </ul>
           </div>
         </div>
