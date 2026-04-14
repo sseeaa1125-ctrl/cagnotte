@@ -103,12 +103,105 @@ function maskDonation(
 const listQuerySchema = z.object({
   cursor: z.string().min(1).max(40).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
+  // Phase 10 — sort mode. "recent" (default) preserves cursor pagination.
+  // "popular" returns the top N blocks ranked by paid-order count; cursor
+  // is ignored (single-page response). Used by the home featured list.
+  sort: z.enum(["recent", "popular"]).default("recent").optional(),
 });
 
 cagnottesRouter.get("/", async (req, res) => {
   try {
     const query = listQuerySchema.parse(req.query);
 
+    // ── Popular sort branch ──────────────────────────────────────────────
+    // Fetch a wider pool (up to 200) of eligible blocks, compute their paid
+    // order counts, sort in JS, and return the top N. No cursor in this
+    // branch — the home page shows a fixed top-3 and never paginates.
+    if (query.sort === "popular") {
+      const poolSize = Math.min(200, Math.max(query.limit * 10, 60));
+      const pool = await prisma.block.findMany({
+        where: {
+          type: "FUNDRAISER",
+          isActive: true,
+          config: { path: ["visibility"], equals: "public" },
+          seller: { deletedAt: null },
+          slug: { not: null },
+        },
+        orderBy: { createdAt: "desc" },
+        take: poolSize,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          config: true,
+          createdAt: true,
+          seller: {
+            select: {
+              id: true,
+              slug: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+
+      const poolIds = pool.map((r) => r.id);
+      const poolTotals = poolIds.length === 0
+        ? []
+        : await prisma.order.groupBy({
+            by: ["blockId"],
+            where: { blockId: { in: poolIds }, paymentStatus: "PAID" },
+            _sum: { amount: true },
+            _count: { _all: true },
+          });
+      const poolMap = new Map<string, { sum: number; count: number }>();
+      for (const t of poolTotals) {
+        if (!t.blockId) continue;
+        poolMap.set(t.blockId, {
+          sum: t._sum.amount || 0,
+          count: t._count._all,
+        });
+      }
+
+      const sortedPool = pool
+        .slice()
+        .sort((a, b) => {
+          const sa = poolMap.get(a.id)?.count ?? 0;
+          const sb = poolMap.get(b.id)?.count ?? 0;
+          if (sb !== sa) return sb - sa;
+          // Tie-break on total raised, then on createdAt desc for stable order.
+          const ra = poolMap.get(a.id)?.sum ?? 0;
+          const rb = poolMap.get(b.id)?.sum ?? 0;
+          if (rb !== ra) return rb - ra;
+          return b.createdAt.getTime() - a.createdAt.getTime();
+        })
+        .slice(0, query.limit);
+
+      const popular = sortedPool.map((row) => {
+        const cfg = (row.config as FundraiserConfig) || {};
+        const stats = poolMap.get(row.id) || { sum: 0, count: 0 };
+        return {
+          id: row.id,
+          slug: row.slug,
+          title: row.title,
+          coverUrl: cfg.coverUrl ?? null,
+          subtype: cfg.subtype ?? null,
+          goalAmount: cfg.goalAmount ?? null,
+          endDate: cfg.endDate ?? null,
+          totalRaised: cfg.hideAmount ? null : stats.sum,
+          donorCount: cfg.hideDonors ? null : stats.count,
+          seller: shapeSeller(row.seller),
+          createdAt: row.createdAt.toISOString(),
+        };
+      });
+
+      res.setHeader("Cache-Control", "public, max-age=60");
+      res.json({ cagnottes: popular, nextCursor: null });
+      return;
+    }
+
+    // ── Recent sort branch (default) ─────────────────────────────────────
     // Fetch limit+1 to detect whether there's a next page without a count query.
     const rows = await prisma.block.findMany({
       where: {

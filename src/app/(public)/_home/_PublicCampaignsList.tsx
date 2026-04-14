@@ -31,9 +31,14 @@ interface ListResponse {
 
 async function getFeatured(): Promise<ApiCagnotte[]> {
   try {
-    const res = await fetch(`${BACKEND_API_URL}/api/cagnottes?limit=3`, {
-      next: { revalidate: 60 },
-    });
+    // Phase 10 — rank by `popular` so the home hero surfaces the cagnottes
+    // with the most participations (ties broken by total raised, then most
+    // recent). The backend re-sorts a 60-row pool in JS so we avoid a raw
+    // SQL join on the prototype.
+    const res = await fetch(
+      `${BACKEND_API_URL}/api/cagnottes?sort=popular&limit=3`,
+      { next: { revalidate: 60 } },
+    );
     if (!res.ok) return [];
     const data = (await res.json()) as ListResponse;
     return (data.cagnottes ?? []).filter((c): c is ApiCagnotte => Boolean(c.slug));
