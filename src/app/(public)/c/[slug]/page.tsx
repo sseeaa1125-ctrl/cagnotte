@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Youtube } from "lucide-react";
+import { Flag, Share2, Sparkles, Youtube } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import { ShareSheet } from "@/components/share/ShareSheet";
 import { SUBTYPE_LABELS, ACTIONS } from "@/lib/constants";
@@ -42,8 +42,8 @@ interface CagnotteDetail {
   recentDonations: Array<{
     id: string;
     amount: number | null;
-    customerName: string | null;
-    donorMessage: string | null;
+    name: string | null;
+    message: string | null;
     createdAt: string;
   }>;
   seller: {
@@ -55,14 +55,16 @@ interface CagnotteDetail {
   createdAt: string;
 }
 
+interface ParticipantItem {
+  id: string;
+  amount: number | null;
+  name: string | null;
+  message: string | null;
+  createdAt: string;
+}
+
 interface ParticipantsResponse {
-  participants: Array<{
-    id: string;
-    amount: number | null;
-    customerName: string | null;
-    donorMessage: string | null;
-    createdAt: string;
-  }>;
+  participants: ParticipantItem[];
   nextCursor: string | null;
 }
 
@@ -82,7 +84,7 @@ async function getCagnotte(slug: string): Promise<CagnotteDetail | null> {
 async function getParticipants(slug: string): Promise<ParticipantsResponse> {
   try {
     const res = await fetch(
-      `${BACKEND_API_URL}/api/cagnottes/${slug}/participants?limit=10`,
+      `${BACKEND_API_URL}/api/cagnottes/${slug}/participants?limit=50`,
       { cache: "no-store" },
     );
     if (!res.ok) return { participants: [], nextCursor: null };
@@ -102,12 +104,13 @@ export async function generateMetadata({
   if (!cagnotte) {
     return {
       title: "Cagnotte introuvable",
-      // CRITICAL — OQ-4: ALL /c/ variants noindex in v1.
       robots: { index: false, follow: false },
     };
   }
 
-  const description = (cagnotte.description ?? "Soutiens cette cagnotte sur cagnotte.sn").slice(0, 200);
+  const description = (
+    cagnotte.description ?? "Soutiens cette cagnotte sur cagnotte.sn"
+  ).slice(0, 200);
   const ogImages = cagnotte.coverUrl
     ? [{ url: cagnotte.coverUrl, width: 1200, height: 630 }]
     : [];
@@ -130,22 +133,35 @@ export async function generateMetadata({
       description,
       images: cagnotte.coverUrl ? [cagnotte.coverUrl] : [],
     },
-    // CRITICAL — OQ-4 lock: ALL /c/[slug] are noindex in v1, public OR private.
     robots: { index: false, follow: false },
   };
 }
 
-function formatEndDate(iso: string | null): string | null {
-  if (!iso) return null;
+function formatRelative(iso: string): string {
   try {
-    return new Date(iso).toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    const now = Date.now();
+    const then = new Date(iso).getTime();
+    const diff = now - then;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "à l'instant";
+    if (mins < 60) return `il y a ${mins} min`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `il y a ${hours}h`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `il y a ${days}j`;
+    const weeks = Math.floor(days / 7);
+    if (weeks < 5) return `il y a ${weeks}sem`;
+    const months = Math.floor(days / 30);
+    return `il y a ${months}mois`;
   } catch {
-    return null;
+    return "";
   }
+}
+
+function initial(name: string | null | undefined): string {
+  if (!name) return "?";
+  const trimmed = name.trim();
+  return trimmed.charAt(0).toUpperCase() || "?";
 }
 
 export default async function CagnottePage({
@@ -162,175 +178,89 @@ export default async function CagnottePage({
   if (!cagnotte) notFound();
 
   const isPrivate = cagnotte.visibility === "private";
+  const isClosed = cagnotte.status === "closed";
   const subtype = (cagnotte.subtype ?? "festive") as "festive" | "solidaire";
   const goalAmount = cagnotte.goalAmount ?? 0;
   const totalRaised = cagnotte.totalRaised ?? 0;
   const donorCount = cagnotte.donorCount ?? 0;
-  const endDateLabel = formatEndDate(cagnotte.endDate);
   const sellerName = cagnotte.seller?.displayName ?? "Anonyme";
+
+  const participants = participantsData.participants;
+  const messagesCount = participants.filter((p) => p.message).length;
+  const average = donorCount > 0 ? Math.floor(totalRaised / donorCount) : 0;
+  const latest = participants[0] ?? null;
+
+  const messageWall = participants.filter((p) => p.message).slice(0, 6);
+  const donorWall = participants.slice(0, 8);
 
   return (
     <article className="container mx-auto px-4 py-6 md:py-10">
-      {isPrivate && (
+      {/* Latest participation pill */}
+      {latest && !cagnotte.hideDonors ? (
+        <p className="mb-4 flex items-center justify-center gap-2 text-center text-xs font-medium text-gray-500 md:text-sm">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden />
+          Dernière participation · {formatRelative(latest.createdAt)} ·{" "}
+          <span className="font-semibold text-primary">
+            {latest.name ?? "Anonyme"}
+          </span>{" "}
+          a participé
+        </p>
+      ) : null}
+
+      {isPrivate ? (
         <div
           role="status"
           className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
         >
           Cagnotte privée — accessible uniquement via le lien direct.
         </div>
-      )}
+      ) : null}
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Main column */}
-        <div className="space-y-6 lg:col-span-2">
-          {cagnotte.coverUrl ? (
-            // Plain <img> (not next/image) — the backend serves covers through
-            // /api/files/:key which Next's image optimizer fails on (returns a
-            // 400 for the optimized variant even with remotePatterns set).
-            // Loading the asset directly mirrors the creator dashboard behavior
-            // and avoids the optimizer entirely.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={cagnotte.coverUrl}
-              alt={cagnotte.title}
-              className="aspect-[16/9] w-full rounded-xl bg-muted object-cover"
-            />
+      {/* ─── Hero: title / amount / CTAs + cover ──────────────────────── */}
+      <header className="grid gap-8 md:grid-cols-2 md:items-center">
+        <div className="flex flex-col gap-5">
+          <Badge variant={subtype}>
+            <Sparkles size={14} aria-hidden className="text-primary/70" />
+            {SUBTYPE_LABELS[subtype]}
+          </Badge>
+
+          <h1 className="font-headings text-3xl font-black leading-tight text-primary sm:text-4xl md:text-5xl">
+            {cagnotte.title}
+          </h1>
+
+          <p className="text-sm text-gray-600">
+            Créée par{" "}
+            <span className="font-semibold text-primary">{sellerName}</span>
+          </p>
+
+          {!cagnotte.hideAmount ? (
+            <div>
+              <p className="font-headings text-4xl font-black text-primary sm:text-5xl md:text-6xl">
+                {formatPrice(totalRaised)}
+              </p>
+              <p className="mt-1 text-sm font-semibold uppercase tracking-wider text-gray-500">
+                Collectés
+                {goalAmount > 0 ? ` · Objectif ${formatPrice(goalAmount)}` : ""}
+              </p>
+            </div>
           ) : (
-            <div className="flex aspect-[16/9] w-full items-center justify-center rounded-xl bg-pink">
-              <span
-                className="font-headings text-5xl font-bold text-primary/40"
-                aria-hidden
-              >
-                {cagnotte.title.slice(0, 2).toUpperCase()}
-              </span>
-            </div>
+            <p className="text-sm italic text-gray-500">Montant masqué par le créateur</p>
           )}
 
-          <header className="space-y-3">
-            <Badge variant={subtype}>{SUBTYPE_LABELS[subtype]}</Badge>
-            <h1 className="font-headings text-3xl font-bold text-primary md:text-4xl">
-              {cagnotte.title}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              par <span className="font-medium text-primary">{sellerName}</span>
-              {endDateLabel ? ` · Fin le ${endDateLabel}` : null}
-            </p>
-          </header>
+          <ProgressPoll
+            slug={slug}
+            initialTotalRaised={totalRaised}
+            initialDonorCount={donorCount}
+            goalAmount={goalAmount}
+            hideAmount={cagnotte.hideAmount}
+            hideDonors={cagnotte.hideDonors}
+          />
 
-          {cagnotte.description && (
-            <div className="prose prose-sm max-w-none whitespace-pre-line text-base text-primary/90">
-              {cagnotte.description}
-            </div>
-          )}
-
-          {cagnotte.gallery && cagnotte.gallery.length > 0 && (
-            <section aria-labelledby="gallery-heading">
-              <h2
-                id="gallery-heading"
-                className="mb-3 font-headings text-xl font-semibold text-primary"
-              >
-                Galerie
-              </h2>
-              <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {cagnotte.gallery.map((item, idx) => (
-                  <li
-                    key={`${item.kind}-${item.url}-${idx}`}
-                    className="group overflow-hidden rounded-xl border border-border bg-muted transition-shadow duration-300 hover:shadow-lg"
-                  >
-                    {item.kind === "image" ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.url}
-                        alt=""
-                        className="aspect-video w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                      />
-                    ) : item.videoId ? (
-                      <div className="relative aspect-video w-full">
-                        <iframe
-                          src={youtubeEmbed(item.videoId)}
-                          title="Vidéo YouTube"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                          className="absolute inset-0 h-full w-full"
-                          loading="lazy"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex aspect-video w-full items-center justify-center bg-black/80 text-white">
-                        <Youtube size={28} aria-hidden />
-                      </div>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {!cagnotte.hideDonors && participantsData.participants.length > 0 && (
-            <section aria-labelledby="participants-heading">
-              <h2
-                id="participants-heading"
-                className="mb-3 font-headings text-xl font-semibold text-primary"
-              >
-                Derniers participants
-              </h2>
-              <ul className="divide-y divide-border rounded-xl border border-border bg-background">
-                {participantsData.participants.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between gap-3 p-3 text-sm"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-primary">
-                        {p.customerName ?? "Anonyme"}
-                      </p>
-                      {p.donorMessage && (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {p.donorMessage}
-                        </p>
-                      )}
-                    </div>
-                    {!cagnotte.hideAmount && typeof p.amount === "number" && (
-                      <span className="flex-shrink-0 font-semibold text-primary">
-                        {formatPrice(p.amount)}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          <section aria-labelledby="share-heading" className="pt-2">
-            <h2
-              id="share-heading"
-              className="mb-3 font-headings text-lg font-semibold text-primary"
-            >
-              {ACTIONS.partager}
-            </h2>
-            <ShareSheet
-              url={`${PUBLIC_BASE_URL}/c/${slug}`}
-              title={cagnotte.title}
-              description={cagnotte.description ?? undefined}
-            />
-          </section>
-        </div>
-
-        {/* Sticky sidebar */}
-        <aside className="lg:col-span-1">
-          <div className="sticky top-4 space-y-5 rounded-xl border border-border bg-background p-6">
-            <ProgressPoll
-              slug={slug}
-              initialTotalRaised={totalRaised}
-              initialDonorCount={donorCount}
-              goalAmount={goalAmount}
-              hideAmount={cagnotte.hideAmount}
-              hideDonors={cagnotte.hideDonors}
-            />
-            {cagnotte.status === "closed" ? (
+          <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+            {isClosed ? (
               <div
                 role="status"
-                className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-600"
+                className="flex min-h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-600"
               >
                 <span
                   aria-hidden
@@ -339,15 +269,273 @@ export default async function CagnottePage({
                 Cagnotte clôturée
               </div>
             ) : (
-              <Link href={`/c/${slug}/participer`} className="block">
-                <Button variant="primary" size="lg" fullWidth>
-                  {ACTIONS.participer}
-                </Button>
-              </Link>
+              <Button
+                as="a"
+                href={`/c/${slug}/participer`}
+                variant="primary"
+                size="lg"
+                fullWidth
+                className="sm:max-w-[220px]"
+              >
+                {ACTIONS.participer}
+              </Button>
+            )}
+            <Button
+              as="a"
+              href={`#partager`}
+              variant="outline"
+              size="lg"
+              iconLeft={<Share2 size={18} />}
+              fullWidth
+              className="sm:max-w-[180px]"
+            >
+              {ACTIONS.partager}
+            </Button>
+          </div>
+        </div>
+
+        <div className="order-first md:order-last">
+          {cagnotte.coverUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={cagnotte.coverUrl}
+              alt={cagnotte.title}
+              className="aspect-[4/3] w-full rounded-3xl bg-muted object-cover shadow-xl shadow-black/5"
+            />
+          ) : (
+            <div className="flex aspect-[4/3] w-full items-center justify-center rounded-3xl bg-pink">
+              <span
+                className="font-headings text-5xl font-bold text-primary/40"
+                aria-hidden
+              >
+                {cagnotte.title.slice(0, 2).toUpperCase()}
+              </span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* ─── Stats bar ─────────────────────────────────────────────────── */}
+      <section
+        aria-label="Chiffres clés"
+        className="mt-10 rounded-2xl border border-border bg-white p-5 shadow-sm md:p-6"
+      >
+        <div className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">
+          En quelques chiffres
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="font-headings text-2xl font-black text-primary md:text-3xl">
+              {cagnotte.hideDonors ? "—" : donorCount}
+            </p>
+            <p className="text-xs font-medium text-gray-500 md:text-sm">
+              participations
+            </p>
+          </div>
+          <div>
+            <p className="font-headings text-2xl font-black text-primary md:text-3xl">
+              {cagnotte.hideDonors ? "—" : messagesCount}
+            </p>
+            <p className="text-xs font-medium text-gray-500 md:text-sm">
+              messages
+            </p>
+          </div>
+          <div>
+            <p className="font-headings text-2xl font-black text-primary md:text-3xl">
+              {cagnotte.hideAmount || donorCount === 0
+                ? "—"
+                : formatPrice(average)}
+            </p>
+            <p className="text-xs font-medium text-gray-500 md:text-sm">
+              en moyenne
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Why section ──────────────────────────────────────────────── */}
+      {cagnotte.description ? (
+        <section className="mt-10" aria-labelledby="why-heading">
+          <h2
+            id="why-heading"
+            className="mb-2 font-headings text-2xl font-black text-primary md:text-3xl"
+          >
+            Pourquoi cette cagnotte ?
+          </h2>
+          <p className="mb-4 text-sm font-semibold text-primary/80 md:text-base">
+            ✨ Le parcours de {sellerName}
+          </p>
+          <details className="group">
+            <summary className="list-none">
+              <div className="whitespace-pre-line text-base leading-relaxed text-primary/90 group-open:line-clamp-none line-clamp-6">
+                {cagnotte.description}
+              </div>
+              <span className="mt-2 inline-block text-sm font-bold text-primary underline underline-offset-2 group-open:hidden">
+                Lire la suite →
+              </span>
+              <span className="mt-2 hidden text-sm font-bold text-primary underline underline-offset-2 group-open:inline-block">
+                ← Réduire
+              </span>
+            </summary>
+          </details>
+          <p className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-gray-500">
+            <Flag size={12} aria-hidden />
+            <a
+              href="mailto:contact@cagnottes.sn?subject=Signaler%20une%20cagnotte"
+              className="underline underline-offset-2 hover:text-primary"
+            >
+              Signaler la cagnotte
+            </a>
+          </p>
+        </section>
+      ) : null}
+
+      {/* ─── Gallery ───────────────────────────────────────────────────── */}
+      {cagnotte.gallery && cagnotte.gallery.length > 0 ? (
+        <section className="mt-10" aria-labelledby="gallery-heading">
+          <h2
+            id="gallery-heading"
+            className="mb-4 font-headings text-xl font-black text-primary md:text-2xl"
+          >
+            Galerie
+          </h2>
+          <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {cagnotte.gallery.map((item, idx) => (
+              <li
+                key={`${item.kind}-${item.url}-${idx}`}
+                className="group overflow-hidden rounded-xl border border-border bg-muted transition-shadow duration-300 hover:shadow-lg"
+              >
+                {item.kind === "image" ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.url}
+                    alt=""
+                    className="aspect-video w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                  />
+                ) : item.videoId ? (
+                  <div className="relative aspect-video w-full">
+                    <iframe
+                      src={youtubeEmbed(item.videoId)}
+                      title="Vidéo YouTube"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="absolute inset-0 h-full w-full"
+                      loading="lazy"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex aspect-video w-full items-center justify-center bg-black/80 text-white">
+                    <Youtube size={28} aria-hidden />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {/* ─── Two-column: messages + donors ─────────────────────────────── */}
+      {!cagnotte.hideDonors && participants.length > 0 ? (
+        <section className="mt-10 grid gap-6 lg:grid-cols-5">
+          {/* Messages de soutien */}
+          <div className="rounded-3xl border border-border bg-white p-5 shadow-sm md:p-6 lg:col-span-3">
+            <h2 className="mb-4 flex items-center gap-2 font-headings text-lg font-black text-primary">
+              💬 Les messages de soutien
+            </h2>
+            {messageWall.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-500">
+                Aucun message pour l&apos;instant. Sois le·la premier·ère à
+                encourager !
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-4">
+                {messageWall.map((p) => (
+                  <li
+                    key={p.id}
+                    className="border-b border-border/60 pb-4 last:border-0 last:pb-0"
+                  >
+                    <p className="mb-1 text-sm font-bold text-primary">
+                      {p.name ?? "Anonyme"}{" "}
+                      <span className="font-medium text-gray-500">
+                        · {formatRelative(p.createdAt)}
+                      </span>
+                    </p>
+                    <p className="text-sm leading-relaxed text-primary/80">
+                      {p.message}
+                    </p>
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
-        </aside>
-      </div>
+
+          {/* Ils ont participé */}
+          <div className="rounded-3xl border border-border bg-white p-5 shadow-sm md:p-6 lg:col-span-2">
+            <h2 className="mb-4 font-headings text-lg font-black text-primary">
+              Ils ont participé
+            </h2>
+            <ul className="flex flex-col gap-3">
+              {donorWall.map((p) => (
+                <li key={p.id} className="flex items-center gap-3">
+                  <div
+                    aria-hidden
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent font-headings text-sm font-black text-primary"
+                  >
+                    {initial(p.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-primary">
+                      {p.name ?? "Anonyme"}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      a fait un don · {formatRelative(p.createdAt)}
+                    </p>
+                  </div>
+                  {!cagnotte.hideAmount && typeof p.amount === "number" ? (
+                    <span className="shrink-0 text-sm font-bold text-primary">
+                      {formatPrice(p.amount)}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+            {donorCount > donorWall.length ? (
+              <button
+                type="button"
+                className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-primary bg-white px-4 py-3 text-sm font-bold text-primary transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pink/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                Afficher tout ({donorCount})
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ─── Share card ───────────────────────────────────────────────── */}
+      <section
+        id="partager"
+        className="mt-10 rounded-3xl bg-pink p-6 text-center md:p-10"
+        aria-labelledby="share-heading"
+      >
+        <h2
+          id="share-heading"
+          className="mb-3 font-headings text-2xl font-black text-primary md:text-3xl"
+        >
+          Partager, c&apos;est aussi soutenir
+        </h2>
+        <p className="mx-auto mb-6 max-w-xl text-sm text-primary/80 md:text-base">
+          Chaque partage est une chance en plus d&apos;atteindre l&apos;objectif.
+          Partage la cagnotte autour de toi — sur WhatsApp, Instagram,
+          LinkedIn.
+        </p>
+        <div className="mx-auto max-w-md">
+          <ShareSheet
+            url={`${PUBLIC_BASE_URL}/c/${slug}`}
+            title={cagnotte.title}
+            description={cagnotte.description ?? undefined}
+          />
+        </div>
+      </section>
     </article>
   );
 }
