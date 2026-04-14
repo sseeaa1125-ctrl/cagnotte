@@ -213,15 +213,15 @@ export default async function CreatorCagnotteDetailPage({
             <img
               src={cagnotte.coverUrl}
               alt={cagnotte.title}
-              className="h-20 w-20 shrink-0 rounded-2xl object-cover"
+              className="h-16 w-16 shrink-0 rounded-2xl object-cover sm:h-20 sm:w-20"
             />
           ) : (
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-accent text-2xl font-black text-primary">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-accent text-2xl font-black text-primary sm:h-20 sm:w-20">
               {cagnotte.title.slice(0, 2).toUpperCase()}
             </div>
           )}
 
-          <div className="flex flex-col gap-2">
+          <div className="flex min-w-0 flex-col gap-2">
             {cagnotte.status === "closed" ? (
               <Badge variant="status-closed">
                 <span
@@ -239,20 +239,22 @@ export default async function CreatorCagnotteDetailPage({
                 {CREATOR_DETAIL_LABELS.statusOnline}
               </Badge>
             )}
-            <h1 className="font-headings text-3xl font-black text-primary md:text-4xl">
+            <h1 className="font-headings text-2xl font-black leading-tight text-primary sm:text-3xl md:text-4xl">
               {cagnotte.title}
             </h1>
-            <p className="text-sm text-muted-foreground">{subtitle}</p>
+            <p className="text-sm text-gray-600">{subtitle}</p>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 md:shrink-0">
+        <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto md:shrink-0">
           <Button
             as="a"
             href={`/tableau-de-bord/cagnottes/${cagnotte.slug}/modifier`}
             variant="outline"
             size="md"
             iconLeft={<Settings size={16} />}
+            fullWidth
+            className="sm:w-auto"
           >
             {CREATOR_DETAIL_LABELS.manageCta}
           </Button>
@@ -262,6 +264,8 @@ export default async function CreatorCagnotteDetailPage({
             variant="primary"
             size="md"
             iconLeft={<Share2 size={16} />}
+            fullWidth
+            className="sm:w-auto"
           >
             {CREATOR_DETAIL_LABELS.shareCta}
           </Button>
@@ -298,25 +302,25 @@ export default async function CreatorCagnotteDetailPage({
       </section>
 
       {/* Withdraw Action Box ────────────────────────────────────────── */}
-      <section className="relative overflow-hidden rounded-3xl border-2 border-primary bg-white p-6 shadow-sm md:p-8">
+      <section className="relative overflow-hidden rounded-3xl border-2 border-primary bg-white p-4 shadow-sm sm:p-6 md:p-8">
         {/* Decorative pink blob */}
         <div
           className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-accent opacity-50"
           aria-hidden
         />
-        <div className="relative z-10 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="mb-1 flex items-center gap-2 text-sm font-bold text-muted-foreground">
+        <div className="relative z-10 flex flex-col items-start gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2 text-sm font-bold text-gray-600">
               <span
                 className="inline-block h-2 w-2 rounded-full bg-green-500"
                 aria-hidden
               />
               {CREATOR_DETAIL_LABELS.kpiAvailableFunds}
             </div>
-            <h3 className="mb-3 font-headings text-3xl font-black text-primary md:text-4xl">
+            <h3 className="mb-3 font-headings text-2xl font-black text-primary sm:text-3xl md:text-4xl">
               {formatPrice(availableFunds)}
             </h3>
-            <p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground">
+            <p className="max-w-md text-sm font-medium leading-relaxed text-gray-600">
               {CREATOR_DETAIL_LABELS.withdrawHelper}
             </p>
             {!kycApproved ? (

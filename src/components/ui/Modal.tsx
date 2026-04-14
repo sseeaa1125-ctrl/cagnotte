@@ -118,7 +118,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md text-gray-600 hover:bg-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               aria-label="Fermer"
             >
               <X size={20} />

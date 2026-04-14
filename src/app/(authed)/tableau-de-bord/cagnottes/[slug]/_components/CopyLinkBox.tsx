@@ -42,7 +42,7 @@ export function CopyLinkBox({ url }: CopyLinkBoxProps) {
         type="text"
         value={url}
         readOnly
-        className="w-full truncate rounded-xl border border-border bg-gray-50 px-3 py-3 font-mono text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="min-h-12 w-full truncate rounded-xl border border-border bg-gray-50 px-3 py-3 font-mono text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         onFocus={(e) => e.currentTarget.select()}
       />
       <button

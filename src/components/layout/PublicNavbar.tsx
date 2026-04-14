@@ -104,7 +104,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
                 {menuOpen ? (
                   <div
                     role="menu"
-                    className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-background shadow-lg"
+                    className="absolute right-0 top-full z-50 mt-2 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-background shadow-lg"
                   >
                     <div className="border-b border-border px-4 py-3">
                       <p className="text-sm font-semibold text-primary">

@@ -39,6 +39,7 @@ export function ProgressBar({
         aria-valuenow={clamped}
         aria-valuemin={0}
         aria-valuemax={100}
+        aria-label={label ?? "Progression"}
       >
         <div
           className={cn(

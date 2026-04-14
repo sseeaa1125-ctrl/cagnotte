@@ -92,7 +92,7 @@ export function DashboardNavbar({
             <Bell size={20} />
             {showBadge ? (
               <span
-                className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground"
+                className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-background"
                 aria-hidden
               >
                 {badgeLabel}
@@ -119,7 +119,7 @@ export function DashboardNavbar({
             {menuOpen ? (
               <div
                 role="menu"
-                className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-border bg-background shadow-lg"
+                className="absolute right-0 top-full z-50 mt-2 w-56 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-background shadow-lg"
               >
                 <div className="border-b border-border px-4 py-3">
                   <p className="text-sm font-semibold text-primary">
