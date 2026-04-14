@@ -72,7 +72,9 @@ export default async function AuthedLayout({
           avatarUrl: seller.avatarUrl,
         }}
       />
-      <main className="container mx-auto px-4 py-6 md:py-10">{children}</main>
+      <main className="container mx-auto animate-page-enter px-4 py-6 md:py-10">
+        {children}
+      </main>
     </div>
   );
 }

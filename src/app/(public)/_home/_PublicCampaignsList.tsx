@@ -91,15 +91,15 @@ export async function HomePublicCampaignsList() {
               <Link
                 key={c.id}
                 href={`/c/${slug}`}
-                className="flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="group flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 ease-out will-change-transform hover:-translate-y-1 hover:shadow-[0_20px_50px_rgb(23,40,102,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
-                <div className="relative h-48">
+                <div className="relative h-48 overflow-hidden">
                   {c.coverUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={c.coverUrl}
                       alt={c.title}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-pink text-4xl font-black text-primary/30">

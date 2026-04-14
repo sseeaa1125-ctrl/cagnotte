@@ -69,7 +69,7 @@ export async function HomeSolidaryCampaigns() {
               <Link
                 key={c.id}
                 href={`/c/${slug}`}
-                className="flex flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="group flex flex-col overflow-hidden rounded-3xl bg-white p-4 shadow-sm transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <div className="mb-4 h-32 w-full overflow-hidden rounded-2xl bg-muted">
                   {c.coverUrl ? (
@@ -77,7 +77,7 @@ export async function HomeSolidaryCampaigns() {
                     <img
                       src={c.coverUrl}
                       alt={c.title}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-pink text-2xl font-black text-primary/30">

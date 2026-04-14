@@ -235,14 +235,14 @@ export default async function CagnottePage({
                 {cagnotte.gallery.map((item, idx) => (
                   <li
                     key={`${item.kind}-${item.url}-${idx}`}
-                    className="overflow-hidden rounded-xl border border-border bg-muted"
+                    className="group overflow-hidden rounded-xl border border-border bg-muted transition-shadow duration-300 hover:shadow-lg"
                   >
                     {item.kind === "image" ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={item.url}
                         alt=""
-                        className="aspect-video w-full object-cover"
+                        className="aspect-video w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                       />
                     ) : item.videoId ? (
                       <div className="relative aspect-video w-full">

@@ -60,7 +60,7 @@ export function HomeFeaturesPink() {
         {HOME_FEATURES_LABELS.cards.map((card, idx) => (
           <div
             key={card.title}
-            className="flex flex-col items-center rounded-3xl bg-white p-8 text-center shadow-xl shadow-pink-900/5"
+            className="flex flex-col items-center rounded-3xl bg-white p-8 text-center shadow-xl shadow-pink-900/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-pink-900/10"
           >
             <span className="mb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
               {card.kicker}

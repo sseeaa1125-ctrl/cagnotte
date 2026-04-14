@@ -13,7 +13,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
     <>
       <TopBannerHost />
       <PublicNavbar />
-      <main className="min-h-screen">{children}</main>
+      <main className="min-h-screen animate-page-enter">{children}</main>
       <PreFooter />
       <Footer />
       <CookieBanner />
