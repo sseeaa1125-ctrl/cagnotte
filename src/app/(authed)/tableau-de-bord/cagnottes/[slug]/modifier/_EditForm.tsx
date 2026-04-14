@@ -6,6 +6,8 @@ import { Camera, Eye, Lock } from "lucide-react";
 import {
   Button,
   Calendar,
+  GalleryBuilder,
+  type GalleryItem,
   Input,
   Textarea,
   Toggle,
@@ -109,6 +111,11 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
   const [coverUrl, setCoverUrl] = React.useState<string | null>(
     typeof safeConfig.coverUrl === "string" ? safeConfig.coverUrl : null,
   );
+  const [gallery, setGallery] = React.useState<GalleryItem[]>(
+    Array.isArray(safeConfig.gallery)
+      ? (safeConfig.gallery as GalleryItem[])
+      : [],
+  );
   const [goalAmount, setGoalAmount] = React.useState<string>(
     typeof safeConfig.goalAmount === "number"
       ? String(safeConfig.goalAmount)
@@ -175,6 +182,7 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
       ...safeConfig,
       description: description.trim() || undefined,
       coverUrl: coverUrl ?? null,
+      gallery,
       goalAmount: parsedGoal,
       endDate: endDate ? endDate.toISOString() : null,
       visibility,
@@ -262,6 +270,17 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
             />
           </div>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="text-sm font-medium text-primary">
+          {WIZARD_FIELDS.galleryLabel}
+        </label>
+        <GalleryBuilder
+          value={gallery}
+          onChange={setGallery}
+          uploadImage={uploadCover}
+        />
       </div>
 
       <Input

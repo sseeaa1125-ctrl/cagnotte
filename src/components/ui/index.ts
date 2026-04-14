@@ -13,6 +13,8 @@ export { Combobox } from "./Combobox";
 export type { ComboboxProps, ComboboxOption } from "./Combobox";
 export { ImageUpload } from "./ImageUpload";
 export type { ImageUploadProps } from "./ImageUpload";
+export { GalleryBuilder } from "./GalleryBuilder";
+export type { GalleryBuilderProps, GalleryItem } from "./GalleryBuilder";
 
 // Selection
 export { RadioCard } from "./RadioCard";

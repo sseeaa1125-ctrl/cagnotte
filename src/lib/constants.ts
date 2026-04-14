@@ -669,6 +669,7 @@ export const WIZARD_FIELDS = {
   coverLabel: "Photo de couverture",
   coverHelp: "Une belle photo augmente considérablement les dons.",
   coverUploadError: "Impossible d'envoyer l'image. Réessaye.",
+  galleryLabel: "Galerie (facultatif)",
   descriptionLabelFestive: "Un petit mot pour les participants",
   descriptionPlaceholderFestive:
     "Expliquez en quelques mots pourquoi vous organisez cette cagnotte et à quoi servira l'argent récolté…",

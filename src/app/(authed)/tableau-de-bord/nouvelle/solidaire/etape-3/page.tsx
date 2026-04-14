@@ -86,6 +86,7 @@ export default function SolidaireStep3Page() {
               goalAmount: draft.goalAmount,
               endDate: draft.endDate ?? null,
               coverUrl: draft.coverUrl ?? null,
+              gallery: draft.gallery ?? [],
               thankYouMessage: draft.thankYouMessage ?? "",
               subtype: "solidaire",
               // CRITICAL — backend superRefine rejects non-null occasion

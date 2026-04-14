@@ -42,11 +42,18 @@ export type SolidaireBeneficiary = "moi_meme" | "un_proche" | "une_association";
 
 export type Visibility = "public" | "private";
 
+export type GalleryItemDraft = {
+  kind: "image" | "youtube";
+  url: string;
+  videoId?: string;
+};
+
 export type FestiveDraft = {
   title?: string;
   occasion?: FestiveOccasion;
   goalAmount?: number;
   coverUrl?: string | null;
+  gallery?: GalleryItemDraft[];
   description?: string;
   thankYouMessage?: string;
   endDate?: string | null;

@@ -141,6 +141,18 @@ export const fundraiserBlockConfigSchema = z.object({
   // the link; only donations are blocked (orders.ts) and the public page
   // swaps the Participer CTA for a grey "Cagnotte clôturée" badge.
   status: z.enum(["active", "closed"]).default("active").optional(),
+  // Phase 10 — gallery of cover-secondary images + YouTube video links.
+  // Max 10 items; empty array is equivalent to no gallery. Stored in JSON.
+  gallery: z
+    .array(
+      z.object({
+        kind: z.enum(["image", "youtube"]),
+        url: z.string().max(500),
+        videoId: z.string().max(32).optional(),
+      }),
+    )
+    .max(10)
+    .optional(),
 }).superRefine((data, ctx) => {
   if (data.subtype === "festive") {
     if (!data.occasion) {

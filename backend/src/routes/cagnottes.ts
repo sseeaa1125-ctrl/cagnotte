@@ -40,6 +40,11 @@ interface FundraiserConfig {
   goalAmount?: number;
   endDate?: string | null;
   status?: "active" | "closed";
+  gallery?: Array<{
+    kind: "image" | "youtube";
+    url: string;
+    videoId?: string;
+  }>;
 }
 
 interface PublicSeller {
@@ -303,6 +308,7 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       subtype: cfg.subtype ?? null,
       visibility: cfg.visibility ?? "public",
       status: cfg.status ?? "active",
+      gallery: cfg.gallery ?? [],
       goalAmount: cfg.goalAmount ?? null,
       endDate: cfg.endDate ?? null,
       hideAmount: cfg.hideAmount ?? false,

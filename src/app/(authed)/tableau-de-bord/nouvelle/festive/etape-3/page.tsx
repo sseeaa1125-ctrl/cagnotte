@@ -83,6 +83,7 @@ export default function FestiveStep3Page() {
               goalAmount: draft.goalAmount,
               endDate: draft.endDate ?? null,
               coverUrl: draft.coverUrl ?? null,
+              gallery: draft.gallery ?? [],
               thankYouMessage: draft.thankYouMessage ?? "",
               subtype: "festive",
               occasion: draft.occasion,

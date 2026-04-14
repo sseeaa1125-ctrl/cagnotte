@@ -6,6 +6,8 @@ import { ArrowRight } from "lucide-react";
 import {
   Button,
   Calendar,
+  GalleryBuilder,
+  type GalleryItem,
   ImageUpload,
   Textarea,
   useToast,
@@ -26,6 +28,7 @@ export default function FestiveStep2Page() {
 
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [description, setDescription] = useState("");
   const [thankYouMessage, setThankYouMessage] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -42,6 +45,7 @@ export default function FestiveStep2Page() {
       return;
     }
     if (draft.coverUrl) setCoverUrl(draft.coverUrl);
+    if (draft.gallery) setGallery(draft.gallery);
     if (draft.description) setDescription(draft.description);
     if (draft.thankYouMessage) setThankYouMessage(draft.thankYouMessage);
     if (draft.endDate) setEndDate(draft.endDate);
@@ -76,6 +80,7 @@ export default function FestiveStep2Page() {
   function handleContinue() {
     setDraft({
       coverUrl,
+      gallery,
       description: description.trim() || undefined,
       thankYouMessage: thankYouMessage.trim() || undefined,
       endDate: endDate || null,
@@ -123,6 +128,16 @@ export default function FestiveStep2Page() {
           }}
           error={uploadError ?? undefined}
         />
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-primary">
+            {WIZARD_FIELDS.galleryLabel}
+          </label>
+          <GalleryBuilder
+            value={gallery}
+            onChange={setGallery}
+            uploadImage={uploadCover}
+          />
+        </div>
         <Textarea
           label={WIZARD_FIELDS.descriptionLabelFestive}
           placeholder={WIZARD_FIELDS.descriptionPlaceholderFestive}

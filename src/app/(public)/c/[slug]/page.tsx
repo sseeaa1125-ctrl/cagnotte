@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Youtube } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
 import { ShareSheet } from "@/components/share/ShareSheet";
 import { SUBTYPE_LABELS, ACTIONS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
+import { youtubeEmbed } from "@/lib/youtube";
 import { ProgressPoll } from "./ProgressPoll";
 
 const BACKEND_API_URL =
@@ -15,6 +17,12 @@ const PUBLIC_BASE_URL =
 // CRITICAL — OQ-3 / Pitfall P05 mitigation. Never pre-render at build time.
 export const dynamic = "force-dynamic";
 
+interface GalleryItem {
+  kind: "image" | "youtube";
+  url: string;
+  videoId?: string;
+}
+
 interface CagnotteDetail {
   id: string;
   slug: string;
@@ -24,6 +32,7 @@ interface CagnotteDetail {
   subtype: "festive" | "solidaire" | null;
   visibility: "public" | "private";
   status: "active" | "closed";
+  gallery: GalleryItem[];
   goalAmount: number | null;
   endDate: string | null;
   hideAmount: boolean;
@@ -212,6 +221,49 @@ export default async function CagnottePage({
             <div className="prose prose-sm max-w-none whitespace-pre-line text-base text-primary/90">
               {cagnotte.description}
             </div>
+          )}
+
+          {cagnotte.gallery && cagnotte.gallery.length > 0 && (
+            <section aria-labelledby="gallery-heading">
+              <h2
+                id="gallery-heading"
+                className="mb-3 font-headings text-xl font-semibold text-primary"
+              >
+                Galerie
+              </h2>
+              <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {cagnotte.gallery.map((item, idx) => (
+                  <li
+                    key={`${item.kind}-${item.url}-${idx}`}
+                    className="overflow-hidden rounded-xl border border-border bg-muted"
+                  >
+                    {item.kind === "image" ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.url}
+                        alt=""
+                        className="aspect-video w-full object-cover"
+                      />
+                    ) : item.videoId ? (
+                      <div className="relative aspect-video w-full">
+                        <iframe
+                          src={youtubeEmbed(item.videoId)}
+                          title="Vidéo YouTube"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="absolute inset-0 h-full w-full"
+                          loading="lazy"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex aspect-video w-full items-center justify-center bg-black/80 text-white">
+                        <Youtube size={28} aria-hidden />
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {!cagnotte.hideDonors && participantsData.participants.length > 0 && (
