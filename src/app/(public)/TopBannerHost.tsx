@@ -13,7 +13,7 @@ export function TopBannerHost() {
   if (dismissed) return null;
   return (
     <TopBanner
-      message="Lance ta cagnotte gratuitement en 2 minutes."
+      message="Lance ta cagnotte en 2 minutes."
       ctaLabel="Créer maintenant"
       ctaHref="/inscription"
       onClose={() => setDismissed(true)}

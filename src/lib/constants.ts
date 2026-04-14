@@ -281,14 +281,12 @@ export const HOME_COPY = {
 // stays exported for any leftover references.
 
 export const HOME_HERO_LABELS = {
-  trustPre: "Paiement sécurisé Bictorys",
+  trustPre: "La plateforme de cagnottes du Sénégal",
   h1Part1: "La cagnotte qui",
   h1Part2: "fait du bien.",
   subtitle:
     "Des cagnottes en ligne pour faire plaisir, et soutenir celles et ceux qui en ont besoin.",
   ctaCreate: "Créer une cagnotte",
-  freeBannerIntro: "En avril, les cagnottes créées sont entièrement gratuites,",
-  freeBannerEmphasis: "de la création jusqu'au virement.",
 } as const;
 
 export const HOME_FEATURED_LABELS = {
@@ -310,25 +308,25 @@ export const HOME_FEATURES_LABELS = {
     "La cagnotte en ligne pour un anniversaire, un pot de départ, un heureux événement…",
   cards: [
     {
-      kicker: "UN ACCOMPAGNEMENT DE PROXIMITÉ",
-      title: "Un service client 5 étoiles",
+      kicker: "SIMPLE & RAPIDE",
+      title: "Prêt en 2 minutes",
       body:
-        "Une cagnotte en ligne, c'est souvent un moment important. Notre équipe basée à Dakar est disponible tous les jours pour vous accompagner du début à la fin.",
-      cta: "Nous contacter",
+        "Créez votre cagnotte, partagez le lien, recevez les contributions. C'est tout.",
+      cta: null,
     },
     {
       kicker: "PAIEMENTS SÉCURISÉS",
       title: "Des paiements super safe",
       body:
-        "Nous protégeons vos données ainsi que toutes vos transactions, grâce à notre prestataire Bictorys, basé en Afrique de l'Ouest.",
+        "Wave, Orange Money, Free Money et carte bancaire. Chaque transaction est protégée par nos prestataires bancaires partenaires.",
       cta: null,
     },
     {
       kicker: "6% SOLIDAIRE · 8% FESTIVE",
-      title: "Des frais pour la bonne cause",
+      title: "Des frais transparents",
       body:
-        "Les frais des cagnottes festives permettent (entre autres) aux cagnottes solidaires d'être sans frais dans certains cas.",
-      cta: "En savoir +",
+        "Nos commissions sont toujours affichées avant le paiement. Zéro frais cachés, zéro mauvaise surprise.",
+      cta: "Voir nos conditions",
     },
   ] as const,
 } as const;
@@ -350,12 +348,12 @@ export const HOME_FAQ_LABELS = {
       a: "Une fois ton identité vérifiée (KYC), tu peux demander un retrait vers ton compte Wave, Orange Money, Free Money ou bancaire. Tu gardes la main sur le rythme des retraits.",
     },
     {
-      q: "Combien coûte une cagnotte sur cagnotte.sn ?",
-      a: "6% pour les cagnottes solidaires, 8% pour les cagnottes festives. La commission est toujours affichée au donateur avant le paiement — zéro frais cachés.",
+      q: "Combien de temps pour recevoir mes fonds ?",
+      a: "Dès que ta cagnotte reçoit des contributions, tu peux demander un retrait. Les virements Mobile Money sont généralement traités sous 24h après validation de ton identité.",
     },
     {
       q: "Quels moyens de paiement sont acceptés ?",
-      a: "Wave, Orange Money, Free Money et carte bancaire. Tous les paiements sont traités par notre prestataire Bictorys.",
+      a: "Wave, Orange Money, Free Money et carte bancaire. Les donateurs choisissent leur moyen de paiement préféré au moment de la participation.",
     },
   ] as const,
 } as const;
@@ -364,7 +362,6 @@ export const HOME_PREFOOTER_LABELS = {
   h2Part1: "Bref, il ne vous reste",
   h2Part2: "qu'une chose à faire",
   cta: "Créer une cagnotte",
-  trust: "Paiement sécurisé Bictorys",
 } as const;
 
 // ── /c/[slug]/participer (screen 23) ──
