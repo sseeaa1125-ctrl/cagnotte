@@ -33,6 +33,16 @@ html, body {
   --radius-2xl: 2.5rem;
 }
 
+/* Phase 9 fixpack — Banani home hero accent.
+   Gradient on "fait du bien." headline span. Navy → pink-accent. */
+.text-gradient {
+  background-image: linear-gradient(90deg, #172866 0%, #D14B7A 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
 /* UI3: Theme utility classes — reduce inline style={{}} in store components */
 .theme-text { color: var(--theme-text, #111827); }
 .theme-text-muted { color: var(--theme-text-muted, #6B7280); }

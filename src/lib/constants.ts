@@ -276,6 +276,97 @@ export const HOME_COPY = {
   ],
 } as const;
 
+// ── Phase 9 fixpack — Banani home page namespaces ──
+// These replace HOME_COPY on src/app/(public)/page.tsx sections. HOME_COPY
+// stays exported for any leftover references.
+
+export const HOME_HERO_LABELS = {
+  trustPre: "Paiement sécurisé Bictorys",
+  h1Part1: "La cagnotte qui",
+  h1Part2: "fait du bien.",
+  subtitle:
+    "Des cagnottes en ligne pour faire plaisir, et soutenir celles et ceux qui en ont besoin.",
+  ctaCreate: "Créer une cagnotte",
+  freeBannerIntro: "En avril, les cagnottes créées sont entièrement gratuites,",
+  freeBannerEmphasis: "de la création jusqu'au virement.",
+} as const;
+
+export const HOME_FEATURED_LABELS = {
+  h2: "Les cagnottes du moment",
+  subtitle:
+    "Découvrez et participez aux cagnottes créées par la communauté.",
+  viewAll: "Voir toutes les cagnottes",
+  empty: "Aucune cagnotte pour l'instant.",
+  participate: "Participer",
+  onLabel: "sur",
+} as const;
+
+export const HOME_FEATURES_LABELS = {
+  togglePlaisir: "Faire plaisir",
+  toggleSoutenir: "Soutenir",
+  h2Part1: "Faites plaisir",
+  h2Part2: "à vos proches.",
+  subtitle:
+    "La cagnotte en ligne pour un anniversaire, un pot de départ, un heureux événement…",
+  cards: [
+    {
+      kicker: "UN ACCOMPAGNEMENT DE PROXIMITÉ",
+      title: "Un service client 5 étoiles",
+      body:
+        "Une cagnotte en ligne, c'est souvent un moment important. Notre équipe basée à Dakar est disponible tous les jours pour vous accompagner du début à la fin.",
+      cta: "Nous contacter",
+    },
+    {
+      kicker: "PAIEMENTS SÉCURISÉS",
+      title: "Des paiements super safe",
+      body:
+        "Nous protégeons vos données ainsi que toutes vos transactions, grâce à notre prestataire Bictorys, basé en Afrique de l'Ouest.",
+      cta: null,
+    },
+    {
+      kicker: "6% SOLIDAIRE · 8% FESTIVE",
+      title: "Des frais pour la bonne cause",
+      body:
+        "Les frais des cagnottes festives permettent (entre autres) aux cagnottes solidaires d'être sans frais dans certains cas.",
+      cta: "En savoir +",
+    },
+  ] as const,
+} as const;
+
+export const HOME_SOLIDAIRE_LABELS = {
+  h2: "Les cagnottes solidaires",
+  subtitle: "Des collectes de fonds où chaque geste compte. Même petit.",
+  collectedSuffix: "récoltés",
+  empty: "Aucune cagnotte solidaire pour l'instant.",
+} as const;
+
+export const HOME_FAQ_LABELS = {
+  kicker: "FAQ",
+  h2Part1: "On répond à toutes",
+  h2Part2: "vos questions.",
+  items: [
+    {
+      q: "Comment utiliser l'argent de ma cagnotte en ligne ?",
+      a: "Une fois ton identité vérifiée (KYC), tu peux demander un retrait vers ton compte Wave, Orange Money, Free Money ou bancaire. Tu gardes la main sur le rythme des retraits.",
+    },
+    {
+      q: "Combien coûte une cagnotte sur cagnotte.sn ?",
+      a: "6% pour les cagnottes solidaires, 8% pour les cagnottes festives. La commission est toujours affichée au donateur avant le paiement — zéro frais cachés.",
+    },
+    {
+      q: "Quels moyens de paiement sont acceptés ?",
+      a: "Wave, Orange Money, Free Money et carte bancaire. Tous les paiements sont traités par notre prestataire Bictorys.",
+    },
+  ] as const,
+} as const;
+
+export const HOME_PREFOOTER_LABELS = {
+  h2Part1: "Bref, il ne vous reste",
+  h2Part2: "qu'une chose à faire",
+  cta: "Créer une cagnotte",
+  trust: "Paiement sécurisé Bictorys",
+} as const;
+
 // ── /c/[slug]/participer (screen 23) ──
 export const PARTICIPER_LABELS = {
   pageTitle: "Je participe",
