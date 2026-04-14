@@ -29,9 +29,9 @@ export function StepIndicator({
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm font-semibold text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="inline-flex min-h-12 min-w-12 items-center gap-1.5 rounded-md px-3 py-2 text-sm font-semibold text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          <ArrowLeft size={16} />
+          <ArrowLeft size={18} />
           {WIZARD_LABELS.backCta}
         </button>
       ) : (
@@ -91,10 +91,10 @@ export function WizardHeader({
   return (
     <div className="mb-8 flex flex-col gap-3">
       <SubtypeBadge variant={variant} />
-      <h1 className="font-headings text-3xl font-bold text-primary md:text-4xl">
+      <h1 className="font-headings text-2xl font-bold text-primary sm:text-3xl md:text-4xl">
         {title}
       </h1>
-      <p className="text-sm text-muted-foreground">{subtitle}</p>
+      <p className="text-sm text-gray-600">{subtitle}</p>
     </div>
   );
 }

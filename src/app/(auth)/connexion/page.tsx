@@ -149,7 +149,7 @@ function ConnexionForm() {
               </label>
               <Link
                 href="/mot-de-passe-oublie"
-                className="text-xs text-primary hover:underline"
+                className="text-sm font-medium text-primary hover:underline"
               >
                 {AUTH_LABELS.forgotPasswordCta}
               </Link>

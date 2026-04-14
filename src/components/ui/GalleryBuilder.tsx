@@ -152,7 +152,7 @@ export function GalleryBuilder({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isFull || uploading}
-            className="inline-flex min-h-12 items-center gap-2 rounded-lg border border-primary bg-background px-4 py-2 text-sm font-semibold text-primary hover:bg-pink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-h-12 items-center gap-2 whitespace-nowrap rounded-lg border border-primary bg-background px-4 py-2 text-sm font-semibold text-primary hover:bg-pink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ImagePlus size={16} />
             {uploading ? "Envoi en cours…" : "Ajouter des images"}

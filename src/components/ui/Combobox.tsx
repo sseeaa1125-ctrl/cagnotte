@@ -150,7 +150,7 @@ export function Combobox({
           <div
             ref={popoverRef}
             role="listbox"
-            className="absolute z-50 mt-2 w-full overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-xl"
+            className="absolute z-50 mt-2 max-h-[min(60vh,400px)] w-full overflow-y-auto overflow-x-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-xl"
           >
             {options.map((opt) => (
               <React.Fragment key={opt.value}>
