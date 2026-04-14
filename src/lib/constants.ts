@@ -42,6 +42,7 @@ export const NAV_LABELS = {
   accueil: "Accueil",
   cagnottes: "Cagnottes",
   comment: "Comment ça marche",
+  aide: "Aide",
   apropos: "À propos",
   connexion: "Connexion",
   inscription: "Inscription",

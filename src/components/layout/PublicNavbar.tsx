@@ -16,6 +16,7 @@ const NAV_ITEMS: Array<{ label: string; href: string }> = [
   { label: NAV_LABELS.accueil, href: "/" },
   { label: NAV_LABELS.cagnottes, href: "/cagnottes" },
   { label: NAV_LABELS.comment, href: "/comment" },
+  { label: NAV_LABELS.aide, href: "/aide" },
   { label: NAV_LABELS.apropos, href: "/a-propos" },
 ];
 

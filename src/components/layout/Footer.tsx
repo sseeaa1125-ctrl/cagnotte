@@ -17,6 +17,7 @@ const LEGAL_LINKS: Array<{ label: string; href: string }> = [
 const PRODUCT_LINKS: Array<{ label: string; href: string }> = [
   { label: NAV_LABELS.cagnottes, href: "/cagnottes" },
   { label: NAV_LABELS.comment, href: "/comment" },
+  { label: NAV_LABELS.aide, href: "/aide" },
   { label: NAV_LABELS.creerCagnotte, href: "/inscription" },
 ];
 
