@@ -313,33 +313,64 @@ export const HOME_FEATURED_LABELS = {
 export const HOME_FEATURES_LABELS = {
   togglePlaisir: "Faire plaisir",
   toggleSoutenir: "Soutenir",
-  h2Part1: "Faites plaisir",
-  h2Part2: "à vos proches.",
-  subtitle:
-    "La cagnotte en ligne pour un anniversaire, un pot de départ, un heureux événement…",
-  cards: [
-    {
-      kicker: "SIMPLE & RAPIDE",
-      title: "Prêt en 2 minutes",
-      body:
-        "Créez votre cagnotte, partagez le lien, recevez les contributions. C'est tout.",
-      cta: null,
-    },
-    {
-      kicker: "PAIEMENTS SÉCURISÉS",
-      title: "Des paiements super safe",
-      body:
-        "Wave, Orange Money, Free Money et carte bancaire. Chaque transaction est protégée par nos prestataires bancaires partenaires.",
-      cta: null,
-    },
-    {
-      kicker: "6% SOLIDAIRE · 8% FESTIVE",
-      title: "Des frais transparents",
-      body:
-        "Nos commissions sont toujours affichées avant le paiement. Zéro frais cachés, zéro mauvaise surprise.",
-      cta: "Voir nos conditions",
-    },
-  ] as const,
+  plaisir: {
+    h2Part1: "Faites plaisir",
+    h2Part2: "à vos proches.",
+    subtitle:
+      "La cagnotte en ligne pour un anniversaire, un pot de départ, un heureux événement…",
+    cards: [
+      {
+        kicker: "SIMPLE & RAPIDE",
+        title: "Prêt en 2 minutes",
+        body:
+          "Créez votre cagnotte, partagez le lien, recevez les contributions. C'est tout.",
+        cta: null,
+      },
+      {
+        kicker: "PAIEMENTS SÉCURISÉS",
+        title: "Des paiements super safe",
+        body:
+          "Wave, Orange Money, Free Money et carte bancaire. Chaque transaction est protégée par nos prestataires bancaires partenaires.",
+        cta: null,
+      },
+      {
+        kicker: "6% SOLIDAIRE · 8% FESTIVE",
+        title: "Des frais transparents",
+        body:
+          "Nos commissions sont toujours affichées avant le paiement. Zéro frais cachés, zéro mauvaise surprise.",
+        cta: "Voir nos conditions",
+      },
+    ] as const,
+  },
+  soutenir: {
+    h2Part1: "Soutenez celles",
+    h2Part2: "et ceux qui en ont besoin.",
+    subtitle:
+      "La cagnotte solidaire pour financer un projet, une urgence médicale, une cause qui vous tient à cœur.",
+    cards: [
+      {
+        kicker: "PROJETS VÉRIFIÉS",
+        title: "Des causes qui comptent",
+        body:
+          "Chaque cagnotte solidaire est créée par un porteur de projet vérifié. Tu sais exactement où vont tes dons.",
+        cta: null,
+      },
+      {
+        kicker: "UN GESTE, UN IMPACT",
+        title: "Même petit, ton don change tout",
+        body:
+          "De 500 FCFA à plusieurs millions, chaque contribution compte. Partage la cagnotte autour de toi pour amplifier l'impact.",
+        cta: null,
+      },
+      {
+        kicker: "COMMISSION SOLIDAIRE",
+        title: "6% pour faire tourner le moteur",
+        body:
+          "Nos frais servent à financer l'infrastructure, le support client et la vérification d'identité. Pas de mécénat caché.",
+        cta: "Voir nos conditions",
+      },
+    ] as const,
+  },
 } as const;
 
 export const HOME_SOLIDAIRE_LABELS = {
