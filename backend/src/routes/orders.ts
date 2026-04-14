@@ -220,6 +220,14 @@ ordersRouter.post(
       // Check endDate for FUNDRAISER blocks — reject if expired
       if (donationBlock.type === "FUNDRAISER") {
         const config = donationBlock.config as Record<string, unknown>;
+        // Phase 10 — reject donations on closed cagnottes. Status is stored in
+        // the JSON config (no migration). The public page swaps the CTA, but
+        // a donor with the direct /c/:slug/participer URL could still POST —
+        // guard server-side.
+        if (config.status === "closed") {
+          res.status(400).json({ error: "Cette cagnotte est clôturée" });
+          return;
+        }
         const endDate = config.endDate as string | null;
         if (endDate) {
           const end = new Date(endDate);

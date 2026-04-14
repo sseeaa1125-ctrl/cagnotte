@@ -39,6 +39,7 @@ interface FundraiserConfig {
   hideDonors?: boolean;
   goalAmount?: number;
   endDate?: string | null;
+  status?: "active" | "closed";
 }
 
 interface PublicSeller {
@@ -301,6 +302,7 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       coverUrl: cfg.coverUrl ?? null,
       subtype: cfg.subtype ?? null,
       visibility: cfg.visibility ?? "public",
+      status: cfg.status ?? "active",
       goalAmount: cfg.goalAmount ?? null,
       endDate: cfg.endDate ?? null,
       hideAmount: cfg.hideAmount ?? false,

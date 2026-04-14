@@ -192,6 +192,7 @@ export const MISC = {
 // ── Phase 7 plan 07-01 — Creator cagnotte detail page (verbatim Banani FR) ──
 export const CREATOR_DETAIL_LABELS = {
   statusOnline: "En ligne",
+  statusClosed: "Clôturée",
   subtypeFestive: "Cagnotte Festive",
   subtypeSolidaire: "Cagnotte Solidaire",
   kpiCollected: "Montant récolté",
@@ -206,6 +207,13 @@ export const CREATOR_DETAIL_LABELS = {
   visibilityTitle: "Visibilité",
   dangerZoneTitle: "Zone de danger",
   closeCagnotte: "Clôturer la cagnotte",
+  closingCagnotte: "Clôture en cours…",
+  reopenCagnotte: "Rouvrir la cagnotte",
+  reopeningCagnotte: "Réouverture…",
+  closeConfirm:
+    "Clôturer cette cagnotte ? Les donateurs ne pourront plus participer. Tu pourras la rouvrir plus tard.",
+  reopenConfirm: "Rouvrir cette cagnotte ?",
+  closeError: "Impossible de modifier la cagnotte. Réessaie.",
   manageCta: "Gérer",
   shareCta: "Partager",
   backToDashboard: "Retour à mes cagnottes",
@@ -215,6 +223,8 @@ export const CREATOR_DETAIL_LABELS = {
   visibilityEditCta: "Modifier",
   dangerZoneHelper:
     "Clôturer la cagnotte empêchera de nouvelles participations. Cette action est réversible.",
+  dangerZoneHelperClosed:
+    "Cette cagnotte est clôturée. Les donateurs voient un badge « Cagnotte clôturée » et ne peuvent plus participer.",
   copyLinkCta: "Copier",
   copyLinkSuccess: "Copié !",
   anonymousDonor: "Anonyme",

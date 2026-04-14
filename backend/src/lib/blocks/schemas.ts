@@ -136,6 +136,11 @@ export const fundraiserBlockConfigSchema = z.object({
   visibility: z.enum(["public", "private"]).default("public"),
   hideAmount: z.boolean().default(false),
   hideDonors: z.boolean().default(false),
+  // Phase 10 — creator-side close switch. Stored in JSON config so we avoid
+  // a Prisma migration. "closed" cagnottes remain readable by everyone with
+  // the link; only donations are blocked (orders.ts) and the public page
+  // swaps the Participer CTA for a grey "Cagnotte clôturée" badge.
+  status: z.enum(["active", "closed"]).default("active").optional(),
 }).superRefine((data, ctx) => {
   if (data.subtype === "festive") {
     if (!data.occasion) {

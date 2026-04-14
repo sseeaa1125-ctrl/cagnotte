@@ -23,6 +23,7 @@ interface CagnotteDetail {
   coverUrl: string | null;
   subtype: "festive" | "solidaire" | null;
   visibility: "public" | "private";
+  status: "active" | "closed";
   goalAmount: number | null;
   endDate: string | null;
   hideAmount: boolean;
@@ -274,11 +275,24 @@ export default async function CagnottePage({
               hideAmount={cagnotte.hideAmount}
               hideDonors={cagnotte.hideDonors}
             />
-            <Link href={`/c/${slug}/participer`} className="block">
-              <Button variant="primary" size="lg" fullWidth>
-                {ACTIONS.participer}
-              </Button>
-            </Link>
+            {cagnotte.status === "closed" ? (
+              <div
+                role="status"
+                className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-gray-100 px-4 text-sm font-semibold text-gray-600"
+              >
+                <span
+                  aria-hidden
+                  className="inline-block h-2 w-2 rounded-full bg-gray-500"
+                />
+                Cagnotte clôturée
+              </div>
+            ) : (
+              <Link href={`/c/${slug}/participer`} className="block">
+                <Button variant="primary" size="lg" fullWidth>
+                  {ACTIONS.participer}
+                </Button>
+              </Link>
+            )}
           </div>
         </aside>
       </div>

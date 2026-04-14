@@ -14,6 +14,7 @@ import { Badge, Button, ProgressBar } from "@/components/ui";
 import { CREATOR_DETAIL_LABELS, MISC } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 import { CopyLinkBox } from "./_components/CopyLinkBox";
+import { CloseCagnotteButton } from "./_components/CloseCagnotteButton";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Phase 7 plan 07-01 — /tableau-de-bord/cagnottes/[slug] (creator detail).
@@ -54,6 +55,7 @@ interface CagnottePayload {
   coverUrl: string | null;
   subtype: "festive" | "solidaire" | null;
   visibility: "public" | "private";
+  status: "active" | "closed";
   goalAmount: number | null;
   endDate: string | null;
   hideAmount: boolean;
@@ -220,13 +222,23 @@ export default async function CreatorCagnotteDetailPage({
           )}
 
           <div className="flex flex-col gap-2">
-            <Badge variant="status-active">
-              <span
-                aria-hidden
-                className="inline-block h-1.5 w-1.5 rounded-full bg-green-600"
-              />
-              {CREATOR_DETAIL_LABELS.statusOnline}
-            </Badge>
+            {cagnotte.status === "closed" ? (
+              <Badge variant="status-closed">
+                <span
+                  aria-hidden
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-gray-500"
+                />
+                {CREATOR_DETAIL_LABELS.statusClosed}
+              </Badge>
+            ) : (
+              <Badge variant="status-active">
+                <span
+                  aria-hidden
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-green-600"
+                />
+                {CREATOR_DETAIL_LABELS.statusOnline}
+              </Badge>
+            )}
             <h1 className="font-headings text-3xl font-black text-primary md:text-4xl">
               {cagnotte.title}
             </h1>
@@ -437,17 +449,14 @@ export default async function CreatorCagnotteDetailPage({
               {CREATOR_DETAIL_LABELS.dangerZoneTitle}
             </div>
             <p className="mb-4 text-xs text-red-700">
-              {CREATOR_DETAIL_LABELS.dangerZoneHelper}
+              {cagnotte.status === "closed"
+                ? CREATOR_DETAIL_LABELS.dangerZoneHelperClosed
+                : CREATOR_DETAIL_LABELS.dangerZoneHelper}
             </p>
-            {/* TODO PHASE-8: in-place close action. For now we route to
-                the modifier page anchor so the owner can close from
-                there. */}
-            <Link
-              href={`/tableau-de-bord/cagnottes/${cagnotte.slug}/modifier#cloturer`}
-              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
-            >
-              {CREATOR_DETAIL_LABELS.closeCagnotte}
-            </Link>
+            <CloseCagnotteButton
+              blockId={cagnotte.id}
+              status={cagnotte.status}
+            />
           </div>
         </aside>
       </section>

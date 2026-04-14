@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Prisma } from "../generated/prisma/client.js";
@@ -863,6 +863,66 @@ blocksRouter.delete("/:id/bumps/:bumpId", verifyCsrf, requireAuth, async (req, r
     res.json({ success: true });
   } catch (err) {
     logger.error("Erreur suppression order bump", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 10 — Close / reopen a FUNDRAISER cagnotte.
+// Toggles `config.status` in the JSON blob (no Prisma migration needed).
+// Closed cagnottes remain publicly visible; orders.ts rejects new donations
+// and the public /c/[slug] page swaps the Participer CTA for a grey badge.
+// ─────────────────────────────────────────────────────────────────────────────
+async function setFundraiserStatus(
+  blockId: string,
+  sellerId: string,
+  nextStatus: "active" | "closed",
+  res: Response,
+) {
+  const existing = await prisma.block.findUnique({ where: { id: blockId } });
+  if (!existing || existing.sellerId !== sellerId) {
+    res.status(404).json({ error: "Cagnotte introuvable" });
+    return;
+  }
+  if (existing.type !== "FUNDRAISER") {
+    res.status(400).json({ error: "Ce bloc n'est pas une cagnotte" });
+    return;
+  }
+  const currentConfig = (existing.config ?? {}) as Record<string, unknown>;
+  const nextConfig = { ...currentConfig, status: nextStatus };
+  // Re-validate through the FUNDRAISER schema so any drift is caught here.
+  const validated = validateBlockConfig("FUNDRAISER", nextConfig);
+  await prisma.block.update({
+    where: { id: blockId },
+    data: {
+      config: JSON.parse(JSON.stringify(validated)) as never,
+    },
+  });
+  res.json({ success: true, status: nextStatus });
+}
+
+blocksRouter.post("/:id/close", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    await setFundraiserStatus(req.params.id as string, req.seller!.sub, "closed", res);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: formatZodError(err) });
+      return;
+    }
+    logger.error("Erreur clôture cagnotte", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+blocksRouter.post("/:id/reopen", verifyCsrf, requireAuth, async (req, res) => {
+  try {
+    await setFundraiserStatus(req.params.id as string, req.seller!.sub, "active", res);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      res.status(400).json({ error: formatZodError(err) });
+      return;
+    }
+    logger.error("Erreur réouverture cagnotte", err);
     res.status(500).json({ error: "Erreur interne" });
   }
 });
