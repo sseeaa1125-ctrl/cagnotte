@@ -16,18 +16,18 @@ export async function HomeHero() {
   const ctaHref = hasSession ? "/tableau-de-bord/nouvelle" : "/inscription";
 
   return (
-    <section className="bg-white px-4 py-20 text-center">
+    <section className="bg-white px-4 py-12 text-center sm:py-16 md:py-20">
       <div className="mx-auto mb-6 inline-flex items-center justify-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-gray-600">
         {HOME_HERO_LABELS.trustPre}
       </div>
 
-      <h1 className="mx-auto mb-6 max-w-4xl font-headings text-5xl font-black leading-tight tracking-tight text-primary md:text-7xl">
+      <h1 className="mx-auto mb-6 max-w-4xl font-headings text-4xl font-black leading-tight tracking-tight text-primary sm:text-5xl md:text-6xl lg:text-7xl">
         {HOME_HERO_LABELS.h1Part1}
         <br />
         <span className="text-gradient">{HOME_HERO_LABELS.h1Part2}</span>
       </h1>
 
-      <p className="mx-auto mb-10 max-w-2xl text-xl font-medium text-gray-600 md:text-2xl">
+      <p className="mx-auto mb-10 max-w-2xl text-base font-medium text-gray-600 sm:text-lg md:text-xl lg:text-2xl">
         {HOME_HERO_LABELS.subtitle}
       </p>
 

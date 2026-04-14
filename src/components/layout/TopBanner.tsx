@@ -42,10 +42,10 @@ export function TopBanner({
       <button
         type="button"
         onClick={onClose}
-        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-md text-primary hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         aria-label="Fermer la bannière"
       >
-        <X size={18} />
+        <X size={20} />
       </button>
     </div>
   );

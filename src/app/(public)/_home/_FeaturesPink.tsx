@@ -22,7 +22,7 @@ function PaymentIcons() {
 
 export function HomeFeaturesPink() {
   return (
-    <section className="relative mx-4 my-12 overflow-hidden rounded-[3rem] bg-[#FBE6ED] px-4 py-24 text-center md:mx-12 md:px-8">
+    <section className="relative mx-4 my-8 overflow-hidden rounded-[2rem] bg-[#FBE6ED] px-4 py-14 text-center sm:my-10 sm:rounded-[2.5rem] sm:py-16 md:mx-12 md:my-12 md:rounded-[3rem] md:px-8 md:py-24">
       <div
         aria-hidden
         className="pointer-events-none absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-pink/50 to-transparent"
@@ -47,12 +47,12 @@ export function HomeFeaturesPink() {
         </div>
       </div>
 
-      <h2 className="mx-auto mb-6 max-w-3xl font-headings text-4xl font-black leading-tight text-primary md:text-6xl">
+      <h2 className="mx-auto mb-4 max-w-3xl font-headings text-3xl font-black leading-tight text-primary sm:mb-6 sm:text-4xl md:text-5xl lg:text-6xl">
         {HOME_FEATURES_LABELS.h2Part1}
         <br />
         {HOME_FEATURES_LABELS.h2Part2}
       </h2>
-      <p className="mx-auto mb-16 max-w-2xl text-lg font-medium text-gray-700 md:text-xl">
+      <p className="mx-auto mb-10 max-w-2xl text-base font-medium text-gray-700 sm:mb-12 sm:text-lg md:mb-16 md:text-xl">
         {HOME_FEATURES_LABELS.subtitle}
       </p>
 

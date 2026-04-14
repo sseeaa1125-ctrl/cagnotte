@@ -11,7 +11,7 @@ export default function MentionsLegalesPage() {
       <h1 className="mb-6 font-headings text-4xl font-black text-primary md:text-5xl">
         Mentions légales
       </h1>
-      <p className="mb-10 text-sm text-muted-foreground">
+      <p className="mb-10 text-sm text-gray-600">
         Dernière mise à jour&nbsp;: avril 2026
       </p>
 
@@ -55,7 +55,7 @@ export default function MentionsLegalesPage() {
           </p>
         </section>
 
-        <p className="pt-6 text-sm italic text-muted-foreground">
+        <p className="pt-6 text-sm italic text-gray-600">
           Document provisoire — la version finale sera publiée avant la mise en
           production publique.
         </p>

@@ -54,13 +54,13 @@ export async function HomePublicCampaignsList() {
   const cagnottes = await getFeatured();
 
   return (
-    <section className="mx-4 my-4 max-w-[1400px] px-2 py-16 md:mx-12 md:px-8 xl:mx-auto">
-      <div className="mb-10 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
+    <section className="mx-4 my-4 max-w-[1400px] px-2 py-10 sm:py-14 md:mx-12 md:px-8 md:py-16 xl:mx-auto">
+      <div className="mb-8 flex flex-col items-start justify-between gap-4 sm:mb-10 md:flex-row md:items-end">
         <div>
-          <h2 className="mb-4 font-headings text-3xl font-black leading-tight text-primary md:text-4xl">
+          <h2 className="mb-3 font-headings text-2xl font-black leading-tight text-primary sm:mb-4 sm:text-3xl md:text-4xl">
             {HOME_FEATURED_LABELS.h2}
           </h2>
-          <p className="text-lg font-medium text-gray-600">
+          <p className="text-base font-medium text-gray-600 sm:text-lg">
             {HOME_FEATURED_LABELS.subtitle}
           </p>
         </div>

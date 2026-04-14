@@ -45,11 +45,11 @@ export async function HomeSolidaryCampaigns() {
   const cagnottes = await getSolidaires();
 
   return (
-    <section className="mx-4 my-12 rounded-[3rem] bg-[#E6F3EE] px-4 py-24 text-center md:mx-12 md:px-8">
-      <h2 className="mb-6 font-headings text-4xl font-black leading-tight text-primary md:text-5xl">
+    <section className="mx-4 my-8 rounded-[2rem] bg-[#E6F3EE] px-4 py-14 text-center sm:my-10 sm:rounded-[2.5rem] sm:py-16 md:mx-12 md:my-12 md:rounded-[3rem] md:px-8 md:py-24">
+      <h2 className="mb-4 font-headings text-2xl font-black leading-tight text-primary sm:mb-6 sm:text-3xl md:text-4xl lg:text-5xl">
         {HOME_SOLIDAIRE_LABELS.h2}
       </h2>
-      <p className="mx-auto mb-16 max-w-2xl text-lg font-medium leading-relaxed text-gray-700">
+      <p className="mx-auto mb-10 max-w-2xl text-base font-medium leading-relaxed text-gray-700 sm:mb-12 sm:text-lg md:mb-16">
         {HOME_SOLIDAIRE_LABELS.subtitle}
       </p>
 
