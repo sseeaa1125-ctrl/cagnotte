@@ -409,25 +409,42 @@ export const HOME_PREFOOTER_LABELS = {
 // ── /c/[slug]/participer (screen 23) ──
 export const PARTICIPER_LABELS = {
   pageTitle: "Je participe",
-  stepAmount: "Ton montant",
-  stepInfo: "Tes informations",
+  backCta: "Cagnotte",
+  breadcrumbCurrent: "Participation",
+  stepAmount: "Votre participation",
+  stepInfo: "Mes infos de paiement",
   stepMessage: "Ton message",
   suggestedAmounts: [1000, 2500, 5000, 10000, 25000] as readonly number[],
   customAmountLabel: "Autre montant (FCFA)",
   customAmountPlaceholder: "Ex : 7 500",
   firstNameLabel: "Prénom",
   lastNameLabel: "Nom",
-  emailLabel: "Email (facultatif)",
+  emailLabel: "Email",
   phoneLabel: "Téléphone",
   phonePlaceholder: "+221 77 XXX XX XX",
   messageLabel: "Message au créateur (facultatif)",
   messagePlaceholder: "Ajoute un mot d'encouragement…",
-  anonymousLabel: "Faire un don anonyme",
-  anonymousHelp: "Ton nom ne sera pas affiché sur la page publique.",
-  privateMessageLabel: "Message privé",
-  privateMessageHelp: "Seul le créateur pourra lire ton message.",
+  // Phase 10 — voluntary contribution (3% of base amount).
+  voluntaryTitle: "Contribution volontaire",
+  voluntaryLabel: "Soutenir la plateforme",
+  voluntaryHelp:
+    "Soutenez la plateforme de cagnottes sénégalaises. Votre contribution volontaire de 3% aide à maintenir un service de qualité pour tous les porteurs de projets.",
+  voluntaryOptOut:
+    "Je ne souhaite pas donner de contribution volontaire",
+  hideIdentityLabel: "Masquer mon identité",
+  hideIdentityHelp:
+    "Ton nom ne sera pas affiché sur la page publique. Le créateur verra quand même ton vrai nom.",
+  hideAmountLabel: "Masquer le montant de ma participation",
+  hideAmountHelp:
+    "Le montant de ton don ne sera pas visible sur la page publique.",
+  privateMessageLabel: "Garder mon message privé",
+  privateMessageHelp: "Seul·e le·la créateur·trice pourra lire ton message.",
+  // Legacy keys kept for backwards compatibility with other consumers.
+  anonymousLabel: "Masquer mon identité",
+  anonymousHelp:
+    "Ton nom ne sera pas affiché sur la page publique.",
   tosLabel: "J'accepte les conditions générales d'utilisation",
-  submitCta: "Continuer vers le paiement",
+  submitCta: "Passer au paiement",
   errorAmountMin: "Le montant minimum est 500 FCFA",
   errorAmountMax: "Le montant maximum est 10 000 000 FCFA",
   errorFirstNameRequired: "Prénom requis",
