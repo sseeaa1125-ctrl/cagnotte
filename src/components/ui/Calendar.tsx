@@ -242,7 +242,7 @@ export function Calendar({
             ref={popoverRef}
             role="dialog"
             aria-label="Sélecteur de date"
-            className="absolute z-50 mt-2 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-4 shadow-xl"
+            className="absolute bottom-full left-0 z-50 mb-3 w-[320px] max-w-[calc(100vw-2rem)] rounded-2xl border border-gray-200 bg-white p-4 shadow-xl"
           >
             {/* Header: prev / month-year / next */}
             <div className="mb-4 flex items-center justify-between">
@@ -280,11 +280,11 @@ export function Calendar({
               ))}
             </div>
 
-            {/* Day grid */}
+            {/* Day grid — 48px touch targets per mobile accessibility rule */}
             <div className="grid grid-cols-7 gap-1">
               {cells.map((day, idx) => {
                 if (!day) {
-                  return <div key={`empty-${idx}`} className="h-11 w-11" />;
+                  return <div key={`empty-${idx}`} className="h-12 w-full" />;
                 }
                 const isSelected = !!value && sameDay(day, value);
                 const isToday = sameDay(day, todayDay);
@@ -304,7 +304,7 @@ export function Calendar({
                     })}
                     aria-pressed={isSelected}
                     className={cn(
-                      "flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium transition-colors",
+                      "mx-auto flex h-12 w-12 items-center justify-center rounded-full text-sm font-medium transition-colors",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                       isSelected && "bg-primary text-white font-bold",
                       !isSelected &&
