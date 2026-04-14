@@ -5,6 +5,7 @@ type BadgeVariant =
   | "festive"
   | "solidaire"
   | "status-active"
+  | "status-closed"
   | "status-ended"
   | "default";
 
@@ -15,17 +16,15 @@ export interface BadgeProps {
   className?: string;
 }
 
-// Phase 8 fixpack — each variant now owns its own full class string so the
-// "status-active" badge can deviate from the pill defaults (Banani
-// creator-cagnotte-detail-v2 reference: tight green label, rounded-md,
-// text-xs font-bold, px-2 py-1 — NOT a pill and NOT text-sm).
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   festive:
     "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-gradient-to-r from-gold-start to-gold-end text-white",
   solidaire:
     "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-accent text-primary",
   "status-active":
-    "inline-block rounded-md px-2 py-1 text-xs font-bold bg-green-100 text-green-700",
+    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-green-100 text-green-700 w-fit",
+  "status-closed":
+    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold bg-gray-100 text-gray-600 w-fit",
   "status-ended":
     "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold bg-muted text-muted-foreground",
   default:
