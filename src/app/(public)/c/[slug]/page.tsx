@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { Badge, Button } from "@/components/ui";
 import { ShareSheet } from "@/components/share/ShareSheet";
@@ -175,16 +174,17 @@ export default async function CagnottePage({
         {/* Main column */}
         <div className="space-y-6 lg:col-span-2">
           {cagnotte.coverUrl ? (
-            <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-muted">
-              <Image
-                src={cagnotte.coverUrl}
-                alt={cagnotte.title}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 66vw"
-                className="object-cover"
-              />
-            </div>
+            // Plain <img> (not next/image) — the backend serves covers through
+            // /api/files/:key which Next's image optimizer fails on (returns a
+            // 400 for the optimized variant even with remotePatterns set).
+            // Loading the asset directly mirrors the creator dashboard behavior
+            // and avoids the optimizer entirely.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={cagnotte.coverUrl}
+              alt={cagnotte.title}
+              className="aspect-[16/9] w-full rounded-xl bg-muted object-cover"
+            />
           ) : (
             <div className="flex aspect-[16/9] w-full items-center justify-center rounded-xl bg-pink">
               <span
