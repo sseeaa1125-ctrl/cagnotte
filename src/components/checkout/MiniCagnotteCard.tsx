@@ -7,9 +7,10 @@ export interface MiniCagnotteCardProps {
   cagnotte: {
     title: string;
     coverUrl: string | null;
-    raised: number;
+    raised: number | null;
     goal: number;
     subtype: "festive" | "solidaire";
+    hideAmount?: boolean;
   };
   className?: string;
 }
@@ -18,8 +19,13 @@ export function MiniCagnotteCard({
   cagnotte,
   className,
 }: MiniCagnotteCardProps) {
-  const { title, coverUrl, raised, goal, subtype } = cagnotte;
-  const percent = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const { title, coverUrl, raised, goal, subtype, hideAmount } = cagnotte;
+  const hidden = hideAmount === true || raised === null;
+  const raisedValue = hidden ? 0 : (raised ?? 0);
+  const percent =
+    !hidden && goal > 0
+      ? Math.min(100, Math.round((raisedValue / goal) * 100))
+      : 0;
 
   return (
     <div
@@ -52,13 +58,21 @@ export function MiniCagnotteCard({
       {/* Content */}
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <p className="truncate text-sm font-semibold text-primary">{title}</p>
-        <ProgressBar
-          value={percent}
-          color={subtype === "festive" ? "gold" : "primary"}
-        />
-        <p className="text-xs text-muted-foreground">
-          {formatPrice(raised)} / {formatPrice(goal)}
-        </p>
+        {hidden ? (
+          <p className="text-xs italic text-muted-foreground">
+            Montant masqué
+          </p>
+        ) : (
+          <>
+            <ProgressBar
+              value={percent}
+              color={subtype === "festive" ? "gold" : "primary"}
+            />
+            <p className="text-xs text-muted-foreground">
+              {formatPrice(raisedValue)} / {formatPrice(goal)}
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

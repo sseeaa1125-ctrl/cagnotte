@@ -274,9 +274,10 @@ export function ParticiperForm({
               cagnotte={{
                 title: cagnotte.title,
                 coverUrl: cagnotte.coverUrl,
-                raised: cagnotte.totalRaised ?? 0,
+                raised: cagnotte.totalRaised,
                 goal: cagnotte.goalAmount ?? 0,
                 subtype,
+                hideAmount: cagnotte.hideAmount,
               }}
             />
             <OrderSummary

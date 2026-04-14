@@ -20,6 +20,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
+import { verifyToken } from "../lib/auth.js";
 import * as logger from "../lib/logger.js";
 
 export const cagnottesRouter = Router();
@@ -239,9 +240,23 @@ cagnottesRouter.get("/:slug", async (req, res) => {
 
     const cfg = (block.config as FundraiserConfig) || {};
 
+    // Phase 9 fixpack — owner detection. If the caller presents a valid
+    // izy-token cookie AND the JWT's sub matches the block's seller, we
+    // unmask hideAmount/hideDonors so the creator can always see their own
+    // totals on the dashboard. Public callers keep the masked response.
+    const cookieToken = (req.cookies?.["izy-token"] as string) ?? null;
+    let isOwner = false;
+    if (cookieToken) {
+      const payload = await verifyToken(cookieToken);
+      if (payload?.sub && payload.sub === block.seller.id) {
+        isOwner = true;
+      }
+    }
+
     // T-02-02 — private cagnottes must NEVER be cached by CDNs/proxies.
     // Public detail uses a short max-age to keep SSR friendly without staling.
-    if (cfg.visibility === "private") {
+    // Owner responses are also never cached since they carry unmasked data.
+    if (cfg.visibility === "private" || isOwner) {
       res.setHeader("Cache-Control", "private, no-store");
     } else {
       res.setHeader("Cache-Control", "public, max-age=60");
@@ -272,6 +287,12 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       },
     });
 
+    // Owner bypasses hideAmount/hideDonors masking and recentDonations masking
+    // so the creator dashboard always sees their real numbers + donor names.
+    const ownerCfg: FundraiserConfig = isOwner
+      ? { ...cfg, hideAmount: false, hideDonors: false }
+      : cfg;
+
     res.json({
       id: block.id,
       slug: block.slug,
@@ -284,9 +305,9 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       endDate: cfg.endDate ?? null,
       hideAmount: cfg.hideAmount ?? false,
       hideDonors: cfg.hideDonors ?? false,
-      totalRaised: cfg.hideAmount ? null : totalRaised,
-      donorCount: cfg.hideDonors ? null : donorCount,
-      recentDonations: recent.map((o) => maskDonation(o, cfg)),
+      totalRaised: isOwner || !cfg.hideAmount ? totalRaised : null,
+      donorCount: isOwner || !cfg.hideDonors ? donorCount : null,
+      recentDonations: recent.map((o) => maskDonation(o, ownerCfg)),
       seller: shapeSeller(block.seller),
       createdAt: block.createdAt.toISOString(),
     });
