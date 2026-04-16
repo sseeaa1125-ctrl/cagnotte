@@ -48,6 +48,8 @@ export function ConfirmStep() {
   }, [isReady, draft, router]);
 
   async function handleConfirm() {
+    // Audit 011 D-04: re-entrancy guard in addition to disabled button.
+    if (submitting) return;
     if (!isCompleteDraft(draft) || !draft.pin) return;
     setSubmitting(true);
     try {
@@ -143,7 +145,7 @@ export function ConfirmStep() {
             <span className="text-sm text-muted-foreground">
               {WITHDRAWAL_LABELS.confirmFees}
             </span>
-            <span className="text-sm font-semibold text-green-600">
+            <span className="text-sm font-semibold text-[#00B67A]">
               {WITHDRAWAL_LABELS.confirmFeesFree}
             </span>
           </div>
@@ -170,7 +172,7 @@ export function ConfirmStep() {
             <span className="text-sm font-semibold text-primary">
               {WITHDRAWAL_LABELS.confirmNet}
             </span>
-            <span className="font-headings text-2xl font-black text-green-600">
+            <span className="font-headings text-2xl font-black text-[#00B67A]">
               {formatPrice(draft.amount)}
             </span>
           </div>

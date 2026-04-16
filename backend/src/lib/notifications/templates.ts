@@ -34,6 +34,24 @@ function formatDateFr(d: Date): string {
   return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
+// Public site URL for absolute links inside transactional emails.
+const PUBLIC_BASE_URL =
+  process.env.PUBLIC_BASE_URL ||
+  process.env.NEXT_PUBLIC_BASE_URL ||
+  "https://cagnotte.sn";
+
+// Inline navy CTA button — Outlook-safe. Brand color #172866 to match the
+// frontend `--color-primary` / Tailwind `text-primary`.
+function ctaButton(label: string, path: string): string {
+  const safeLabel = escapeHtml(label);
+  const href = `${PUBLIC_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 24px 0;">
+    <tr><td style="border-radius: 12px; background-color: #172866;">
+      <a href="${href}" target="_blank" rel="noopener" style="display: inline-block; padding: 14px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 12px;">${safeLabel}</a>
+    </td></tr>
+  </table>`;
+}
+
 export interface TemplateOutput {
   title: string;
   body: string;
@@ -61,7 +79,7 @@ export function donationReceivedTemplate(input: DonationReceivedInput): Template
     emailSubject: `${fcfa} reçus — ${input.cagnotteTitle}`,
     emailHtml: `<h2>Nouvelle participation</h2>
       <p><strong>${safeName}</strong> vient de participer <strong>${fcfa}</strong> à ta cagnotte <strong>« ${safeTitle} »</strong>.</p>
-      <p>Connecte-toi à ton tableau de bord pour voir le détail.</p>`,
+      ${ctaButton("Voir ma cagnotte", "/tableau-de-bord")}`,
   };
 }
 
@@ -83,7 +101,8 @@ export function milestoneTemplate(input: MilestoneInput, threshold: 50 | 100): T
       emailSubject: `50 % atteint — ${input.cagnotteTitle}`,
       emailHtml: `<h2>50 % atteint !</h2>
         <p>Ta cagnotte <strong>« ${safeTitle} »</strong> a atteint la moitié de son objectif.</p>
-        <p>C'est le moment idéal pour relancer le partage — la dynamique est lancée.</p>`,
+        <p>C'est le moment idéal pour relancer le partage — la dynamique est lancée.</p>
+        ${ctaButton("Partager ma cagnotte", "/tableau-de-bord")}`,
     };
   }
   // threshold === 100
@@ -94,7 +113,8 @@ export function milestoneTemplate(input: MilestoneInput, threshold: 50 | 100): T
     emailSubject: `Objectif atteint — ${input.cagnotteTitle}`,
     emailHtml: `<h2>Objectif atteint</h2>
       <p>Ta cagnotte <strong>« ${safeTitle} »</strong> a atteint son objectif de <strong>${fcfa}</strong>.</p>
-      <p>Bravo ! Tu peux retirer tes fonds depuis ton tableau de bord.</p>`,
+      <p>Bravo ! Tu peux retirer tes fonds depuis ton tableau de bord.</p>
+      ${ctaButton("Retirer mes fonds", "/retraits")}`,
   };
 }
 
@@ -115,7 +135,8 @@ export function endingSoonTemplate(input: EndingSoonInput): TemplateOutput {
     emailSubject: `Plus que 3 jours — ${input.cagnotteTitle}`,
     emailHtml: `<h2>Plus que quelques jours</h2>
       <p>Ta cagnotte <strong>« ${safeTitle} »</strong> se termine le <strong>${dateStr}</strong>.</p>
-      <p>C'est le moment de relancer tes proches pour récolter le maximum avant la fin.</p>`,
+      <p>C'est le moment de relancer tes proches pour récolter le maximum avant la fin.</p>
+      ${ctaButton("Partager ma cagnotte", "/tableau-de-bord")}`,
   };
 }
 
@@ -138,7 +159,8 @@ export function cagnotteEndedTemplate(input: CagnotteEndedInput): TemplateOutput
     emailHtml: `<h2>Cagnotte terminée</h2>
       <p>Ta cagnotte <strong>« ${safeTitle} »</strong> s'est terminée.</p>
       <p>Total collecté : <strong>${fcfa}</strong><br>Participants : <strong>${input.donorCount}</strong></p>
-      <p>Tu peux retirer tes fonds depuis ton tableau de bord.</p>`,
+      <p>Tu peux retirer tes fonds depuis ton tableau de bord.</p>
+      ${ctaButton("Retirer mes fonds", "/retraits")}`,
   };
 }
 
@@ -161,7 +183,8 @@ export function donationMessageTemplate(input: DonationMessageInput): TemplateOu
     emailSubject: `Nouveau message sur ${input.cagnotteTitle}`,
     emailHtml: `<h2>Nouveau message</h2>
       <p><strong>${safeName}</strong> a laissé un message sur ta cagnotte <strong>« ${safeTitle} »</strong> :</p>
-      <blockquote style="margin:12px 0;padding:12px 16px;background-color:#F9FAFB;border-left:3px solid #0D9488;border-radius:8px;color:#374151;font-style:italic;">${safeMsg}</blockquote>`,
+      <blockquote style="margin:12px 0;padding:12px 16px;background-color:#F9FAFB;border-left:3px solid #172866;border-radius:8px;color:#374151;font-style:italic;">${safeMsg}</blockquote>
+      ${ctaButton("Voir ma cagnotte", "/tableau-de-bord")}`,
   };
 }
 
@@ -184,7 +207,8 @@ export function payoutCompletedTemplate(input: PayoutCompletedInput): TemplateOu
     emailSubject: `Retrait de ${fcfa} effectué`,
     emailHtml: `<h2>Retrait effectué</h2>
       <p>Ton retrait de <strong>${fcfa}</strong> vers <strong>${safePhone}</strong> (${safeProvider}) a été effectué avec succès.</p>
-      <p>L'argent devrait arriver sur ton mobile money sous quelques minutes.</p>`,
+      <p>L'argent devrait arriver sur ton Mobile Money sous quelques minutes.</p>
+      ${ctaButton("Voir mes retraits", "/retraits")}`,
   };
 }
 
@@ -205,7 +229,8 @@ export function payoutFailedTemplate(input: PayoutFailedInput, reason: string, a
     emailHtml: `<h2>Retrait échoué</h2>
       <p>Ton retrait de <strong>${fcfa}</strong> n'a pas pu être effectué (tentative ${attempt}).</p>
       <p>Raison : <strong>${safeReason}</strong></p>
-      <p>Vérifie ton numéro de mobile money et réessaye depuis ton tableau de bord.</p>`,
+      <p>Vérifie ton numéro Mobile Money et réessaye depuis ton tableau de bord.</p>
+      ${ctaButton("Réessayer le retrait", "/retraits")}`,
   };
 }
 
@@ -224,7 +249,8 @@ export function kycApprovedTemplate(_input: KycInput): TemplateOutput {
     emailSubject: `Ton identité a été vérifiée`,
     emailHtml: `<h2>Identité vérifiée</h2>
       <p>Bonne nouvelle — ton identité a été vérifiée avec succès.</p>
-      <p>Tu peux maintenant retirer tes fonds depuis ton tableau de bord.</p>`,
+      <p>Tu peux maintenant retirer tes fonds depuis ton tableau de bord.</p>
+      ${ctaButton("Retirer mes fonds", "/retraits")}`,
   };
 }
 
@@ -240,6 +266,7 @@ export function kycRejectedTemplate(_input: KycInput, reason: string): TemplateO
     emailHtml: `<h2>Documents refusés</h2>
       <p>Tes documents d'identité n'ont pas pu être validés.</p>
       <p>Raison : <strong>${safeReason}</strong></p>
-      <p>Connecte-toi à ton profil pour soumettre de nouveaux documents.</p>`,
+      <p>Connecte-toi à ton profil pour soumettre de nouveaux documents.</p>
+      ${ctaButton("Soumettre à nouveau", "/profil/kyc")}`,
   };
 }

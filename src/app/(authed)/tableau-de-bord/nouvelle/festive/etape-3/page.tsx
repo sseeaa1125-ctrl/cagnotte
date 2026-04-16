@@ -137,7 +137,7 @@ export default function FestiveStep3Page() {
       />
 
       <form
-        className="flex flex-col gap-8"
+        className="flex flex-col gap-5 sm:gap-8"
         onSubmit={(e) => {
           e.preventDefault();
           handlePublish();

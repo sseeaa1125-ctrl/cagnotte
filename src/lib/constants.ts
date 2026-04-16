@@ -33,8 +33,8 @@ export const PERIOD_OPTIONS = [
 export const OPERATOR_LABELS: Record<string, string> = {
   wave_money: "Wave",
   orange_money: "Orange Money",
+  moov: "Free Money",
   maxit: "Maxit",
-  card: "Carte bancaire",
 };
 
 // ── Navigation labels ──
@@ -109,18 +109,19 @@ export const VALIDATION = {
 
 // ── Empty states ──
 export const EMPTY_STATES = {
-  aucuneCagnotte: "Aucune cagnotte pour le moment",
-  aucuneParticipation: "Vous n'avez pas encore participé à une cagnotte",
-  aucuneNotification: "Aucune notification",
+  aucuneCagnotte: "Lance ta première cagnotte",
+  aucuneParticipation: "Tu n'as encore participé à aucune cagnotte",
+  aucuneNotification: "Pas de notifications pour le moment",
   aucunResultat: "Aucun résultat",
 } as const;
 
 // ── Error states ──
 export const ERRORS = {
-  generique: "Une erreur est survenue. Réessayez.",
-  reseau: "Erreur de connexion au serveur",
-  nonAutorise: "Session expirée. Connectez-vous à nouveau.",
-  tropDeRequetes: "Trop de requêtes. Patientez quelques minutes.",
+  generique:
+    "Une erreur s'est produite. Réessaye ou contacte support@cagnotte.sn si ça persiste.",
+  reseau: "Connexion au serveur impossible. Vérifie ton réseau.",
+  nonAutorise: "Session expirée. Reconnecte-toi pour continuer.",
+  tropDeRequetes: "Trop de requêtes. Attends 10 minutes, puis réessaye.",
 } as const;
 
 // ── Fundraiser subtype labels ──
@@ -131,11 +132,12 @@ export const SUBTYPE_LABELS = {
 
 // ── Occasions (for Select / RadioCard) ──
 export const OCCASIONS = [
-  "Anniversaire",
+  "Baptême",
   "Mariage",
-  "Pot de départ",
+  "Anniversaire",
+  "Tabaski",
   "Cadeau commun",
-  "Naissance",
+  "Pot de départ",
   "Voyage",
 ] as const;
 
@@ -143,9 +145,9 @@ export const OCCASIONS = [
 export const CAUSES = [
   "Santé",
   "Éducation",
+  "Rentrée scolaire",
   "Projet solidaire",
   "Urgence",
-  "Animaux",
 ] as const;
 
 // ── Beneficiaires ──
@@ -160,21 +162,14 @@ export const NOTIF_LABELS: Record<string, string> = {
   DONATION_RECEIVED: "Nouveau don reçu",
   DONATION_MESSAGE: "Nouveau message",
   MILESTONE_REACHED: "Objectif en vue",
-  CAGNOTTE_ENDING_SOON: "Votre cagnotte se termine bientôt",
-  CAGNOTTE_ENDED: "Cagnotte terminée",
+  CAGNOTTE_ENDING_SOON: "Ta cagnotte se termine bientôt",
+  CAGNOTTE_ENDED: "Ta cagnotte est terminée",
   PAYOUT_COMPLETED: "Retrait effectué",
   PAYOUT_FAILED: "Retrait échoué",
   KYC_APPROVED: "Identité vérifiée",
   KYC_REJECTED: "Vérification refusée",
   SYSTEM: "Système",
 };
-
-// ── Commission transparency labels ──
-export const COMMISSION_LABELS = {
-  festiveLabel: "8% de commission pour les cagnottes festives",
-  solidaireLabel: "6% de commission pour les cagnottes solidaires",
-  transparencyNote: "Commission prélevée sur le total collecté",
-} as const;
 
 // ── Misc ──
 // Phase 7 plan 07-01 — lowercase two-tone wordmark.
@@ -201,12 +196,12 @@ export const CREATOR_DETAIL_LABELS = {
   kpiAvailableFunds: "Fonds disponibles",
   withdrawCta: "Retirer les fonds",
   withdrawHelper:
-    "Transférez ce montant sur votre compte Mobile Money en quelques clics.",
+    "Transfère ce montant sur ton compte Mobile Money en quelques clics.",
   recentParticipations: "Participations récentes",
   viewAllParticipations: "Voir toutes",
   shareLinkTitle: "Lien de la cagnotte",
   visibilityTitle: "Visibilité",
-  dangerZoneTitle: "Zone de danger",
+  dangerZoneTitle: "Gestion de la cagnotte",
   closeCagnotte: "Clôturer la cagnotte",
   closingCagnotte: "Clôture en cours…",
   reopenCagnotte: "Rouvrir la cagnotte",
@@ -230,7 +225,7 @@ export const CREATOR_DETAIL_LABELS = {
   copyLinkSuccess: "Copié !",
   anonymousDonor: "Anonyme",
   kycNotApprovedNote:
-    "Vérifiez votre identité pour activer les retraits.",
+    "Vérifie ton identité pour activer les retraits.",
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -242,7 +237,7 @@ export const CREATOR_DETAIL_LABELS = {
 export const HOME_COPY = {
   heroTitle: "Crée ta cagnotte, partage, collecte.",
   heroSubtitle:
-    "La plateforme sénégalaise pour lever des fonds entre amis, en famille ou pour une cause. Wave, Orange Money, Free Money, carte bancaire.",
+    "La plateforme sénégalaise pour lever des fonds entre amis, en famille ou pour une cause. Wave, Orange Money, Free Money.",
   heroCtaCreate: "Créer ma cagnotte",
   heroCtaDiscover: "Découvrir les cagnottes",
   featuredTitle: "Les cagnottes du moment",
@@ -253,8 +248,8 @@ export const HOME_COPY = {
   featuresTitle: "Pourquoi cagnotte.sn",
   featuresList: [
     {
-      title: "Commission transparente",
-      body: "6% pour les causes solidaires, 8% pour les cagnottes festives. Tout est affiché avant le paiement.",
+      title: "Gratuit pour tes donateurs",
+      body: "Tes contributeurs paient exactement ce qu'ils choisissent, sans frais ajoutés. Les frais d'organisateur sont présentés à la création.",
     },
     {
       title: "Mobile money d'abord",
@@ -270,11 +265,11 @@ export const HOME_COPY = {
   faqItems: [
     {
       q: "Comment récupérer les fonds collectés ?",
-      a: "Une fois ton identité vérifiée, tu peux demander un retrait vers ton Wave, Orange Money, Free Money ou ton compte bancaire. Le transfert arrive sous 24 à 72 heures selon l'opérateur.",
+      a: "Une fois ton identité vérifiée, tu peux demander un retrait vers ton Wave, Orange Money, Free Money ou ton compte bancaire. Le transfert arrive sous 24 à 48 heures selon l'opérateur.",
     },
     {
-      q: "Quelle commission prélève cagnotte.sn ?",
-      a: "6% pour les cagnottes solidaires (santé, éducation, urgence) et 8% pour les cagnottes festives (mariage, anniversaire, cadeau commun). La commission est affichée au donateur avant le paiement.",
+      q: "La participation est-elle gratuite pour mes donateurs ?",
+      a: "Oui. Tes contributeurs paient exactement le montant qu'ils choisissent, sans frais ajoutés. Les éventuels frais d'organisateur te sont présentés en clair au moment de la création de la cagnotte.",
     },
     {
       q: "Mes donateurs peuvent-ils rester anonymes ?",
@@ -294,16 +289,26 @@ export const HOME_COPY = {
 export const HOME_HERO_LABELS = {
   trustPre: "La plateforme de cagnottes du Sénégal",
   h1Part1: "La cagnotte qui",
-  h1Part2: "fait du bien.",
   subtitle:
     "Des cagnottes en ligne pour faire plaisir, et soutenir celles et ceux qui en ont besoin.",
   ctaCreate: "Créer une cagnotte",
 } as const;
 
+// Second line of the hero headline, cycled by _RotatingHeadline.tsx.
+// Order matters — first entry is the SSR / first-paint phrase so the
+// hydration swap-in looks like a natural continuation.
+export const HOME_HERO_PHRASES = [
+  "fait du bien.",
+  "rassemble.",
+  "fait sourire.",
+  "change des vies.",
+  "nous unit.",
+] as const;
+
 export const HOME_FEATURED_LABELS = {
   h2: "Les cagnottes du moment",
   subtitle:
-    "Découvrez et participez aux cagnottes créées par la communauté.",
+    "Les cagnottes qui font le plus parler d'elles cette semaine au Sénégal.",
   viewAll: "Voir toutes les cagnottes",
   empty: "Aucune cagnotte pour l'instant.",
   participate: "Participer",
@@ -320,24 +325,24 @@ export const HOME_FEATURES_LABELS = {
       "La cagnotte en ligne pour un anniversaire, un pot de départ, un heureux événement…",
     cards: [
       {
-        kicker: "SIMPLE & RAPIDE",
-        title: "Prêt en 2 minutes",
+        kicker: "VIREMENT RAPIDE",
+        title: "Tes fonds en 48 h",
         body:
-          "Créez votre cagnotte, partagez le lien, recevez les contributions. C'est tout.",
+          "Une fois la cagnotte clôturée et ton identité vérifiée, tes fonds sont versés sous 48 h jours ouvrés sur Wave, Orange Money, Free Money ou ton compte bancaire.",
         cta: null,
       },
       {
         kicker: "PAIEMENTS SÉCURISÉS",
         title: "Des paiements super safe",
         body:
-          "Wave, Orange Money, Free Money et carte bancaire. Chaque transaction est protégée par nos prestataires bancaires partenaires.",
+          "Wave, Orange Money et Free Money. Chaque transaction est protégée par nos prestataires partenaires.",
         cta: null,
       },
       {
-        kicker: "6% SOLIDAIRE · 8% FESTIVE",
-        title: "Des frais transparents",
+        kicker: "GRATUIT POUR LES DONATEURS",
+        title: "Les donateurs ne paient aucun frais",
         body:
-          "Nos commissions sont toujours affichées avant le paiement. Zéro frais cachés, zéro mauvaise surprise.",
+          "Tes contributeurs paient exactement le montant qu'ils choisissent. Aucun frais ajouté, aucune mauvaise surprise.",
         cta: "Voir nos conditions",
       },
     ] as const,
@@ -349,10 +354,10 @@ export const HOME_FEATURES_LABELS = {
       "La cagnotte solidaire pour financer un projet, une urgence médicale, une cause qui vous tient à cœur.",
     cards: [
       {
-        kicker: "PROJETS VÉRIFIÉS",
-        title: "Des causes qui comptent",
+        kicker: "VIREMENT RAPIDE",
+        title: "Fonds versés en 48 h",
         body:
-          "Chaque cagnotte solidaire est créée par un porteur de projet vérifié. Tu sais exactement où vont tes dons.",
+          "Dès la clôture de la cagnotte et la validation de ton identité, les fonds collectés sont versés sous 48 h jours ouvrés. Tes bénéficiaires n'attendent pas.",
         cta: null,
       },
       {
@@ -363,10 +368,10 @@ export const HOME_FEATURES_LABELS = {
         cta: null,
       },
       {
-        kicker: "COMMISSION SOLIDAIRE",
-        title: "6% pour faire tourner le moteur",
+        kicker: "UNE PLATEFORME SÉRIEUSE",
+        title: "Infrastructure, support, KYC",
         body:
-          "Nos frais servent à financer l'infrastructure, le support client et la vérification d'identité. Pas de mécénat caché.",
+          "Derrière chaque cagnotte, nos équipes maintiennent l'infrastructure, la vérification d'identité et un support humain 7 j/7. Les détails des frais d'organisateur sont présentés à la création.",
         cta: "Voir nos conditions",
       },
     ] as const,
@@ -391,11 +396,23 @@ export const HOME_FAQ_LABELS = {
     },
     {
       q: "Combien de temps pour recevoir mes fonds ?",
-      a: "Dès que ta cagnotte reçoit des contributions, tu peux demander un retrait. Les virements Mobile Money sont généralement traités sous 24h après validation de ton identité.",
+      a: "Dès que ta cagnotte reçoit des contributions, tu peux demander un retrait. Les virements Mobile Money sont généralement traités sous 48 h après validation de ton identité.",
     },
     {
       q: "Quels moyens de paiement sont acceptés ?",
-      a: "Wave, Orange Money, Free Money et carte bancaire. Les donateurs choisissent leur moyen de paiement préféré au moment de la participation.",
+      a: "Wave, Orange Money et Free Money. Les donateurs choisissent leur Mobile Money préféré au moment de la participation.",
+    },
+    {
+      q: "Mes donateurs paient-ils des frais ?",
+      a: "Non. Les donateurs paient exactement le montant qu'ils choisissent, sans frais ajouté. Une contribution volontaire de 3 % est proposée au moment du paiement pour soutenir la plateforme — elle reste 100 % optionnelle et peut être décochée en un clic.",
+    },
+    {
+      q: "Ma cagnotte peut-elle être privée ?",
+      a: "Oui. À la création, choisis « Cagnotte privée » : elle n'apparaît ni sur la page d'accueil ni dans la liste publique. Seules les personnes à qui tu envoies le lien direct peuvent y participer.",
+    },
+    {
+      q: "Comment ma cagnotte est-elle sécurisée ?",
+      a: "Les paiements sont traités par notre partenaire Bictorys, agréé par les opérateurs Wave, Orange Money et Free Money. Chaque transaction est chiffrée de bout en bout et ton identité est vérifiée avant tout retrait (KYC). Nos équipes surveillent les transactions 7 j/7.",
     },
   ] as const,
 } as const;
@@ -411,10 +428,9 @@ export const PARTICIPER_LABELS = {
   pageTitle: "Je participe",
   backCta: "Cagnotte",
   breadcrumbCurrent: "Participation",
-  stepAmount: "Votre participation",
-  stepInfo: "Mes infos de paiement",
+  stepAmount: "Ta participation",
+  stepInfo: "Tes infos de paiement",
   stepMessage: "Ton message",
-  suggestedAmounts: [1000, 2500, 5000, 10000, 25000] as readonly number[],
   customAmountLabel: "Autre montant (FCFA)",
   customAmountPlaceholder: "Ex : 7 500",
   firstNameLabel: "Prénom",
@@ -428,7 +444,7 @@ export const PARTICIPER_LABELS = {
   voluntaryTitle: "Contribution volontaire",
   voluntaryLabel: "Soutenir la plateforme",
   voluntaryHelp:
-    "Soutenez la plateforme de cagnottes sénégalaises. Votre contribution volontaire de 3% aide à maintenir un service de qualité pour tous les porteurs de projets.",
+    "Soutiens la plateforme de cagnottes sénégalaise. Ta contribution volontaire de 3 % aide à maintenir un service de qualité pour tous les porteurs de projets.",
   voluntaryOptOut:
     "Je ne souhaite pas donner de contribution volontaire",
   hideIdentityLabel: "Masquer mon identité",
@@ -449,9 +465,9 @@ export const PARTICIPER_LABELS = {
   errorAmountMax: "Le montant maximum est 10 000 000 FCFA",
   errorFirstNameRequired: "Prénom requis",
   errorLastNameRequired: "Nom requis",
-  errorPhoneRequired: "Téléphone requis",
+  errorPhoneRequired: "Numéro requis. Format : +221 77 123 45 67",
   errorMessageTooLong: "Message trop long (max 500 caractères)",
-  errorTosRequired: "Vous devez accepter les conditions",
+  errorTosRequired: "Tu dois accepter les conditions",
 } as const;
 
 // ── /c/[slug]/paiement (screen 24) ──
@@ -460,8 +476,7 @@ export const PAIEMENT_LABELS = {
   pageSubtitle: "Choisis ton moyen de paiement pour continuer.",
   methodWave: "Wave",
   methodOrange: "Orange Money",
-  methodFree: "Free Money",
-  methodCard: "Carte bancaire",
+  methodMaxit: "Maxit",
   payWithPrefix: "Payer avec",
   processingLabel: "Traitement…",
   errorRateLimit: "Trop de tentatives, réessaye dans 1 minute.",
@@ -469,6 +484,21 @@ export const PAIEMENT_LABELS = {
   errorGeneric: "Erreur lors de la création de l'ordre. Réessaye.",
   errorMissingSession:
     "Informations de contribution introuvables. Reprends depuis le début.",
+  // Waiting state (QR desktop + in-app browsers) — Phase 11 parity with fari.store PaymentModal.
+  waitingPollingTitle: "En attente du paiement…",
+  waitingPollingSubtitle:
+    "Termine ton paiement sur l'application puis reviens ici. La page se met à jour automatiquement.",
+  waitingPaidTitle: "Paiement confirmé !",
+  waitingPaidSubtitle: "Redirection en cours…",
+  waitingQrHeadingPrefix: "Scanne ce QR code avec",
+  waitingQrDefaultApp: "ton app",
+  waitingOpenAppPrefix: "Ouvrir dans l'app",
+  waitingOpenAppFallback: "de paiement",
+  waitingCopyLink: "Copier le lien",
+  waitingCopied: "Lien copié !",
+  waitingShareLink: "Partager le lien",
+  waitingInAppHelp:
+    "Ce navigateur bloque la redirection. Utilise un des boutons ci-dessous pour continuer.",
 } as const;
 
 // ── /c/[slug]/merci ──
@@ -489,6 +519,8 @@ export const MERCI_LABELS = {
   retryPaymentCta: "Réessayer le paiement",
   manualRetryCta: "Vérifier à nouveau",
   backCta: "Retour à la cagnotte",
+  missingReferenceDescription:
+    "Nous n'avons pas trouvé de commande associée à cette page. Retourne à la cagnotte pour recommencer.",
 } as const;
 
 // ── In-app browser helpers (TikTok / IG / FB WebViews) ──
@@ -529,7 +561,7 @@ export const AUTH_LABELS = {
   tosError: "Tu dois accepter les conditions pour continuer.",
   signupCta: "Créer mon compte",
   signupLoading: "Création du compte…",
-  alreadyAccount: "Vous avez déjà un compte ? Se connecter",
+  alreadyAccount: "Tu as déjà un compte ? Se connecter",
   // Login
   loginTitle: "Bon retour !",
   loginSubtitle:
@@ -543,13 +575,16 @@ export const AUTH_LABELS = {
   socialGoogleLabel: "Google",
   socialAppleLabel: "Apple",
   // Errors
-  errorGeneric: "Une erreur est survenue. Réessaye.",
-  errorEmailTaken: "Cet email est déjà utilisé.",
+  errorGeneric:
+    "Une erreur s'est produite. Réessaye ou contacte support@cagnotte.sn si le problème persiste.",
+  errorEmailTaken:
+    "Cet email a déjà un compte. Connecte-toi ou réinitialise ton mot de passe.",
   errorSlugTaken: "Ce nom d'espace est déjà pris.",
   errorInvalidCredentials: "E-mail ou mot de passe incorrect.",
   errorEmailUnverified:
-    "Email non vérifié — un nouveau code vient d'être envoyé.",
-  errorRateLimit: "Trop de tentatives. Réessaye dans quelques minutes.",
+    "Email non vérifié — un nouveau code vient d'être envoyé. Vérifie ta boîte mail (et le dossier spam).",
+  errorRateLimit:
+    "Trop de tentatives. Attends 10 minutes, puis réessaye.",
   errorDisplayNameTooShort: "Prénom et nom requis (minimum 2 caractères).",
   errorSlugUnavailable:
     "Aucun nom d'espace disponible — essaie un autre prénom/nom.",
@@ -623,7 +658,7 @@ export const DASHBOARD_LABELS = {
   welcomeBack: "Bon retour, {name}",
   kpiTotalRaised: "Total collecté",
   kpiDonorCount: "Participations",
-  kpiCampaignCount: "Cagnottes actives",
+  kpiCampaignCount: "Mes cagnottes",
   recentCagnottes: "Mes cagnottes récentes",
   seeAllLink: "Voir tout",
   createCta: "Créer une cagnotte",
@@ -636,17 +671,26 @@ export const DASHBOARD_LABELS = {
 
 // ── /tableau-de-bord/nouvelle (Banani screen 8) ──
 export const CREATE_PICKER_LABELS = {
-  title: "Créer la cagnotte de votre choix",
-  subtitle: "Choisissez le type de cagnotte qui correspond à votre projet.",
+  title: "Quel type de cagnotte veux-tu créer ?",
+  subtitle: "Choisis celui qui correspond à ton projet.",
   festiveTitle: "Festive",
   festiveDescription:
-    "Cadeau commun, anniversaire, pot de départ, mariage, naissance, voyage…",
+    "Baptême, mariage, anniversaire, cadeau commun, pot de départ, voyage…",
+  festiveFeeAmount: "8 %",
+  festiveFeeLabel: "de commission par contribution",
+  festiveCta: "Choisir festive",
   solidaireTitle: "Solidaire",
   solidaireDescription:
-    "Appel aux dons, aider un proche ou une association, soutenir un projet, obsèques…",
+    "Appel aux dons, aider un proche ou une association, soutenir un projet, urgence santé, obsèques…",
+  solidaireFeeAmount: "6 %",
+  solidaireFeeLabel: "de commission par contribution",
+  solidaireCta: "Choisir solidaire",
+  feeHelper:
+    "Aucun frais caché, la commission est déduite à chaque contribution.",
   cancelCta: "Retour au tableau de bord",
-  trustBadgeSecure: "100% sécurisé",
+  trustBadgeSecure: "100 % sécurisé",
   trustBadgeEasy: "Collecte facilitée",
+  trustBadgePayout: "Fonds versés en 48 h",
 } as const;
 
 // ── Wizard shared labels (festive + solidaire, 3 steps) ──
@@ -654,7 +698,10 @@ export const WIZARD_LABELS = {
   festiveBadge: "🪩 Cagnotte Festive",
   solidaireBadge: "❤️ Cagnotte Solidaire",
   backCta: "Retour",
-  continueCta: "Étape suivante",
+  continueCta: "Continuer",
+  // Context-aware CTAs (used per step in the wizard pages)
+  continueCtaStep1: "Personnaliser ma cagnotte",
+  continueCtaStep2: "Configurer les options",
   publishCta: "Publier ma cagnotte",
   publishing: "Publication en cours…",
   step1Of3: "Étape 1 sur 3",
@@ -662,21 +709,21 @@ export const WIZARD_LABELS = {
   step3Of3: "Étape 3 sur 3",
   step1TitleFestive: "Commençons par les bases",
   step1SubtitleFestive:
-    "Donnez un nom à votre cagnotte et précisez l'occasion.",
+    "Donne un nom à ta cagnotte et précise l'occasion.",
   step1TitleSolidaire: "Commençons par les bases",
   step1SubtitleSolidaire:
-    "Donnez un nom à votre projet solidaire et précisez la cause.",
-  step2TitleFestive: "Personnalisez votre cagnotte",
+    "Donne un nom à ton projet solidaire et précise la cause.",
+  step2TitleFestive: "Personnalise ta cagnotte",
   step2SubtitleFestive:
-    "Ajoutez une image et un petit mot pour donner envie de participer.",
-  step2TitleSolidaire: "Personnalisez votre projet",
+    "Ajoute une image et un petit mot pour donner envie de participer.",
+  step2TitleSolidaire: "Personnalise ton projet",
   step2SubtitleSolidaire:
-    "Ajoutez une image et expliquez pourquoi vous collectez des fonds.",
+    "Ajoute une image et explique pourquoi tu collectes des fonds.",
   step3Title: "Paramètres et visibilité",
   step3SubtitleFestive:
-    "Dernière étape ! Configurez les options de votre cagnotte.",
+    "Dernière étape ! Configure les options de ta cagnotte.",
   step3SubtitleSolidaire:
-    "Dernière étape ! Configurez les options de votre collecte.",
+    "Dernière étape ! Configure les options de ta collecte.",
 } as const;
 
 // ── Wizard field labels (shared festive + solidaire) ──
@@ -686,27 +733,30 @@ export const WIZARD_FIELDS = {
   titlePlaceholderSolidaire: "Ex : Soutien pour le jardin partagé",
   titleHelp: "Un titre clair donne plus envie de participer.",
   occasionLabel: "Occasion",
-  occasionPlaceholder: "Sélectionnez une occasion…",
+  occasionPlaceholder: "Sélectionne une occasion…",
   occasionOptions: {
+    bapteme: "Baptême",
+    mariage_pacs: "Mariage",
     anniversaire: "Anniversaire",
-    pot_de_depart: "Pot de départ",
+    tabaski: "Tabaski",
     cadeau_commun: "Cadeau commun",
-    mariage_pacs: "Mariage / PACS",
+    pot_de_depart: "Pot de départ",
     naissance: "Naissance",
     voyage: "Voyage",
     autre: "Autre",
   } as Record<string, string>,
   causeLabel: "Cause soutenue",
-  causePlaceholder: "Sélectionnez une cause…",
+  causePlaceholder: "Sélectionne une cause…",
   causeOptions: {
-    sante_medical: "Santé & Médical",
+    sante_medical: "Santé & médical",
     education: "Éducation",
+    rentree_scolaire: "Rentrée scolaire",
     projet_solidaire: "Projet solidaire",
     urgence: "Urgence",
-    animaux: "Animaux",
+    obseques: "Obsèques",
     autre: "Autre",
   } as Record<string, string>,
-  beneficiaryLabel: "Pour qui collectez-vous ?",
+  beneficiaryLabel: "Pour qui collectes-tu ?",
   beneficiaryOptions: {
     moi_meme: "Moi-même",
     un_proche: "Un proche",
@@ -721,44 +771,46 @@ export const WIZARD_FIELDS = {
   galleryLabel: "Galerie (facultatif)",
   descriptionLabelFestive: "Un petit mot pour les participants",
   descriptionPlaceholderFestive:
-    "Expliquez en quelques mots pourquoi vous organisez cette cagnotte et à quoi servira l'argent récolté…",
+    "Explique en quelques mots pourquoi tu organises cette cagnotte et à quoi servira l'argent récolté…",
   descriptionLabelSolidaire: "Description du projet",
   descriptionPlaceholderSolidaire:
-    "Expliquez l'histoire de votre projet, à quoi serviront les fonds et pourquoi chaque don compte…",
+    "Explique l'histoire de ton projet, à quoi serviront les fonds et pourquoi chaque don compte…",
   thankYouMessageLabel: "Message de remerciement (facultatif)",
   thankYouMessagePlaceholder:
     "Merci du fond du cœur pour ta contribution !",
   endDateLabel: "Date de fin",
   endDateOptional: "Optionnel",
   endDateHelpFestive:
-    "Vous pouvez toujours modifier ou clôturer la cagnotte plus tôt.",
+    "Tu peux toujours modifier ou clôturer la cagnotte plus tôt.",
   endDateHelpSolidaire:
-    "Laissez vide si votre collecte est à durée indéterminée.",
+    "Laisse vide si ta collecte est à durée indéterminée.",
   visibilityLabel: "Visibilité de la cagnotte",
   visibilityPublic: "Publique",
   visibilityPublicHelper:
-    "Votre cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de cagnotte.sn.",
+    "Ta cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de cagnotte.sn.",
   visibilityPrivate: "Privée",
   visibilityPrivateHelper:
-    "Votre cagnotte ne sera pas listée sur le site. Seules les personnes avec qui vous partagez le lien pourront y accéder.",
+    "Ta cagnotte ne sera pas listée sur le site. Seules les personnes avec qui tu partages le lien pourront y accéder.",
   hideAmountLabel: "Cacher le montant récolté",
   hideAmountHelp: "Les visiteurs ne verront pas la somme totale collectée.",
   hideDonorsLabel: "Cacher les noms des participants",
   hideDonorsHelp:
-    "Seul vous, l'organisateur, pourrez voir qui a donné.",
+    "Toi seul, l'organisateur, pourras voir qui a donné.",
   tosLabelFestive:
     "J'accepte les Conditions Générales d'Utilisation.",
   tosLabelSolidaire:
     "J'accepte les Conditions Générales d'Utilisation et je confirme que les fonds récoltés seront utilisés pour la cause décrite.",
-  tosError: "Vous devez accepter les conditions pour continuer.",
-  errorTitleRequired: "Un titre est requis.",
-  errorOccasionRequired: "Une occasion est requise.",
-  errorCauseRequired: "Une cause est requise.",
-  errorBeneficiaryRequired: "Un bénéficiaire est requis.",
+  tosError: "Tu dois accepter les conditions pour continuer.",
+  errorTitleRequired:
+    "Donne un titre à ta cagnotte. Ex : « Baptême de Khadija » ou « Soutien santé pour Mamadou ».",
+  errorOccasionRequired: "Choisis une occasion (baptême, mariage, anniversaire…).",
+  errorCauseRequired: "Choisis une cause (santé, éducation, urgence…).",
+  errorBeneficiaryRequired: "Indique pour qui tu collectes (toi-même, un proche, une association).",
   errorGoalMin: "Le montant à atteindre doit être d'au moins 1 000 FCFA.",
   errorDescriptionMin:
-    "La description doit contenir au moins 20 caractères.",
-  errorGeneric: "Impossible de publier la cagnotte. Réessaye.",
+    "Ajoute une description d'au moins 20 caractères pour donner envie de participer.",
+  errorGeneric:
+    "Impossible de publier la cagnotte. Réessaye ou contacte support@cagnotte.sn.",
   errorMissingStep1:
     "Les informations de la première étape sont manquantes. Retour à l'étape 1…",
 } as const;
@@ -798,13 +850,13 @@ export const PROFILE_SIDEBAR = {
 export const PROFILE_LABELS = {
   h1: "Mon profil",
   subtitle:
-    "Gérez vos informations personnelles et vos paramètres de sécurité.",
+    "Gère tes informations personnelles et tes paramètres de sécurité.",
   sectionTitle: "Informations personnelles",
   firstName: "Prénom",
   lastName: "Nom",
   email: "Adresse e-mail",
   emailHelper:
-    "Pour modifier votre e-mail, veuillez contacter le support.",
+    "Pour modifier ton e-mail, contacte le support.",
   phone: "Numéro de téléphone",
   phonePlaceholder: "77 123 45 67",
   avatarHint: "JPG ou PNG, 5 Mo max.",
@@ -817,7 +869,7 @@ export const PROFILE_LABELS = {
 
 export const NOTIF_PREFS_LABELS = {
   h1: "Préférences de notification",
-  subtitle: "Choisissez ce que vous voulez recevoir.",
+  subtitle: "Choisis ce que tu veux recevoir.",
   group1: "Mes cagnottes",
   group2: "Mes participations",
   group3: "Communications Cagnotte.sn",
@@ -857,7 +909,7 @@ export const NOTIF_PREFS_LABELS = {
 export const PARTICIPATIONS_LABELS = {
   h1: "Mes participations",
   subtitle:
-    "Retrouvez toutes les cagnottes auxquelles vous avez contribué.",
+    "Retrouve toutes les cagnottes auxquelles tu as contribué.",
   colCagnotte: "Cagnotte",
   colDate: "Date",
   colAmount: "Montant",
@@ -868,15 +920,15 @@ export const PARTICIPATIONS_LABELS = {
   viewCagnotte: "Voir la cagnotte",
   loadMore: "Charger plus",
   loading: "Chargement…",
-  empty: "Vous n'avez encore participé à aucune cagnotte.",
+  empty: "Tu n'as encore participé à aucune cagnotte.",
   emptyCta: "Découvrir les cagnottes",
   emailMatchNotice: (email: string) =>
-    `Seules les participations effectuées avec votre email (${email}) sont affichées ici.`,
+    `Seules les participations effectuées avec ton email (${email}) sont affichées ici.`,
 };
 
 export const NOTIF_FEED_LABELS = {
-  h1: "Vos notifications",
-  subtitle: "Restez informé de l'activité de vos cagnottes.",
+  h1: "Tes notifications",
+  subtitle: "Suis l'activité de tes cagnottes en temps réel.",
   markAllRead: "Tout marquer comme lu",
   tabAll: "Toutes",
   tabUnread: "Non lues",
@@ -889,6 +941,8 @@ export const NOTIF_FEED_LABELS = {
 export const ALL_CAGNOTTES_LABELS = {
   pageTitle: "Toutes les cagnottes",
   pageSubtitle: "Découvre et soutiens les cagnottes publiées sur cagnotte.sn.",
+  searchPlaceholder: "Rechercher une cagnotte (titre, mot-clé…)",
+  searchAriaLabel: "Rechercher une cagnotte par titre",
   filterAll: "Toutes",
   filterFestive: "Festives",
   filterSolidaire: "Solidaires",
@@ -896,7 +950,7 @@ export const ALL_CAGNOTTES_LABELS = {
   loadingLabel: "Chargement…",
   emptyTitle: "Aucune cagnotte ne correspond",
   emptyBody: "Essaye un autre filtre ou reviens plus tard.",
-  emptyResetCta: "Réinitialiser le filtre",
+  emptyResetCta: "Réinitialiser les filtres",
 } as const;
 
 // ── Phase 6 plan 06-02 — money screens labels ──
@@ -906,33 +960,33 @@ export const ALL_CAGNOTTES_LABELS = {
 
 export const BANK_LABELS = {
   h1: "Coordonnées bancaires",
-  subtitle: "Choisissez le moyen de recevoir vos fonds.",
+  subtitle: "Choisis comment tu veux recevoir tes fonds.",
   providerLabel: "Moyen de paiement",
   providerWave: "Wave Sénégal",
-  providerWaveHelper: "Transfert instantané sur votre compte Wave.",
+  providerWaveHelper: "Transfert instantané sur ton compte Wave.",
   providerOrange: "Orange Money",
-  providerOrangeHelper: "Transfert instantané sur votre compte Orange Money.",
+  providerOrangeHelper: "Transfert instantané sur ton compte Orange Money.",
   phoneLabel: "Numéro Mobile Money",
   phoneHelper: "Exemple : 77 123 45 67",
   nameLabel: "Nom du titulaire",
-  nameHelper: "Tel qu'inscrit chez votre opérateur.",
+  nameHelper: "Tel qu'inscrit chez ton opérateur.",
   save: "Enregistrer",
   saving: "Enregistrement…",
   saved: "Coordonnées enregistrées",
-  errorGeneric: "Impossible d'enregistrer, réessayez.",
+  errorGeneric: "Impossible d'enregistrer. Réessaye.",
   noFreeMoneyNotice:
     "Free Money n'est pas disponible pour les retraits pour le moment.",
-  securityNoticeTitle: "Sécurité de vos coordonnées",
+  securityNoticeTitle: "Tes coordonnées sont protégées",
   securityNoticeBody:
-    "Vos numéros Mobile Money sont stockés de manière sécurisée et ne servent qu'à vous verser les fonds récoltés.",
+    "Tes numéros Mobile Money sont stockés de manière sécurisée et ne servent qu'à te verser les fonds récoltés.",
 } as const;
 
 export const SECURITY_LABELS = {
   h1: "Sécurité & Mot de passe",
-  subtitle: "Protégez votre compte et vos retraits.",
+  subtitle: "Protège ton compte et tes retraits.",
   passwordSection: "Changer mon mot de passe",
   passwordDescription:
-    "Choisissez un mot de passe d'au moins 8 caractères, différent de l'ancien.",
+    "Choisis un mot de passe d'au moins 8 caractères, différent de l'ancien.",
   currentPassword: "Mot de passe actuel",
   newPassword: "Nouveau mot de passe",
   confirmPassword: "Confirmer le nouveau mot de passe",
@@ -944,7 +998,7 @@ export const SECURITY_LABELS = {
   passwordMismatch: "Les mots de passe ne correspondent pas",
   pinSection: "Code de retrait (4 chiffres)",
   pinDescription:
-    "Ce code est demandé à chaque retrait de fonds. Il est distinct de votre mot de passe.",
+    "Ce code est demandé à chaque retrait de fonds. Il est distinct de ton mot de passe.",
   pinCurrent: "Code actuel",
   pinNew: "Nouveau code",
   pinConfirm: "Confirmer le code",
@@ -962,65 +1016,66 @@ export const SECURITY_LABELS = {
 export const KYC_LABELS = {
   h1: "Vérification d'identité",
   subtitle:
-    "Téléversez votre pièce d'identité pour activer les retraits de fonds.",
+    "Téléverse ta pièce d'identité pour activer les retraits de fonds.",
   fullNameLabel: "Nom complet sur la pièce",
-  fullNameHelper: "Tel qu'il apparaît sur votre pièce d'identité.",
+  fullNameHelper: "Tel qu'il apparaît sur ta pièce d'identité.",
   idLabel: "Pièce d'identité (recto)",
   idHelper: "JPG ou PNG, 5 Mo maximum.",
-  selfieLabel: "Selfie avec votre pièce",
+  selfieLabel: "Selfie avec ta pièce",
   selfieHelper:
-    "Tenez votre pièce à côté de votre visage, bien visible, sans reflets.",
+    "Tiens ta pièce à côté de ton visage, bien visible, sans reflets.",
   submit: "Soumettre pour vérification",
   submitting: "Envoi en cours…",
-  uploadFailed: "L'envoi du fichier a échoué, réessayez.",
-  missingFiles: "Veuillez téléverser les deux documents.",
+  uploadFailed: "L'envoi du fichier a échoué. Réessaye.",
+  nameTooShort: "Le nom complet doit contenir au moins 2 caractères.",
+  missingFiles: "Téléverse les deux documents pour continuer.",
   statusNone: "Non vérifié",
   statusPending: "En cours de vérification",
   statusApproved: "Identité vérifiée",
   statusRejected: "Vérification refusée",
   noneBanner:
-    "Votre identité n'a pas encore été vérifiée. Téléversez votre pièce d'identité pour activer les retraits.",
+    "Ton identité n'est pas encore vérifiée. Téléverse ta pièce pour activer les retraits.",
   pendingBanner:
-    "Vos documents sont en cours de vérification. Vous recevrez une notification dès qu'ils seront validés.",
+    "Tes documents sont en cours de vérification. Tu recevras une notification dès qu'ils seront validés.",
   approvedBanner:
-    "Votre identité a été vérifiée. Vous pouvez maintenant retirer vos fonds.",
+    "Ton identité est vérifiée. Tu peux maintenant retirer tes fonds.",
   rejectedBanner:
-    "La vérification a été refusée. Vous pouvez soumettre à nouveau votre pièce et un selfie.",
+    "La vérification a été refusée. Tu peux soumettre à nouveau ta pièce et un selfie.",
   approvedFullName: "Nom vérifié",
 } as const;
 
 export const WITHDRAWAL_LABELS = {
   h1: "Retirer mes fonds",
   subtitle:
-    "Transférez l'argent récolté vers votre compte Mobile Money en toute sécurité.",
+    "Transfère l'argent récolté vers ton compte Mobile Money en toute sécurité.",
   balanceLabel: "Solde disponible",
   balanceHelper: "Toutes cagnottes confondues.",
   amountLabel: "Montant à retirer",
   amountMin: "Minimum 1 000 FCFA.",
   maxChip: "Max",
-  maxHelper: "Vous retirez la totalité du solde disponible.",
+  maxHelper: "Tu retires la totalité du solde disponible.",
   destLabel: "Où envoyer l'argent ?",
   phoneLabel: "Numéro Mobile Money",
   nameLabel: "Nom du titulaire",
   continue: "Continuer",
   back: "Retour",
-  pinTitle: "Entrez votre code à 4 chiffres",
-  pinHelper: "Ce code protège vos retraits.",
+  pinTitle: "Entre ton code à 4 chiffres",
+  pinHelper: "Ce code protège tes retraits.",
   pinForgot: "Code oublié ?",
   pinContinue: "Continuer",
   confirmTitle: "Confirmer le retrait",
-  confirmSubtitle: "Vérifiez les informations avant de valider.",
+  confirmSubtitle: "Vérifie les informations avant de valider.",
   confirmAmount: "Montant retiré",
   confirmFees: "Frais de virement",
   confirmFeesFree: "Gratuit",
   confirmDelay: "Délai estimé",
   confirmDelayInstant: "Immédiat",
-  confirmNet: "Vous allez recevoir",
+  confirmNet: "Tu vas recevoir",
   confirmCta: "Confirmer le retrait",
   confirmSubmitting: "Traitement en cours…",
   secured: "Transaction sécurisée",
   successH1: "Retrait en cours !",
-  successBodyPrefix: "Votre demande de retrait de ",
+  successBodyPrefix: "Ta demande de retrait de ",
   successBodySuffix: " a bien été prise en compte.",
   successToLabel: "Vers le compte",
   successDelayLabel: "Délai estimé",
@@ -1029,33 +1084,34 @@ export const WITHDRAWAL_LABELS = {
   successStatusPending: "En cours de traitement",
   successInfoTitle: "Un SMS de confirmation arrive",
   successInfo:
-    "Vous allez recevoir un SMS de confirmation de notre partenaire de paiement d'ici quelques minutes.",
+    "Tu vas recevoir un SMS de confirmation de notre partenaire de paiement d'ici quelques minutes.",
   successBackToDashboard: "Aller au tableau de bord",
   successBackToCagnottes: "Voir mes cagnottes",
-  kycBlockedTitle: "Vérifiez votre identité",
+  kycBlockedTitle: "Vérifie ton identité",
   kycBlockedBody:
-    "Avant d'effectuer un retrait, nous devons vérifier votre identité.",
+    "Avant d'effectuer un retrait, nous devons vérifier ton identité.",
   kycBlockedCta: "Vérifier mon identité",
-  pinMissingTitle: "Créez votre code de retrait",
+  pinMissingTitle: "Crée ton code de retrait",
   pinMissingBody:
-    "Définissez un code à 4 chiffres dans les paramètres de sécurité pour protéger vos retraits.",
+    "Définis un code à 4 chiffres dans les paramètres de sécurité pour protéger tes retraits.",
   pinMissingCta: "Définir mon code",
   blockedTitle: "Retraits temporairement indisponibles",
   blockedBody:
-    "Nos équipes ont suspendu les retraits sur votre compte. Contactez le support pour plus d'informations.",
+    "Nos équipes ont suspendu les retraits sur ton compte. Contacte le support pour plus d'informations.",
   insufficientBalance: "Solde insuffisant",
-  rateLimited: "Trop de demandes. Réessayez dans quelques minutes.",
+  rateLimited:
+    "Trop de demandes. Attends 10 minutes, puis réessaye.",
   circuitOpen:
-    "Le service de paiement est momentanément indisponible. Réessayez dans quelques instants.",
+    "Le service de paiement est momentanément indisponible. Réessaye dans quelques instants.",
   pinIncorrect: "Code de retrait incorrect",
-  pinLocked: "Trop de tentatives. Votre code est temporairement bloqué.",
-  draftExpired: "Votre demande a expiré, veuillez recommencer.",
-  submitError: "Le retrait n'a pas pu être effectué. Réessayez.",
+  pinLocked: "Trop de tentatives. Ton code est temporairement bloqué.",
+  draftExpired: "Ta demande a expiré. Recommence depuis le début.",
+  submitError: "Le retrait n'a pas pu être effectué. Réessaye.",
 } as const;
 
 export const STATS_LABELS = {
   h1: "Statistiques",
-  subtitle: "Un résumé de l'activité de votre cagnotte.",
+  subtitle: "Un résumé de l'activité de ta cagnotte.",
   kpiRaised: "Total collecté",
   kpiDonors: "Contributeurs",
   kpiAverage: "Don moyen",
@@ -1078,11 +1134,11 @@ export const STATS_LABELS = {
 export const WITHDRAW_LABELS = {
   pageTitle: "Retirer mes fonds",
   pageHelper:
-    "Transférez l'argent récolté vers le compte de votre choix en toute sécurité.",
+    "Transfère l'argent récolté vers le compte de ton choix en toute sécurité.",
   step1Title: "Montant à retirer",
   step2Title: "Où envoyer l'argent ?",
   maxChip: "Max",
-  maxHelper: "Vous retirez la totalité du solde disponible.",
+  maxHelper: "Tu retires la totalité du solde disponible.",
   addAccountCta: "Ajouter un compte bancaire ou Mobile Money",
   summaryLabel: "RÉCAPITULATIF DU RETRAIT",
   summaryAmount: "Montant retiré",
@@ -1090,7 +1146,7 @@ export const WITHDRAW_LABELS = {
   summaryFeesFree: "Gratuit",
   summaryDelay: "Délai estimé",
   summaryDelayInstant: "Immédiat",
-  summaryNet: "Vous allez recevoir",
+  summaryNet: "Tu vas recevoir",
   confirmCta: "Confirmer le retrait",
   securedFooter: "Transaction sécurisée",
   instantBadge: "Instantané",
@@ -1099,9 +1155,9 @@ export const WITHDRAW_LABELS = {
 export const WITHDRAW_PIN_LABELS = {
   pageTitle: "Vérification de sécurité",
   // Persistent PIN — NOT SMS OTP. No phone-masked text, no countdown.
-  pageHelperPrefix: "Pour valider votre retrait de ",
+  pageHelperPrefix: "Pour valider ton retrait de ",
   pageHelperSuffix:
-    ", veuillez saisir votre code PIN à 4 chiffres.",
+    ", saisis ton code PIN à 4 chiffres.",
   submitCta: "Valider le retrait",
   cancelCta: "Annuler",
   pinError: "Code PIN incorrect.",
@@ -1110,7 +1166,7 @@ export const WITHDRAW_PIN_LABELS = {
 
 export const WITHDRAW_SUCCESS_LABELS = {
   title: "Retrait confirmé !",
-  helper: "Votre retrait sera traité dans les prochaines minutes.",
+  helper: "Ton retrait sera traité dans les prochaines minutes.",
   backCta: "Retour au tableau de bord",
 } as const;
 
@@ -1118,37 +1174,37 @@ export const BANK_ACCOUNTS_LABELS = {
   pageTitle: "Coordonnées bancaires",
   mobileMoneyTitle: "Comptes Mobile Money",
   mobileMoneyHelper:
-    "Pour recevoir les fonds de vos cagnottes instantanément.",
+    "Pour recevoir les fonds de tes cagnottes instantanément.",
   bankAccountsTitle: "Comptes Bancaires",
   bankAccountsHelper:
-    "Pour les virements bancaires classiques (délai de 48h à 72h).",
+    "Pour les virements bancaires classiques (délai de 48 h).",
   addAccountCta: "Ajouter",
   addBankCta: "Ajouter un compte bancaire",
   activeBadge: "Actif",
   deleteAriaLabel: "Supprimer",
   bankEmptyTitle: "Aucun compte bancaire",
   bankEmptyBody:
-    "Ajoutez un RIB/IBAN pour virer l'argent de vos cagnottes directement sur votre compte bancaire.",
+    "Ajoute un RIB/IBAN pour virer l'argent de tes cagnottes directement sur ton compte bancaire.",
   mobileEmptyTitle: "Aucun compte Mobile Money configuré.",
   mobileEmptyBody:
-    "Ajoutez un compte Wave ou Orange Money pour recevoir vos fonds instantanément.",
-  securityNoticeTitle: "Sécurité de vos coordonnées",
+    "Ajoute un compte Wave ou Orange Money pour recevoir tes fonds instantanément.",
+  securityNoticeTitle: "Tes coordonnées sont protégées",
   securityNoticeBody:
-    "Vos coordonnées bancaires et numéros Mobile Money sont cryptés et stockés de manière sécurisée. Ils ne sont utilisés que pour procéder au virement des fonds récoltés sur vos cagnottes.",
+    "Tes coordonnées bancaires et numéros Mobile Money sont chiffrés et stockés de manière sécurisée. Ils ne sont utilisés que pour virer les fonds récoltés sur tes cagnottes.",
 } as const;
 
 export const VISIBILITY_LABELS = {
   sectionLabel: "Visibilité de la cagnotte",
   publicTitle: "Publique",
   publicDescription:
-    "Votre cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de Cagnotte.sn.",
+    "Ta cagnotte sera visible par tous et apparaîtra dans les résultats de recherche de cagnotte.sn.",
   privateTitle: "Privée",
   privateDescription:
     "Seules les personnes disposant du lien pourront voir la cagnotte et y participer. Elle n'apparaîtra pas dans les recherches. Idéal pour les événements personnels.",
 } as const;
 
 export const DATE_PICKER_LABELS = {
-  placeholder: "Sélectionnez une date...",
+  placeholder: "Sélectionne une date…",
 } as const;
 
 export const WIZARD_EXTRA_LABELS = {
@@ -1159,29 +1215,29 @@ export const WIZARD_EXTRA_LABELS = {
 export const HOW_IT_WORKS_LABELS = {
   pageTitle: "Comment ça marche",
   pageSubtitle:
-    "Trois étapes simples pour lever des fonds auprès de votre communauté au Sénégal.",
+    "Trois étapes simples pour lever des fonds auprès de ta communauté au Sénégal.",
   steps: [
     {
       number: "1",
-      title: "Créez votre cagnotte",
+      title: "Crée ta cagnotte",
       body:
-        "Inscrivez-vous en 2 minutes, choisissez un titre, un objectif et une photo. Festive ou solidaire : votre page est prête.",
+        "Inscris-toi en 2 minutes, choisis un titre, un objectif et une photo. Festive ou solidaire : ta page est prête.",
     },
     {
       number: "2",
-      title: "Partagez le lien",
+      title: "Partage le lien",
       body:
-        "Envoyez l'URL personnalisée (cagnotte.sn/<votre-page>) sur WhatsApp, les réseaux sociaux ou par SMS à vos proches.",
+        "Envoie l'URL personnalisée (cagnotte.sn/<ta-page>) sur WhatsApp, les réseaux sociaux ou par SMS à tes proches.",
     },
     {
       number: "3",
-      title: "Recevez les dons",
+      title: "Reçois les dons",
       body:
-        "Vos contributeurs paient en Wave, Orange Money, Free Money ou par carte. Retirez les fonds directement sur votre Mobile Money.",
+        "Tes contributeurs paient en Wave, Orange Money ou Free Money. Tu retires les fonds directement sur ton Mobile Money.",
     },
   ],
   ctaTitle: "Prêt à commencer ?",
-  ctaSubtitle: "Créez votre première cagnotte gratuitement.",
+  ctaSubtitle: "Crée ta première cagnotte gratuitement.",
   ctaLabel: "Créer ma cagnotte",
 } as const;
 
@@ -1189,25 +1245,25 @@ export const HOW_IT_WORKS_LABELS = {
 export const ABOUT_LABELS = {
   pageTitle: "À propos de cagnotte.sn",
   paragraphs: [
-    "Cagnotte.sn est la plateforme sénégalaise dédiée à la collecte de fonds en ligne. Nous croyons que chacun devrait pouvoir lever des fonds pour ses projets, que ce soit pour fêter un mariage, financer une opération médicale ou soutenir une cause solidaire.",
-    "Conçue pour le Sénégal, notre plateforme accepte Wave, Orange Money, Free Money et les cartes bancaires. Aucun téléchargement, aucune application : un simple lien partageable suffit.",
-    "Nous proposons deux types de cagnottes : festives (anniversaires, mariages, cadeaux communs) et solidaires (santé, urgence, projets communautaires). La commission est transparente : 8 % pour les cagnottes festives, 6 % pour les cagnottes solidaires — prélevée automatiquement sur le montant collecté.",
-    "Notre mission est simple : rendre la collecte de fonds accessible à tous, en français, en FCFA, et avec les moyens de paiement que vous utilisez tous les jours.",
+    "Cagnotte.sn est la plateforme sénégalaise dédiée à la collecte de fonds en ligne. Nous croyons que chacun devrait pouvoir lever des fonds pour ses projets — fêter un baptême, célébrer un mariage, financer une opération médicale ou soutenir une cause solidaire.",
+    "Conçue pour le Sénégal, notre plateforme accepte Wave, Orange Money et Free Money. Aucun téléchargement, aucune application : un simple lien partageable suffit.",
+    "Nous proposons deux types de cagnottes : festives (baptêmes, mariages, anniversaires, cadeaux communs) et solidaires (santé, urgence, rentrée scolaire, projets communautaires). La participation est gratuite pour tes contributeurs ; les frais applicables à l'organisateur sont présentés en clair au moment de la création de la cagnotte, en fonction du type choisi.",
+    "Notre mission est simple : rendre la collecte de fonds accessible à tous, en français, en FCFA, et avec les moyens de paiement que tu utilises tous les jours.",
   ],
 } as const;
 
 export const EDIT_LABELS = {
   h1: "Modifier ma cagnotte",
-  subtitle: "Mettez à jour le contenu sans changer l'URL.",
-  urlSection: "URL de votre cagnotte",
-  slugLocked: "L'URL de votre cagnotte ne peut pas être modifiée.",
+  subtitle: "Mets à jour le contenu sans changer l'URL.",
+  urlSection: "URL de ta cagnotte",
+  slugLocked: "L'URL de ta cagnotte ne peut pas être modifiée.",
   titleLabel: "Titre",
   descriptionLabel: "Description",
   coverLabel: "Image de couverture",
   coverHelper: "JPG ou PNG, 5 Mo maximum.",
   goalLabel: "Objectif (FCFA)",
   endDateLabel: "Date de fin",
-  endDateHelper: "Laissez vide pour une cagnotte sans échéance.",
+  endDateHelper: "Laisse vide pour une cagnotte sans échéance.",
   // Phase 7 plan 07-03 — PLSH-08. Editable thank-you message.
   thankYouMessageLabel: "Message de remerciement (facultatif)",
   thankYouMessagePlaceholder:
@@ -1216,7 +1272,7 @@ export const EDIT_LABELS = {
     "Affiché aux contributeurs après leur participation (500 caractères max).",
   suggestedAmountsLabel: "Montants suggérés (FCFA)",
   suggestedAmountsHelper:
-    "Séparez par une virgule. 3 à 4 montants, minimum 500 FCFA.",
+    "Sépare-les par une virgule. Jusqu'à 3 montants, minimum 500 FCFA.",
   hideAmount: "Masquer le montant collecté",
   hideAmountDescription: "Les contributeurs ne voient pas le total récolté.",
   hideDonors: "Masquer la liste des donateurs",
@@ -1224,6 +1280,6 @@ export const EDIT_LABELS = {
   save: "Enregistrer les modifications",
   saving: "Enregistrement…",
   saved: "Modifications enregistrées",
-  errorGeneric: "Impossible d'enregistrer, réessayez.",
+  errorGeneric: "Impossible d'enregistrer. Réessaye.",
   backToDashboard: "Retour au tableau de bord",
 } as const;

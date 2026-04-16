@@ -9,6 +9,7 @@ import {
   GalleryBuilder,
   type GalleryItem,
   Input,
+  RichTextEditor,
   Textarea,
   Toggle,
   VisibilityCard,
@@ -66,6 +67,11 @@ async function uploadCover(file: File): Promise<string> {
   return data.url;
 }
 
+// Max 3 — keeps the editor in sync with the public participer form which
+// only renders 3 preset pills. If you raise this, also bump
+// ParticiperForm's `PRESETS = suggestedAmounts.slice(0, 3)`.
+const MAX_SUGGESTED_AMOUNTS = 3;
+
 function parseSuggestedAmounts(raw: string): number[] {
   return raw
     .split(",")
@@ -73,7 +79,7 @@ function parseSuggestedAmounts(raw: string): number[] {
     .filter(Boolean)
     .map((s) => Number.parseInt(s.replace(/\D/g, ""), 10))
     .filter((n) => Number.isFinite(n) && n >= 500)
-    .slice(0, 4);
+    .slice(0, MAX_SUGGESTED_AMOUNTS);
 }
 
 function formatSuggestedAmounts(arr: unknown): string {
@@ -224,64 +230,93 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
       onSubmit={handleSubmit}
       className="flex flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm md:p-8"
     >
-      {/* Cover */}
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-primary">
-          {EDIT_LABELS.coverLabel}
-        </label>
-        <div className="flex items-center gap-4">
-          {coverUrl ? (
-            <div className="h-24 w-40 flex-shrink-0 overflow-hidden rounded-xl border border-border bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={coverUrl}
-                alt="Couverture"
-                className="h-full w-full object-cover"
+      {/* Médias — grouped section so creators immediately see where to
+          edit cover + gallery (previous version had two small unlabeled
+          inputs that users missed). */}
+      <fieldset className="flex flex-col gap-5 rounded-2xl border-2 border-pink/60 bg-pink/10 p-5 md:p-6">
+        <legend className="px-2 font-headings text-base font-black text-primary">
+          Médias de la cagnotte
+        </legend>
+
+        {/* Cover */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <label className="font-headings text-sm font-bold text-primary">
+              {EDIT_LABELS.coverLabel}
+            </label>
+            <span className="text-xs font-medium text-primary/60">
+              Affichée en grand
+            </span>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {coverUrl ? (
+              <div className="relative h-40 w-full flex-shrink-0 overflow-hidden rounded-xl border border-border bg-muted sm:h-32 sm:w-52">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverUrl}
+                  alt="Couverture"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex h-40 w-full flex-shrink-0 items-center justify-center rounded-xl border-2 border-dashed border-primary/30 bg-white text-sm text-muted-foreground sm:h-32 sm:w-52">
+                Aucune photo
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={cn(
+                  "inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                  "disabled:opacity-50",
+                )}
+              >
+                <Camera size={16} aria-hidden />
+                {uploading
+                  ? "Envoi…"
+                  : coverUrl
+                    ? "Changer la couverture"
+                    : "Ajouter une couverture"}
+              </button>
+              <p className="text-xs text-muted-foreground">
+                {EDIT_LABELS.coverHelper}
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                onChange={handleCoverUpload}
+                hidden
               />
             </div>
-          ) : (
-            <div className="flex h-24 w-40 flex-shrink-0 items-center justify-center rounded-xl border border-dashed border-border bg-muted/50 text-xs text-muted-foreground">
-              Pas d&rsquo;image
-            </div>
-          )}
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className={cn(
-                "inline-flex min-h-12 items-center gap-2 rounded-lg border border-primary bg-white px-4 py-2 text-sm font-semibold text-primary hover:bg-pink/30",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                "disabled:opacity-50",
-              )}
-            >
-              <Camera size={16} aria-hidden />
-              {uploading ? "Envoi…" : "Changer l'image"}
-            </button>
-            <p className="text-xs text-muted-foreground">
-              {EDIT_LABELS.coverHelper}
-            </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={handleCoverUpload}
-              hidden
-            />
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="text-sm font-medium text-primary">
-          {WIZARD_FIELDS.galleryLabel}
-        </label>
-        <GalleryBuilder
-          value={gallery}
-          onChange={setGallery}
-          uploadImage={uploadCover}
-        />
-      </div>
+        {/* Gallery — secondary images + video links */}
+        <div className="flex flex-col gap-3 border-t border-pink/60 pt-5">
+          <div className="flex items-baseline justify-between gap-2">
+            <label className="font-headings text-sm font-bold text-primary">
+              Galerie (photos & vidéos)
+            </label>
+            <span className="text-xs font-medium text-primary/60">
+              {gallery.length}/10
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Ajoute jusqu&apos;à 10 photos supplémentaires ou colle des liens
+            YouTube, Vimeo, Wistia, Loom. Les visiteurs pourront cliquer sur
+            chaque vignette pour la voir en grand.
+          </p>
+          <GalleryBuilder
+            value={gallery}
+            onChange={setGallery}
+            uploadImage={uploadCover}
+          />
+        </div>
+      </fieldset>
 
       <Input
         label={EDIT_LABELS.titleLabel}
@@ -291,12 +326,11 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
         required
       />
 
-      <Textarea
+      <RichTextEditor
         label={EDIT_LABELS.descriptionLabel}
         value={description}
-        onChange={(e) => setDescription(e.target.value)}
+        onChange={setDescription}
         maxLength={5000}
-        rows={5}
       />
 
       <Input

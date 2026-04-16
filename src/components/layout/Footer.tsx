@@ -48,7 +48,7 @@ export function Footer({ className }: FooterProps) {
             </p>
             <p className="text-sm leading-relaxed">
               La plateforme de cagnottes en ligne du Sénégal. Wave, Orange
-              Money, Free Money, carte bancaire.
+              Money, Free Money.
             </p>
             <p className="pt-2 text-xs text-white/60">
               Dakar, Sénégal
@@ -122,7 +122,7 @@ export function Footer({ className }: FooterProps) {
 
         <div className="mt-10 flex flex-col items-center gap-2 border-t border-white/10 pt-6 text-xs">
           <p className="flex items-center gap-1.5">
-            © {year} {MISC.siteName} — Made in Sénégal
+            © {year} {MISC.siteName} — Fait au Sénégal
             <Heart size={12} className="fill-current text-pink" aria-hidden />
           </p>
         </div>

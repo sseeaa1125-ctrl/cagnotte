@@ -120,9 +120,17 @@ export default function MerciPage() {
         <h1 className="mt-4 font-headings text-2xl font-bold text-primary">
           {MERCI_LABELS.headingFailed}
         </h1>
-        <div className="mt-6">
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
+          {MERCI_LABELS.missingReferenceDescription}
+        </p>
+        <div className="mt-6 flex flex-col items-center gap-3">
           <Link href={`/c/${slug}`}>
-            <Button variant="outline">{MERCI_LABELS.backCta}</Button>
+            <Button variant="primary" size="lg">
+              {MERCI_LABELS.backCta}
+            </Button>
+          </Link>
+          <Link href="/cagnottes">
+            <Button variant="ghost">Parcourir les cagnottes</Button>
           </Link>
         </div>
       </div>
@@ -250,8 +258,29 @@ export default function MerciPage() {
             {MERCI_LABELS.headingTimeout}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Tu recevras une notification dès que ta contribution sera confirmée.
+            Tu recevras une notification dès que ta contribution sera
+            confirmée. Vérifie aussi l&apos;historique de ton Mobile Money.
           </p>
+          {reference ? (
+            <section className="mx-auto max-w-md rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-amber-800/80">
+                Référence de ta transaction
+              </p>
+              <p className="font-mono text-sm font-bold text-amber-900 break-all">
+                {reference}
+              </p>
+              <p className="mt-2 text-xs text-amber-800/80">
+                Si tu as été débité(e), envoie cette référence à{" "}
+                <a
+                  href="mailto:contact@cagnottes.sn"
+                  className="font-semibold underline"
+                >
+                  contact@cagnottes.sn
+                </a>
+                .
+              </p>
+            </section>
+          ) : null}
           <div className="flex flex-col items-center gap-3 pt-2">
             <Button variant="outline" onClick={manualRetry}>
               {MERCI_LABELS.manualRetryCta}

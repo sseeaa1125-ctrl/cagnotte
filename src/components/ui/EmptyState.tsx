@@ -19,12 +19,12 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 px-4 py-12 text-center",
+        "flex flex-col items-center justify-center gap-3 px-4 py-8 text-center sm:py-12",
         className,
       )}
     >
       <div
-        className="flex h-16 w-16 items-center justify-center rounded-full bg-muted text-muted-foreground"
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground sm:h-16 sm:w-16"
         aria-hidden
       >
         {icon}

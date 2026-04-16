@@ -86,7 +86,7 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
             <span className="text-sm text-muted-foreground">
               {WITHDRAWAL_LABELS.successDelayLabel}
             </span>
-            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+            <span className="inline-flex items-center rounded-full bg-[#E6F3EE] px-3 py-1 text-xs font-semibold text-[#00B67A]">
               {WITHDRAWAL_LABELS.successDelayInstant}
             </span>
           </div>
@@ -100,18 +100,18 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
           </div>
         </div>
 
-        {/* Info notice */}
-        <div className="mt-5 flex items-start gap-2 rounded-xl bg-blue-50/60 p-4">
+        {/* Info notice — pattern info-box Banani : pink/40 + border-pink-200 + text-primary */}
+        <div className="mt-5 flex items-start gap-2 rounded-2xl border border-pink-200 bg-pink/40 p-4">
           <Info
             size={18}
-            className="mt-0.5 flex-shrink-0 text-blue-700"
+            className="mt-0.5 flex-shrink-0 text-primary"
             aria-hidden
           />
           <div>
-            <p className="text-sm font-semibold text-blue-900">
+            <p className="text-sm font-semibold text-primary">
               {WITHDRAWAL_LABELS.successInfoTitle}
             </p>
-            <p className="mt-1 text-xs text-blue-900/80">
+            <p className="mt-1 text-xs leading-relaxed text-primary/80">
               {WITHDRAWAL_LABELS.successInfo}
             </p>
           </div>

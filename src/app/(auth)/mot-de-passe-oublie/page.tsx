@@ -28,7 +28,7 @@ export default function MotDePasseOubliePage() {
     try {
       await api("/api/auth/forgot-password", {
         method: "POST",
-        body: { email },
+        body: { email: email.trim() },
       });
       setSubmitted(true);
     } catch (err) {

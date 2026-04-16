@@ -1,13 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CampaignCard } from "@/components/cagnottes/CampaignCard";
 import { FilterChipBar } from "@/components/cagnottes/FilterChipBar";
-import { Button, EmptyState } from "@/components/ui";
+import { Button, EmptyState, Pagination } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { ALL_CAGNOTTES_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 interface ApiCagnotte {
   id: string;
@@ -26,14 +27,19 @@ interface ApiCagnotte {
 interface ListResponse {
   cagnottes: ApiCagnotte[];
   nextCursor: string | null;
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
 }
 
 type SubtypeFilter = "all" | "festive" | "solidaire";
 
 interface LoadMoreCagnottesProps {
   initialCagnottes: ApiCagnotte[];
-  initialCursor: string | null;
+  initialTotalCount: number;
+  initialTotalPages: number;
   initialSubtype: SubtypeFilter;
+  initialQuery: string;
 }
 
 function toCardProps(c: ApiCagnotte) {
@@ -49,23 +55,62 @@ function toCardProps(c: ApiCagnotte) {
   };
 }
 
+function buildApiUrl(opts: {
+  page?: number;
+  limit?: number;
+  subtype: SubtypeFilter;
+  q: string;
+}): string {
+  const params = new URLSearchParams();
+  params.set("limit", String(opts.limit ?? 20));
+  if (opts.page && opts.page > 1) params.set("page", String(opts.page));
+  if (opts.subtype !== "all") params.set("subtype", opts.subtype);
+  const trimmedQ = opts.q.trim();
+  if (trimmedQ) params.set("q", trimmedQ);
+  return `/api/cagnottes?${params.toString()}`;
+}
+
 export function LoadMoreCagnottes({
   initialCagnottes,
-  initialCursor,
+  initialTotalCount,
+  initialTotalPages,
   initialSubtype,
+  initialQuery,
 }: LoadMoreCagnottesProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [cagnottes, setCagnottes] = React.useState<ApiCagnotte[]>(
-    initialCagnottes,
-  );
-  const [cursor, setCursor] = React.useState<string | null>(initialCursor);
+  const [cagnottes, setCagnottes] = React.useState<ApiCagnotte[]>(initialCagnottes);
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(initialTotalPages);
+  const [totalCount, setTotalCount] = React.useState(initialTotalCount);
   const [loading, setLoading] = React.useState(false);
+  const [searching, setSearching] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [subtype, setSubtype] = React.useState<SubtypeFilter>(initialSubtype);
+  const [queryInput, setQueryInput] = React.useState<string>(initialQuery);
+  const [activeQuery, setActiveQuery] = React.useState<string>(initialQuery);
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Sync URL search params (shareable filter state) without scroll jump.
+  function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape" && queryInput) {
+      e.preventDefault();
+      setQueryInput("");
+    }
+  }
+
+  // Re-hydrate from URL
+  React.useEffect(() => {
+    const urlSubtype = searchParams.get("subtype");
+    const nextSubtype: SubtypeFilter =
+      urlSubtype === "festive" || urlSubtype === "solidaire" ? urlSubtype : "all";
+    const urlQ = (searchParams.get("q") ?? "").trim();
+    setSubtype((current) => (current !== nextSubtype ? nextSubtype : current));
+    setActiveQuery((current) => (current !== urlQ ? urlQ : current));
+    setQueryInput((current) => (current !== urlQ ? urlQ : current));
+  }, [searchParams]);
+
+  // Sync URL when subtype changes
   React.useEffect(() => {
     const current = searchParams.get("subtype") ?? "all";
     if (current === subtype) return;
@@ -76,33 +121,78 @@ export function LoadMoreCagnottes({
       params.set("subtype", subtype);
     }
     const qs = params.toString();
-    router.replace(qs ? `/cagnottes?${qs}` : "/cagnottes", {
-      scroll: false,
-    });
+    router.replace(qs ? `/cagnottes?${qs}` : "/cagnottes", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtype]);
 
-  // Client-side subtype filter (backend doesn't accept ?subtype= yet — D-06)
-  const filtered = React.useMemo(() => {
-    if (subtype === "all") return cagnottes;
-    return cagnottes.filter((c) => c.subtype === subtype);
-  }, [cagnottes, subtype]);
+  // Debounce search
+  React.useEffect(() => {
+    if (queryInput === activeQuery) return;
+    const id = window.setTimeout(() => {
+      setActiveQuery(queryInput.trim());
+      const params = new URLSearchParams(searchParams.toString());
+      const trimmed = queryInput.trim();
+      if (trimmed) params.set("q", trimmed);
+      else params.delete("q");
+      const qs = params.toString();
+      router.replace(qs ? `/cagnottes?${qs}` : "/cagnottes", { scroll: false });
+    }, 300);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryInput]);
 
-  async function loadMore() {
-    if (!cursor || loading) return;
+  // Refetch when activeQuery or subtype changes (reset to page 1)
+  const lastFetchedRef = React.useRef({
+    subtype: initialSubtype,
+    query: initialQuery,
+  });
+  React.useEffect(() => {
+    const lastFetch = lastFetchedRef.current;
+    if (lastFetch.subtype === subtype && lastFetch.query === activeQuery) return;
+    lastFetchedRef.current = { subtype, query: activeQuery };
+    let cancelled = false;
+    async function refetch() {
+      setSearching(true);
+      setError(null);
+      try {
+        const data = await api<ListResponse>(
+          buildApiUrl({ subtype, q: activeQuery, page: 1 }),
+        );
+        if (cancelled) return;
+        setCagnottes(data.cagnottes ?? []);
+        setPage(1);
+        setTotalPages(data.totalPages ?? 1);
+        setTotalCount(data.totalCount ?? 0);
+      } catch (err) {
+        if (cancelled) return;
+        setError(
+          err instanceof ApiError ? err.message : "Erreur lors du chargement. Réessaye.",
+        );
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }
+    refetch();
+    return () => { cancelled = true; };
+  }, [activeQuery, subtype]);
+
+  // Page change handler
+  async function goToPage(newPage: number) {
+    if (newPage === page || loading || searching) return;
     setLoading(true);
     setError(null);
     try {
       const data = await api<ListResponse>(
-        `/api/cagnottes?limit=20&cursor=${encodeURIComponent(cursor)}`,
+        buildApiUrl({ page: newPage, subtype, q: activeQuery }),
       );
-      setCagnottes((prev) => [...prev, ...(data.cagnottes ?? [])]);
-      setCursor(data.nextCursor ?? null);
+      setCagnottes(data.cagnottes ?? []);
+      setPage(newPage);
+      setTotalPages(data.totalPages ?? 1);
+      setTotalCount(data.totalCount ?? 0);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       setError(
-        err instanceof ApiError
-          ? err.message
-          : "Erreur lors du chargement. Réessaye.",
+        err instanceof ApiError ? err.message : "Erreur lors du chargement. Réessaye.",
       );
     } finally {
       setLoading(false);
@@ -115,22 +205,142 @@ export function LoadMoreCagnottes({
     { value: "solidaire", label: ALL_CAGNOTTES_LABELS.filterSolidaire },
   ];
 
+  const hasActiveFilter = subtype !== "all" || activeQuery.length > 0;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Search bar */}
+      <div className="max-w-2xl">
+        <div className="group relative">
+          <div
+            className={cn(
+              "pointer-events-none absolute left-5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center",
+              "text-primary/70 transition-colors duration-200",
+              "group-focus-within:text-primary",
+            )}
+            aria-hidden
+          >
+            {searching ? (
+              <div className="flex items-end gap-[3px]">
+                <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-primary" />
+                <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:150ms]" />
+                <span className="block h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:300ms]" />
+              </div>
+            ) : (
+              <Search
+                size={18}
+                strokeWidth={2.25}
+                className="transition-transform duration-200 group-focus-within:scale-110"
+              />
+            )}
+          </div>
+          <input
+            ref={inputRef}
+            type="search"
+            value={queryInput}
+            onChange={(e) => setQueryInput(e.target.value)}
+            onKeyDown={onInputKeyDown}
+            placeholder={ALL_CAGNOTTES_LABELS.searchPlaceholder}
+            aria-label={ALL_CAGNOTTES_LABELS.searchAriaLabel}
+            aria-describedby="search-results-live"
+            autoComplete="off"
+            spellCheck={false}
+            enterKeyHint="search"
+            className={cn(
+              "h-12 w-full rounded-full border-2 border-primary/40 bg-white",
+              "pl-12 pr-12 text-[15px] font-medium text-primary placeholder:text-gray-400",
+              "shadow-[0_1px_2px_rgba(23,40,102,0.06)]",
+              "transition-[border-color,box-shadow,background-color] duration-200",
+              "hover:border-primary/60",
+              "focus:border-primary focus:outline-none focus:ring-[3px] focus:ring-pink-100",
+              "focus:shadow-[0_4px_16px_rgba(23,40,102,0.08)]",
+              "[&::-webkit-search-cancel-button]:appearance-none",
+              "[&::-webkit-search-decoration]:appearance-none",
+            )}
+          />
+          {queryInput ? (
+            <button
+              type="button"
+              onClick={() => {
+                setQueryInput("");
+                inputRef.current?.focus();
+              }}
+              aria-label="Effacer la recherche"
+              className={cn(
+                "absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full",
+                "bg-gray-100 text-gray-500 transition-all duration-200",
+                "hover:bg-primary hover:text-white",
+                "focus:outline-none focus:ring-2 focus:ring-primary/30",
+              )}
+            >
+              <X size={14} aria-hidden strokeWidth={2.5} />
+            </button>
+          ) : null}
+        </div>
+        <div
+          id="search-results-live"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {searching
+            ? "Recherche en cours…"
+            : activeQuery
+              ? cagnottes.length === 0
+                ? `Aucun résultat pour ${activeQuery}`
+                : `${cagnottes.length} résultat${cagnottes.length > 1 ? "s" : ""} pour ${activeQuery}`
+              : ""}
+        </div>
+      </div>
+
       <FilterChipBar
         filters={filters}
         value={subtype}
         onChange={(v) => setSubtype(v as SubtypeFilter)}
       />
 
-      {filtered.length === 0 ? (
+      {/* Result count */}
+      {totalCount > 0 && !searching ? (
+        <p className="text-sm text-muted-foreground">
+          {totalCount} {totalCount > 1 ? "cagnottes" : "cagnotte"}
+        </p>
+      ) : null}
+
+      {searching && cagnottes.length === 0 ? (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={`search-skeleton-${i}`}
+              aria-hidden
+              className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+            >
+              <div className="aspect-video w-full animate-pulse bg-gray-100" />
+              <div className="space-y-3 p-5">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-100" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
+                <div className="h-2 w-full animate-pulse rounded-full bg-gray-100" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : cagnottes.length === 0 ? (
         <EmptyState
           icon={<Search size={28} />}
-          title={ALL_CAGNOTTES_LABELS.emptyTitle}
+          title={
+            activeQuery
+              ? `Aucun résultat pour « ${activeQuery} »`
+              : ALL_CAGNOTTES_LABELS.emptyTitle
+          }
           description={ALL_CAGNOTTES_LABELS.emptyBody}
           cta={
-            subtype !== "all" ? (
-              <Button variant="outline" onClick={() => setSubtype("all")}>
+            hasActiveFilter ? (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSubtype("all");
+                  setQueryInput("");
+                }}
+              >
                 {ALL_CAGNOTTES_LABELS.emptyResetCta}
               </Button>
             ) : null
@@ -138,29 +348,26 @@ export function LoadMoreCagnottes({
         />
       ) : (
         <>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered
+          <div
+            className={cn(
+              "grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+              loading && "pointer-events-none opacity-60",
+            )}
+          >
+            {cagnottes
               .filter((c) => c.slug !== null)
               .map((c) => (
                 <CampaignCard key={c.id} cagnotte={toCardProps(c)} />
               ))}
           </div>
 
-          {cursor && (
-            <div className="flex justify-center pt-4">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={loadMore}
-                loading={loading}
-                disabled={loading}
-              >
-                {loading
-                  ? ALL_CAGNOTTES_LABELS.loadingLabel
-                  : ALL_CAGNOTTES_LABELS.loadMoreCta}
-              </Button>
-            </div>
-          )}
+          {/* Pagination */}
+          <Pagination
+            page={page}
+            pageCount={totalPages}
+            onChange={goToPage}
+            className="mt-8"
+          />
 
           {error && (
             <p

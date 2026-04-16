@@ -89,7 +89,7 @@ export function WizardHeader({
   subtitle: string;
 }) {
   return (
-    <div className="mb-8 flex flex-col gap-3">
+    <div className="mb-5 flex flex-col gap-3 sm:mb-8">
       <SubtypeBadge variant={variant} />
       <h1 className="font-headings text-2xl font-bold text-primary sm:text-3xl md:text-4xl">
         {title}

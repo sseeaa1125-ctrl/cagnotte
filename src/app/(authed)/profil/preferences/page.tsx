@@ -1,37 +1,24 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { ProfileSidebar } from "@/components/layout/ProfileSidebar";
-import { NOTIF_PREFS_LABELS } from "@/lib/constants";
 import { PreferencesForm } from "./_PreferencesForm";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Phase 6 plan 06-01 — /profil/preferences (Banani screen 19).
-//
-// Server component. Two parallel fetches (cookie forwarded):
-//   1. GET /api/auth/me — for ProfileSidebar props
-//   2. GET /api/notifications/prefs — seeds PreferencesForm initial
+// /profil/preferences — layout + nav + page title come from ../layout.tsx.
+// Only fetches the notification prefs (the seller itself is already
+// resolved by the parent layout via the cached helper).
 // ─────────────────────────────────────────────────────────────────────────
 
-interface SellerPayload {
-  email: string;
-  displayName: string;
-  avatarUrl: string | null;
-  kycStatus?: string;
-}
-
-async function fetchWithCookie<T>(
-  path: string,
+async function fetchPrefs(
   token: string,
-): Promise<T | null> {
+): Promise<Record<string, boolean> | null> {
   const backendUrl =
     process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   try {
-    const res = await fetch(`${backendUrl}${path}`, {
+    const res = await fetch(`${backendUrl}/api/notifications/prefs`, {
       headers: { cookie: `izy-token=${token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
-    return (await res.json()) as T;
+    return (await res.json()) as Record<string, boolean>;
   } catch {
     return null;
   }
@@ -41,45 +28,8 @@ export const dynamic = "force-dynamic";
 
 export default async function PreferencesPage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("izy-token")?.value;
-  if (!token) redirect("/connexion?next=/profil/preferences");
+  const token = cookieStore.get("izy-token")?.value ?? "";
+  const prefs = await fetchPrefs(token);
 
-  const [me, prefs] = await Promise.all([
-    fetchWithCookie<{ seller: SellerPayload }>("/api/auth/me", token),
-    fetchWithCookie<Record<string, boolean>>(
-      "/api/notifications/prefs",
-      token,
-    ),
-  ]);
-
-  if (!me?.seller) redirect("/connexion?next=/profil/preferences");
-  const seller = me.seller;
-
-  return (
-    <div className="mx-auto max-w-6xl">
-      <header className="mb-6">
-        <h1 className="font-headings text-2xl font-bold text-primary md:text-3xl">
-          {NOTIF_PREFS_LABELS.h1}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {NOTIF_PREFS_LABELS.subtitle}
-        </p>
-      </header>
-
-      <ProfileSidebar
-        activeTab="preferences"
-        seller={{
-          displayName: seller.displayName,
-          avatarUrl: seller.avatarUrl,
-          email: seller.email,
-          kycStatus: seller.kycStatus ?? "NONE",
-        }}
-      >
-        <h2 className="mb-6 font-headings text-xl font-bold text-primary">
-          {NOTIF_PREFS_LABELS.h1}
-        </h2>
-        <PreferencesForm initial={prefs ?? {}} />
-      </ProfileSidebar>
-    </div>
-  );
+  return <PreferencesForm initial={prefs ?? {}} />;
 }

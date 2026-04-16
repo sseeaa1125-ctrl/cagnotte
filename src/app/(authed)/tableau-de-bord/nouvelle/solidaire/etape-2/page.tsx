@@ -9,6 +9,7 @@ import {
   GalleryBuilder,
   type GalleryItem,
   ImageUpload,
+  RichTextEditor,
   Textarea,
   useToast,
 } from "@/components/ui";
@@ -111,7 +112,7 @@ export default function SolidaireStep2Page() {
       />
 
       <form
-        className="flex flex-col gap-8"
+        className="flex flex-col gap-5 sm:gap-8"
         onSubmit={(e) => {
           e.preventDefault();
           handleContinue();
@@ -140,13 +141,12 @@ export default function SolidaireStep2Page() {
             uploadImage={uploadCover}
           />
         </div>
-        <Textarea
+        <RichTextEditor
           label={WIZARD_FIELDS.descriptionLabelSolidaire}
           placeholder={WIZARD_FIELDS.descriptionPlaceholderSolidaire}
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={setDescription}
           maxLength={5000}
-          className="min-h-40"
         />
         <Textarea
           label={WIZARD_FIELDS.thankYouMessageLabel}
@@ -181,7 +181,7 @@ export default function SolidaireStep2Page() {
             iconRight={<ArrowRight size={18} />}
             disabled={uploading}
           >
-            {WIZARD_LABELS.continueCta}
+            {WIZARD_LABELS.continueCtaStep2}
           </Button>
         </div>
       </form>

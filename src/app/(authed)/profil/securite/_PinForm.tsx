@@ -77,7 +77,7 @@ function PinBoxes({ label, value, onChange, idPrefix }: PinBoxesProps) {
       <legend className="mb-2 block text-sm font-medium text-primary">
         {label}
       </legend>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-4 gap-3">
         {Array.from({ length: PIN_LENGTH }).map((_, index) => {
           const ch = digits[index]?.trim() ?? "";
           return (
@@ -98,7 +98,7 @@ function PinBoxes({ label, value, onChange, idPrefix }: PinBoxesProps) {
               onPaste={index === 0 ? handlePaste : undefined}
               aria-label={`Chiffre ${index + 1}`}
               className={cn(
-                "h-14 w-12 rounded-lg border border-border bg-background text-center font-mono text-2xl text-primary",
+                "h-14 w-full min-w-0 rounded-xl border border-border bg-background text-center font-mono text-2xl text-primary",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               )}
             />
@@ -177,7 +177,7 @@ export function PinForm({ hasPin }: PinFormProps) {
   if (mode === "display" && hasPin) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 rounded-xl bg-green-50 p-4 text-sm text-green-800">
+        <div className="flex items-center gap-3 rounded-2xl bg-accent p-4 text-sm font-medium text-[#00B67A]">
           <ShieldCheck size={18} aria-hidden />
           <span>{SECURITY_LABELS.pinAlreadySet}</span>
         </div>

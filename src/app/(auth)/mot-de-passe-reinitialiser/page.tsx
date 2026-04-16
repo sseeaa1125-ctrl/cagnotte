@@ -139,7 +139,7 @@ function ResetPasswordForm() {
     try {
       await api("/api/auth/reset-password", {
         method: "POST",
-        body: { email, code, newPassword },
+        body: { email: email.trim(), code, newPassword },
       });
       toast.toast(RESET_PASSWORD_LABELS.successToast, "success");
       router.replace("/connexion?reset=1");
@@ -198,8 +198,8 @@ function ResetPasswordForm() {
                   value={digit}
                   onChange={(e) => handleChange(index, e)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={index === 0 ? handlePaste : undefined}
-                  aria-label={`Chiffre ${index + 1}`}
+                  onPaste={handlePaste}
+                  aria-label={`Chiffre ${index + 1} sur 6`}
                   className={cn(
                     "h-14 w-11 rounded-lg border bg-background text-center font-mono text-2xl text-primary",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",

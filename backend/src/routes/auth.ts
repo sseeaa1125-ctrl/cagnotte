@@ -34,8 +34,17 @@ function timingSafeCompare(a: string, b: string): boolean {
 }
 
 // ── Zod schemas ──
+// Audit 012 F-01 — normalize email to lowercase + trim at the schema level
+// so downstream code never has to worry about `Alice@Example.com` vs
+// `alice@example.com` inconsistency.
+const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.string().email("Email invalide"));
+
 const signupSchema = z.object({
-  email: z.string().email("Email invalide"),
+  email: emailSchema,
   password: z.string().min(8, "Minimum 8 caractères").max(128, "Maximum 128 caractères"),
   displayName: z.string().min(2, "Minimum 2 caractères").max(50),
   slug: z
@@ -46,12 +55,12 @@ const signupSchema = z.object({
 });
 
 const loginSchema = z.object({
-  email: z.string().email("Email invalide"),
+  email: emailSchema,
   password: z.string().min(1, "Mot de passe requis"),
 });
 
 const verifyEmailSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   code: z.string().length(6, "Code à 6 chiffres"),
 });
 
@@ -83,6 +92,35 @@ const verifyEmailLimiter = rateLimit({
   legacyHeaders: false,
   store: new RedisRateLimitStore("verify-email"),
   message: { error: "Trop de tentatives de vérification. Réessaye dans 15 minutes." },
+});
+
+// Audit 012: rate limiter on POST /refresh. Without this, a stolen refresh
+// token could be replayed thousands of times per minute, and the endpoint
+// is also a brute-force surface. Budget: 30 refreshes per 15min per IP —
+// matches a legit multi-tab SPA (tab focus triggers a refresh) without
+// room for abuse.
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore("refresh"),
+  message: { error: "Trop de rafraîchissements. Reconnecte-toi." },
+});
+
+// Audit 013 L-03 — separate limiter for GET /refresh-and-return. This
+// endpoint fires on *navigation* (middleware-triggered, one hit per tab
+// per expired cookie) which has a different traffic pattern than the
+// API-triggered POST /refresh. Sharing a single 30/15min bucket was
+// bleeding the quota across both and locking out users who opened a few
+// tabs after 15 min idle. Budget 60/15min on its own Redis key.
+const refreshNavLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore("refresh-nav"),
+  message: { error: "Trop de rafraîchissements. Reconnecte-toi." },
 });
 
 // ── GET /api/auth/check-slug — Vérifier la disponibilité d'un slug ──
@@ -123,7 +161,7 @@ const checkEmailLimiter = rateLimit({
 });
 authRouter.post("/check-email", checkEmailLimiter, async (req, res) => {
   try {
-    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const { email } = z.object({ email: emailSchema }).parse(req.body);
     const existing = await prisma.seller.findFirst({
       where: { email: email.toLowerCase(), deletedAt: null },
       select: { id: true, googleId: true, password: true },
@@ -240,7 +278,7 @@ const resendCodeLimiter = rateLimit({
 });
 authRouter.post("/resend-code", resendCodeLimiter, async (req, res) => {
   try {
-    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const { email } = z.object({ email: emailSchema }).parse(req.body);
 
     // NEW-V2: Exclude soft-deleted accounts from resend-code
     const seller = await prisma.seller.findFirst({ where: { email, deletedAt: null } });
@@ -353,9 +391,10 @@ authRouter.post("/verify-email", verifyEmailLimiter, async (req, res) => {
       sub: seller.id,
       slug: seller.slug,
       plan: seller.plan,
+      tokenVersion: seller.tokenVersion,
     };
     const accessToken = await createAccessToken(tokenPayload);
-    const refreshToken = await createRefreshToken(seller.id);
+    const refreshToken = await createRefreshToken(seller.id, seller.tokenVersion);
 
     setAuthCookies(res, accessToken, refreshToken);
     const csrfToken = setCsrfCookie(res); // S6: CSRF double-submit cookie
@@ -391,7 +430,7 @@ authRouter.post("/logout", (req, res) => {
 });
 
 // ── POST /api/auth/refresh — Refresh access token using refresh token ──
-authRouter.post("/refresh", async (req, res) => {
+authRouter.post("/refresh", refreshLimiter, async (req, res) => {
   try {
     const refreshTokenValue = req.cookies?.[REFRESH_COOKIE_NAME];
     if (!refreshTokenValue) {
@@ -411,7 +450,7 @@ authRouter.post("/refresh", async (req, res) => {
     // Verify seller still exists and not soft-deleted
     const seller = await prisma.seller.findFirst({
       where: { id: refreshPayload.sub, deletedAt: null },
-      select: { id: true, slug: true, plan: true, onboardingCompleted: true },
+      select: { id: true, slug: true, plan: true, onboardingCompleted: true, tokenVersion: true },
     });
     if (!seller) {
       clearAuthCookies(res);
@@ -420,14 +459,23 @@ authRouter.post("/refresh", async (req, res) => {
       return;
     }
 
+    // Audit 012 S-03 — reject refresh tokens minted before a password change.
+    if (seller.tokenVersion !== refreshPayload.tokenVersion) {
+      clearAuthCookies(res);
+      clearCsrfCookie(res);
+      res.status(401).json({ error: "Session expirée" });
+      return;
+    }
+
     const tokenPayload = {
       sub: seller.id,
       slug: seller.slug,
       plan: seller.plan,
       onboardingCompleted: seller.onboardingCompleted,
+      tokenVersion: seller.tokenVersion,
     };
     const newAccessToken = await createAccessToken(tokenPayload);
-    const newRefreshToken = await createRefreshToken(seller.id);
+    const newRefreshToken = await createRefreshToken(seller.id, seller.tokenVersion);
 
     setAuthCookies(res, newAccessToken, newRefreshToken);
     // S6: Always set CSRF cookie + return in body for cross-domain
@@ -436,6 +484,73 @@ authRouter.post("/refresh", async (req, res) => {
   } catch (err) {
     logger.error("Erreur refresh token", err);
     res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// ── GET /api/auth/refresh-and-return — Silent refresh + redirect ──
+// Why this exists: the (authed) Next.js layout is a server component and
+// cannot trigger a /refresh fetch + cookie write mid-render. The refresh
+// cookie is path-scoped to /api/auth, so middleware on a /tableau-de-bord
+// request never sees it. Solution: middleware redirects to this endpoint
+// (the URL matches /api/auth, so the browser sends izy-refresh), we mint
+// new tokens, set cookies via setAuthCookies, then 302 back to `next`.
+// On any failure → 302 to /connexion?next=<sanitized>.
+function sanitizeNext(rawNext: unknown): string {
+  if (typeof rawNext !== "string") return "/tableau-de-bord";
+  if (!rawNext.startsWith("/")) return "/tableau-de-bord";
+  // Block protocol-relative URLs and backslash tricks
+  if (rawNext.startsWith("//") || rawNext.startsWith("/\\")) {
+    return "/tableau-de-bord";
+  }
+  return rawNext;
+}
+
+authRouter.get("/refresh-and-return", refreshNavLimiter, async (req, res) => {
+  const next = sanitizeNext(req.query.next);
+  const loginRedirect = `/connexion?next=${encodeURIComponent(next)}`;
+
+  try {
+    const refreshTokenValue = req.cookies?.[REFRESH_COOKIE_NAME];
+    if (!refreshTokenValue) {
+      res.redirect(302, loginRedirect);
+      return;
+    }
+
+    const refreshPayload = await verifyRefreshToken(refreshTokenValue);
+    if (!refreshPayload) {
+      clearAuthCookies(res);
+      clearCsrfCookie(res);
+      res.redirect(302, loginRedirect);
+      return;
+    }
+
+    const seller = await prisma.seller.findFirst({
+      where: { id: refreshPayload.sub, deletedAt: null },
+      select: { id: true, slug: true, plan: true, onboardingCompleted: true, tokenVersion: true },
+    });
+    if (!seller || seller.tokenVersion !== refreshPayload.tokenVersion) {
+      clearAuthCookies(res);
+      clearCsrfCookie(res);
+      res.redirect(302, loginRedirect);
+      return;
+    }
+
+    const tokenPayload = {
+      sub: seller.id,
+      slug: seller.slug,
+      plan: seller.plan,
+      onboardingCompleted: seller.onboardingCompleted,
+      tokenVersion: seller.tokenVersion,
+    };
+    const newAccessToken = await createAccessToken(tokenPayload);
+    const newRefreshToken = await createRefreshToken(seller.id, seller.tokenVersion);
+
+    setAuthCookies(res, newAccessToken, newRefreshToken);
+    setCsrfCookie(res);
+    res.redirect(302, next);
+  } catch (err) {
+    logger.error("Erreur refresh-and-return", err);
+    res.redirect(302, loginRedirect);
   }
 });
 
@@ -494,7 +609,12 @@ authRouter.get("/me", requireAuth, async (req, res) => {
       return;
     }
 
-    res.json({ seller });
+    // Re-issue CSRF token on every authed /me call so cross-origin dev
+    // (frontend :3000 / backend :4000) and localStorage-cleared sessions
+    // re-hydrate via AuthContext instead of silently failing mutations with
+    // "Token CSRF invalide".
+    const csrfToken = setCsrfCookie(res);
+    res.json({ seller, csrfToken });
   } catch (err) {
     logger.error("Erreur auth/me", err);
     res.status(500).json({ error: "Erreur interne" });
@@ -537,9 +657,10 @@ authRouter.post("/login", loginLimiter, async (req, res) => {
       slug: seller.slug,
       plan: seller.plan,
       onboardingCompleted: seller.onboardingCompleted,
+      tokenVersion: seller.tokenVersion,
     };
     const accessToken = await createAccessToken(tokenPayload);
-    const refreshToken = await createRefreshToken(seller.id);
+    const refreshToken = await createRefreshToken(seller.id, seller.tokenVersion);
 
     setAuthCookies(res, accessToken, refreshToken);
     const csrfToken = setCsrfCookie(res); // S6: CSRF double-submit cookie
@@ -578,7 +699,7 @@ const forgotPasswordLimiter = rateLimit({
 });
 authRouter.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   try {
-    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const { email } = z.object({ email: emailSchema }).parse(req.body);
 
     // NEW-L3: Exclude soft-deleted accounts from password reset
     const seller = await prisma.seller.findFirst({ where: { email, deletedAt: null } });
@@ -642,7 +763,7 @@ const resetPasswordLimiter = rateLimit({
 });
 
 const resetPasswordSchema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   code: z.string().length(6, "Code à 6 chiffres"),
   newPassword: z.string().min(8, "Minimum 8 caractères").max(128, "Maximum 128 caractères"),
 });
@@ -727,12 +848,39 @@ authRouter.put("/change-password", verifyCsrf, requireAuth, async (req, res) => 
     }
 
     const hashed = await hashPassword(data.newPassword);
-    await prisma.seller.update({
+    // Audit 012 S-03 — bump tokenVersion in the same write. Every JWT minted
+    // before this point is now stale: requireAuth rejects them and the next
+    // refresh attempt hits the version check in /refresh above. We re-issue
+    // fresh cookies inline so the caller keeps their session seamlessly
+    // instead of being kicked to /connexion on the next request.
+    const updated = await prisma.seller.update({
       where: { id: sellerId },
-      data: { password: hashed },
+      data: {
+        password: hashed,
+        tokenVersion: { increment: 1 },
+      },
+      select: {
+        id: true,
+        slug: true,
+        plan: true,
+        onboardingCompleted: true,
+        tokenVersion: true,
+      },
     });
 
-    res.json({ message: "Mot de passe mis à jour" });
+    const tokenPayload = {
+      sub: updated.id,
+      slug: updated.slug,
+      plan: updated.plan,
+      onboardingCompleted: updated.onboardingCompleted,
+      tokenVersion: updated.tokenVersion,
+    };
+    const accessToken = await createAccessToken(tokenPayload);
+    const refreshToken = await createRefreshToken(updated.id, updated.tokenVersion);
+    setAuthCookies(res, accessToken, refreshToken);
+    const csrfToken = setCsrfCookie(res);
+
+    res.json({ message: "Mot de passe mis à jour", csrfToken });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: formatZodError(err) });
@@ -789,7 +937,7 @@ const unsubscribeLimiter = rateLimit({
 });
 authRouter.post("/unsubscribe", unsubscribeLimiter, async (req, res) => {
   try {
-    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const { email } = z.object({ email: emailSchema }).parse(req.body);
 
     // Flag seller as unsubscribed — don't reveal if email exists
     await prisma.seller.updateMany({
@@ -1034,9 +1182,10 @@ authRouter.get("/google/callback", async (req, res) => {
       sub: seller.id,
       slug: seller.slug,
       plan: seller.plan,
+      tokenVersion: seller.tokenVersion,
     };
     const accessToken = await createAccessToken(tokenPayload);
-    const refreshToken = await createRefreshToken(seller.id);
+    const refreshToken = await createRefreshToken(seller.id, seller.tokenVersion);
     setAuthCookies(res, accessToken, refreshToken);
     setCsrfCookie(res);
 

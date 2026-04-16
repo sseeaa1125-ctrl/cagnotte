@@ -220,3 +220,107 @@ export function parseBictorysPayoutError(httpStatus: number | undefined, errorMe
 
   return "La demande de retrait n'a pas pu être traitée. Vérifie que ton numéro n'est pas plafonné ou essaie un autre numéro.";
 }
+
+// ─────────────────────────────────────────────
+// Payout status check — reconciliation
+// ─────────────────────────────────────────────
+
+/**
+ * Audit 017 — polling de réconciliation pour les withdrawals bloqués.
+ *
+ * Le happy path est synchrone (initiatePayout → 200/201 = COMPLETED).
+ * Cette fonction sert uniquement pour les edge cases :
+ *   - Crash serveur entre initiatePayout() et l'update Prisma
+ *   - Network timeout où le payout a réussi mais la réponse a été perdue
+ *   - Withdrawal stuck en PENDING > 10 min avec un bictorysTransactionId set
+ *
+ * Endpoint symétrique au POST : `GET /pay/v1/payouts/{id}` avec la clé privée.
+ * Safe-by-default : retourne `null` sur toute ambiguïté (404, parse error,
+ * timeout, status inconnu) — l'appelant doit traiter `null` comme "skip, retry
+ * au prochain tick" et JAMAIS comme "marquer FAILED".
+ */
+export async function checkPayoutStatus(
+  transactionId: string,
+): Promise<{ status: "succeeded" | "failed" | "pending"; reason?: string } | null> {
+  if (!BICTORYS_API_URL || !BICTORYS_SECRET_KEY) return null;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15_000);
+
+  try {
+    const res = await fetch(
+      `${BICTORYS_API_URL}/pay/v1/payouts/${encodeURIComponent(transactionId)}`,
+      {
+        method: "GET",
+        headers: {
+          accept: "application/json",
+          "X-API-Key": BICTORYS_SECRET_KEY,
+        },
+        signal: controller.signal,
+      },
+    );
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      logger.warn(
+        `[PAYOUT] status check HTTP ${res.status} for txn=${transactionId}`,
+      );
+      return null;
+    }
+
+    const raw = await res.text();
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      logger.warn(
+        `[PAYOUT] status check non-JSON for txn=${transactionId}: ${raw.slice(0, 200)}`,
+      );
+      return null;
+    }
+
+    // Normalise le statut Bictorys vers notre enum. On accepte plusieurs
+    // alias pour être résistants aux changements de nomenclature côté provider.
+    const rawStatus = String(data.status || "").toLowerCase();
+    const reason =
+      (data.message as string | undefined) ||
+      (data.error as string | undefined) ||
+      undefined;
+
+    if (
+      rawStatus === "succeeded" ||
+      rawStatus === "success" ||
+      rawStatus === "completed" ||
+      rawStatus === "paid"
+    ) {
+      return { status: "succeeded", reason };
+    }
+    if (
+      rawStatus === "failed" ||
+      rawStatus === "error" ||
+      rawStatus === "cancelled" ||
+      rawStatus === "canceled" ||
+      rawStatus === "rejected"
+    ) {
+      return { status: "failed", reason };
+    }
+    if (
+      rawStatus === "pending" ||
+      rawStatus === "processing" ||
+      rawStatus === "authorized"
+    ) {
+      return { status: "pending", reason };
+    }
+
+    // Statut inconnu — safe skip.
+    logger.warn(
+      `[PAYOUT] status check statut inconnu "${rawStatus}" pour txn=${transactionId}`,
+    );
+    return null;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn(`[PAYOUT] status check error for txn=${transactionId}: ${msg}`);
+    return null;
+  }
+}

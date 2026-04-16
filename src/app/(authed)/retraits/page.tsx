@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { AlertTriangle, ShieldAlert, ShieldQuestion } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Circle,
+  ShieldAlert,
+  ShieldQuestion,
+} from "lucide-react";
 import { Button } from "@/components/ui";
 import { WITHDRAWAL_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { AmountStep } from "./_AmountStep";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -48,33 +55,101 @@ async function fetchBalance(token: string): Promise<BalancePayload | null> {
   }
 }
 
+interface GateState {
+  kycDone: boolean;
+  pinDone: boolean;
+  notBlocked: boolean;
+}
+
+function ProgressChecklist({ state }: { state: GateState }) {
+  const items: Array<{ label: string; done: boolean; href: string }> = [
+    {
+      label: "Vérification d'identité (KYC)",
+      done: state.kycDone,
+      href: "/profil/kyc",
+    },
+    {
+      label: "Code PIN de retrait",
+      done: state.pinDone,
+      href: "/profil/securite",
+    },
+    {
+      label: "Compte en règle",
+      done: state.notBlocked,
+      href: "/profil",
+    },
+  ];
+  const completed = items.filter((i) => i.done).length;
+  return (
+    <div className="mb-6 rounded-2xl border border-border bg-muted/60 p-5 text-left">
+      <p className="mb-3 text-xs font-bold uppercase tracking-wider text-gray-500">
+        Progression — {completed}/{items.length} étapes complétées
+      </p>
+      <ol className="flex flex-col gap-2">
+        {items.map((item) => (
+          <li
+            key={item.label}
+            className="flex items-center gap-3 text-sm font-medium"
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                item.done
+                  ? "bg-[#E6F3EE] text-[#00B67A]"
+                  : "bg-amber-50 text-amber-600",
+              )}
+            >
+              {item.done ? <Check size={14} /> : <Circle size={10} />}
+            </span>
+            <span
+              className={cn(
+                item.done ? "text-gray-500 line-through" : "text-primary",
+              )}
+            >
+              {item.label}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
 function BlockedState({
   icon,
   title,
   body,
   cta,
   href,
+  state,
 }: {
   icon: React.ReactNode;
   title: string;
   body: string;
   cta: string;
   href: string;
+  state?: GateState;
 }) {
   return (
-    <div className="mx-auto max-w-2xl rounded-3xl bg-white p-8 text-center shadow-sm md:p-12">
-      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 text-orange-600">
-        {icon}
+    <div className="mx-auto max-w-2xl rounded-2xl bg-background p-5 shadow-sm sm:p-8 md:p-12">
+      <div className="text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600 sm:h-16 sm:w-16">
+          {icon}
+        </div>
+        <h2 className="mb-2 font-headings text-lg font-bold text-primary sm:text-xl md:text-2xl">
+          {title}
+        </h2>
+        <p className="mb-6 text-sm text-muted-foreground">{body}</p>
       </div>
-      <h2 className="mb-2 font-headings text-xl font-bold text-primary md:text-2xl">
-        {title}
-      </h2>
-      <p className="mb-6 text-sm text-muted-foreground">{body}</p>
-      <Link href={href}>
-        <Button variant="primary" size="lg">
-          {cta}
-        </Button>
-      </Link>
+      {state ? <ProgressChecklist state={state} /> : null}
+      <div className="flex justify-center">
+        <Link href={href}>
+          <Button variant="primary" size="lg">
+            {cta}
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
@@ -89,15 +164,22 @@ export default async function RetraitsPage() {
   const data = await fetchBalance(token);
   if (!data) redirect("/connexion?next=/retraits");
 
+  const gateState: GateState = {
+    kycDone: data.kycStatus === "APPROVED",
+    pinDone: data.hasWithdrawalPin,
+    notBlocked: !data.withdrawalBlocked,
+  };
+
   // Gate 1 — KYC
   if (data.kycStatus !== "APPROVED") {
     return (
       <BlockedState
-        icon={<ShieldQuestion size={28} aria-hidden />}
+        icon={<ShieldQuestion size={24} aria-hidden />}
         title={WITHDRAWAL_LABELS.kycBlockedTitle}
         body={WITHDRAWAL_LABELS.kycBlockedBody}
         cta={WITHDRAWAL_LABELS.kycBlockedCta}
         href="/profil/kyc"
+        state={gateState}
       />
     );
   }
@@ -106,11 +188,12 @@ export default async function RetraitsPage() {
   if (!data.hasWithdrawalPin) {
     return (
       <BlockedState
-        icon={<ShieldAlert size={28} aria-hidden />}
+        icon={<ShieldAlert size={24} aria-hidden />}
         title={WITHDRAWAL_LABELS.pinMissingTitle}
         body={WITHDRAWAL_LABELS.pinMissingBody}
         cta={WITHDRAWAL_LABELS.pinMissingCta}
         href="/profil/securite"
+        state={gateState}
       />
     );
   }
@@ -119,11 +202,12 @@ export default async function RetraitsPage() {
   if (data.withdrawalBlocked) {
     return (
       <BlockedState
-        icon={<AlertTriangle size={28} aria-hidden />}
+        icon={<AlertTriangle size={24} aria-hidden />}
         title={WITHDRAWAL_LABELS.blockedTitle}
         body={data.withdrawalBlockReason ?? WITHDRAWAL_LABELS.blockedBody}
         cta="Contacter le support"
-        href="/"
+        href="mailto:support@cagnotte.sn"
+        state={gateState}
       />
     );
   }

@@ -7,6 +7,22 @@ const rawSecret = process.env.JWT_SECRET;
 if (!rawSecret) {
   throw new Error("JWT_SECRET est requis. Définis-le dans .env");
 }
+// Boot-time entropy guard. HS256 requires >= 256 bits of secret per RFC 7518
+// §3.2 — we enforce 32 ASCII chars as a minimum (32 bytes if UTF-8 safe). A
+// shorter secret silently breaks token security.
+if (rawSecret.length < 32) {
+  throw new Error(
+    `JWT_SECRET trop court (${rawSecret.length} caractères). Utilise au minimum 32 caractères. Génère-le avec : openssl rand -base64 48`,
+  );
+}
+// Reject obviously-default placeholders that may slip through .env.example.
+if (
+  /^(change[-_ ]?me|secret|password|test|dev|todo|placeholder)/i.test(rawSecret)
+) {
+  throw new Error(
+    "JWT_SECRET ressemble à une valeur par défaut. Régénère-le avec : openssl rand -base64 48",
+  );
+}
 export const JWT_SECRET_BYTES = new TextEncoder().encode(rawSecret);
 
 export const COOKIE_NAME = "izy-token";
@@ -62,6 +78,11 @@ export interface TokenPayload {
   slug: string;
   plan: "FREE" | "PRO";
   onboardingCompleted?: boolean;
+  // Audit 012 S-03 — bumped on password change. requireAuth rejects tokens
+  // whose tokenVersion is stale vs Seller.tokenVersion. Pre-migration tokens
+  // have no field → treated as 0 by `(payload.tokenVersion ?? 0)` which
+  // matches the DB default, so existing sessions survive.
+  tokenVersion?: number;
 }
 
 export async function hashPassword(plain: string): Promise<string> {
@@ -83,8 +104,11 @@ export async function createAccessToken(payload: TokenPayload): Promise<string> 
     .sign(JWT_SECRET_BYTES);
 }
 
-export async function createRefreshToken(sub: string): Promise<string> {
-  return new SignJWT({ sub, type: "refresh" })
+export async function createRefreshToken(
+  sub: string,
+  tokenVersion: number = 0,
+): Promise<string> {
+  return new SignJWT({ sub, type: "refresh", tokenVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(REFRESH_TOKEN_EXPIRY)
@@ -113,14 +137,18 @@ export async function verifyToken(
  */
 export async function verifyRefreshToken(
   token: string
-): Promise<{ sub: string } | null> {
+): Promise<{ sub: string; tokenVersion: number } | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET_BYTES);
     const tokenType = (payload as Record<string, unknown>).type;
     if (tokenType !== "refresh") return null;
     const sub = payload.sub as string | undefined;
     if (!sub) return null;
-    return { sub };
+    // Audit 012 S-03 — default to 0 so pre-migration refresh tokens keep
+    // working against the DB default (existing sessions survive rollout).
+    const tokenVersion =
+      (payload as Record<string, unknown>).tokenVersion as number | undefined;
+    return { sub, tokenVersion: tokenVersion ?? 0 };
   } catch {
     return null;
   }

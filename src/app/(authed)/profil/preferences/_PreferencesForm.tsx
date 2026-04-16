@@ -177,10 +177,10 @@ export function PreferencesForm({ initial }: PreferencesFormProps) {
         <div className="flex flex-col gap-3">{GROUP_2.map(renderRow)}</div>
       </section>
 
-      {/* Group 3 — Communications (mail, blue) */}
+      {/* Group 3 — Communications (mail) */}
       <section>
         <h3 className="mb-3 flex items-center gap-2 font-headings text-base font-bold text-primary">
-          <Mail size={18} className="text-blue-500" aria-hidden />
+          <Mail size={18} className="text-primary" aria-hidden />
           {NOTIF_PREFS_LABELS.group3}
         </h3>
         <div className="flex flex-col gap-3">{GROUP_3.map(renderRow)}</div>

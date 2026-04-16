@@ -35,14 +35,23 @@ export function clearCsrfToken(): void {
 // Refresh token lock — prevent multiple simultaneous refresh calls
 let refreshPromise: Promise<boolean> | null = null;
 
+// Audit 015 R-02 — AbortController timeout on the refresh fetch. Without
+// this, a hung backend would block every 401-retry for the whole 60s+
+// browser default, freezing the user's subsequent actions. 10s is well
+// below the outer api() 30s cap so the retry path stays snappy.
+const REFRESH_TIMEOUT_MS = 10_000;
+
 async function refreshAccessToken(): Promise<boolean> {
   if (refreshPromise) return refreshPromise;
   refreshPromise = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REFRESH_TIMEOUT_MS);
     try {
       const res = await fetch(`${API_URL}/api/auth/refresh`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
       });
       if (res.ok) {
         const data = await res.json();
@@ -53,6 +62,7 @@ async function refreshAccessToken(): Promise<boolean> {
     } catch {
       return false;
     } finally {
+      clearTimeout(timeoutId);
       refreshPromise = null;
     }
   })();
@@ -88,8 +98,13 @@ export async function api<T = unknown>(
     }
   }
 
-  // FL7: Auto-retry on network errors (1 retry after 1s delay)
-  const MAX_RETRIES = 1;
+  // FL7: Auto-retry on network errors (1 retry after 1s delay).
+  //
+  // Audit 011 D-01: on NEVER retries non-idempotent verbs. If a POST actually
+  // reached the server and succeeded but the response was lost, a blind retry
+  // would create a second Order / Withdrawal. GET/HEAD are safe to replay.
+  const isIdempotent = method.toUpperCase() === "GET" || method.toUpperCase() === "HEAD";
+  const MAX_RETRIES = isIdempotent ? 1 : 0;
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

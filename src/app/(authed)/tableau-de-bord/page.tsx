@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Plus, PiggyBank, Heart, Gift } from "lucide-react";
 import { Button, EmptyState, KpiCard } from "@/components/ui";
-import { DASHBOARD_LABELS, MISC } from "@/lib/constants";
+import { ACTIONS, DASHBOARD_LABELS, MISC } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
 import { ClientCampaignCard } from "./_ClientCampaignCard";
 
@@ -96,7 +96,7 @@ export default async function DashboardPage() {
     return (
       <div className="mx-auto max-w-2xl">
         <EmptyState
-          icon={<Gift size={28} aria-hidden />}
+          icon={<Gift size={24} aria-hidden />}
           title={DASHBOARD_LABELS.emptyTitle}
           description={DASHBOARD_LABELS.emptyBody}
           cta={
@@ -117,10 +117,10 @@ export default async function DashboardPage() {
 
   // ─── Populated branch ─────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-5 md:gap-8">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="font-headings text-3xl font-bold text-primary md:text-4xl">
+          <h1 className="font-headings text-2xl font-bold text-primary sm:text-3xl md:text-3xl">
             {DASHBOARD_LABELS.title}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -128,11 +128,6 @@ export default async function DashboardPage() {
               "{name}",
               seller.displayName,
             )}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {DASHBOARD_LABELS.sellerUrlLabel}
-            {": "}
-            <span className="font-mono text-primary">{sellerUrl}</span>
           </p>
         </div>
         <Button
@@ -170,10 +165,10 @@ export default async function DashboardPage() {
             {DASHBOARD_LABELS.recentCagnottes}
           </h2>
           <a
-            href="#"
+            href="/cagnottes"
             className="text-sm font-medium text-primary hover:underline"
           >
-            {DASHBOARD_LABELS.seeAllLink}
+            {ACTIONS.voirTout}
           </a>
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

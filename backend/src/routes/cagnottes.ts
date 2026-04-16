@@ -40,6 +40,7 @@ interface FundraiserConfig {
   goalAmount?: number;
   endDate?: string | null;
   status?: "active" | "closed";
+  suggestedAmounts?: number[];
   gallery?: Array<{
     kind: "image" | "youtube";
     url: string;
@@ -102,16 +103,47 @@ function maskDonation(
 
 const listQuerySchema = z.object({
   cursor: z.string().min(1).max(40).optional(),
+  page: z.coerce.number().int().min(1).default(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   // Phase 10 — sort mode. "recent" (default) preserves cursor pagination.
   // "popular" returns the top N blocks ranked by paid-order count; cursor
   // is ignored (single-page response). Used by the home featured list.
   sort: z.enum(["recent", "popular"]).default("recent").optional(),
+  // Phase 12 — server-side filters. `subtype` narrows to festive/solidaire;
+  // `q` is a case-insensitive substring match on the block title. Both are
+  // optional and stack multiplicatively. The frontend /cagnottes page wires
+  // `q` to a <input type="search"> and `subtype` to the filter chip bar.
+  subtype: z.enum(["festive", "solidaire"]).optional(),
+  q: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .optional(),
 });
 
 cagnottesRouter.get("/", async (req, res) => {
   try {
     const query = listQuerySchema.parse(req.query);
+
+    // Shared AND filters for both branches (popular + recent). Built from
+    // the query so we apply subtype/q consistently. NOTE: Prisma needs
+    // separate entries in AND for each JSON `path` since multiple `path`
+    // filters on the same `config` key cannot be merged into one object.
+    const sharedAnd: Array<Record<string, unknown>> = [
+      { config: { path: ["visibility"], equals: "public" } },
+      { config: { path: ["status"], equals: "active" } },
+    ];
+    if (query.subtype) {
+      sharedAnd.push({
+        config: { path: ["subtype"], equals: query.subtype },
+      });
+    }
+    // Title-only case-insensitive contains. Description search via JSON
+    // path would be case-sensitive (Prisma limitation) → skipped in v1.
+    const titleSearch = query.q
+      ? { title: { contains: query.q, mode: "insensitive" as const } }
+      : {};
 
     // ── Popular sort branch ──────────────────────────────────────────────
     // Fetch a wider pool (up to 200) of eligible blocks, compute their paid
@@ -123,7 +155,19 @@ cagnottesRouter.get("/", async (req, res) => {
         where: {
           type: "FUNDRAISER",
           isActive: true,
-          config: { path: ["visibility"], equals: "public" },
+          // SQL-level visibility + status filters.
+          //
+          // POSITIVE assertion on status (`equals: "active"`) — do NOT use
+          // `not: "closed"` here. Postgres JSON `config->'status'` returns
+          // NULL for rows whose config blob is missing the field, and
+          // `NULL != 'closed'` evaluates to NULL, which is falsy in WHERE
+          // → rows without a status were silently excluded. Any seed data
+          // or legacy block pre-Phase-10 would disappear from the list.
+          // Backfilled via scripts/backfill-fundraiser-status.ts; the web
+          // create path (Zod) defaults to "active", and seed-dev.ts
+          // explicitly writes it. Keep the assertion positive.
+          AND: sharedAnd,
+          ...titleSearch,
           seller: { deletedAt: null },
           slug: { not: null },
         },
@@ -202,49 +246,53 @@ cagnottesRouter.get("/", async (req, res) => {
     }
 
     // ── Recent sort branch (default) ─────────────────────────────────────
-    // Fetch limit+1 to detect whether there's a next page without a count query.
-    const rows = await prisma.block.findMany({
-      where: {
-        type: "FUNDRAISER",
-        isActive: true,
-        // SQL-level visibility filter — P05 mitigation. Postgres JSON path
-        // operator, supported on Neon. NEVER post-filter in JS.
-        config: { path: ["visibility"], equals: "public" },
-        // Exclude soft-deleted sellers (NEW-M3 pattern from existing routes)
-        seller: { deletedAt: null },
-        // Slug must exist — Phase 1 added a unique index but legacy rows may
-        // still be NULL. Without this filter the cursor would have to handle
-        // NULL slugs which complicates pagination.
-        slug: { not: null },
-      },
-      orderBy: { createdAt: "desc" },
-      take: query.limit + 1,
-      ...(query.cursor
-        ? {
-            cursor: { id: query.cursor },
-            skip: 1,
-          }
-        : {}),
-      select: {
-        id: true,
-        slug: true,
-        title: true,
-        config: true,
-        createdAt: true,
-        seller: {
-          select: {
-            id: true,
-            slug: true,
-            displayName: true,
-            avatarUrl: true,
-          },
+    // Supports both cursor-based ("Charger plus") and page-based pagination.
+    // When `page` is provided (and no cursor), offset pagination is used and
+    // totalCount/totalPages are returned for the <Pagination> component.
+    const pageNum = query.page ?? 1;
+
+    const whereClause = {
+      type: "FUNDRAISER" as const,
+      isActive: true,
+      AND: sharedAnd,
+      ...titleSearch,
+      seller: { deletedAt: null },
+      slug: { not: null },
+    };
+
+    const selectFields = {
+      id: true,
+      slug: true,
+      title: true,
+      config: true,
+      createdAt: true,
+      seller: {
+        select: {
+          id: true,
+          slug: true,
+          displayName: true,
+          avatarUrl: true,
         },
       },
-    });
+    };
+
+    const [rows, totalCount] = await Promise.all([
+      prisma.block.findMany({
+        where: whereClause,
+        orderBy: { createdAt: "desc" },
+        take: query.limit + 1,
+        ...(query.cursor
+          ? { cursor: { id: query.cursor }, skip: 1 }
+          : { skip: (pageNum - 1) * query.limit }),
+        select: selectFields,
+      }),
+      prisma.block.count({ where: whereClause }),
+    ]);
 
     const hasMore = rows.length > query.limit;
     const page = hasMore ? rows.slice(0, query.limit) : rows;
     const nextCursor = hasMore ? page[page.length - 1].id : null;
+    const totalPages = Math.ceil(totalCount / query.limit);
 
     // Single grouped aggregate per page — NEVER N+1.
     const blockIds = page.map((r) => r.id);
@@ -285,7 +333,7 @@ cagnottesRouter.get("/", async (req, res) => {
 
     // Public list — short browser/CDN cache is safe (no private rows possible).
     res.setHeader("Cache-Control", "public, max-age=60");
-    res.json({ cagnottes, nextCursor });
+    res.json({ cagnottes, nextCursor, totalCount, totalPages, currentPage: pageNum });
   } catch (err) {
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: "Paramètres invalides" });
@@ -392,6 +440,19 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       ? { ...cfg, hideAmount: false, hideDonors: false }
       : cfg;
 
+    // Creator-set suggested amounts drive the /participer presets. Fallback
+    // to the schema default so the flow never ends up with an empty preset
+    // row. Hard-capped to the first 3 entries — the participer form only
+    // renders 3 pills and the editor enforces the same cap.
+    const rawSuggested = Array.isArray(cfg.suggestedAmounts)
+      ? cfg.suggestedAmounts.filter(
+          (n): n is number => typeof n === "number" && Number.isFinite(n) && n >= 500,
+        )
+      : [];
+    const suggestedAmounts = (
+      rawSuggested.length > 0 ? rawSuggested : [2000, 5000, 10000]
+    ).slice(0, 3);
+
     res.json({
       id: block.id,
       slug: block.slug,
@@ -404,6 +465,7 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       gallery: cfg.gallery ?? [],
       goalAmount: cfg.goalAmount ?? null,
       endDate: cfg.endDate ?? null,
+      suggestedAmounts,
       hideAmount: cfg.hideAmount ?? false,
       hideDonors: cfg.hideDonors ?? false,
       totalRaised: isOwner || !cfg.hideAmount ? totalRaised : null,
@@ -443,7 +505,11 @@ cagnottesRouter.get("/:slug/participants", async (req, res) => {
         isActive: true,
         seller: { deletedAt: null },
       },
-      select: { id: true, config: true },
+      select: {
+        id: true,
+        config: true,
+        seller: { select: { id: true } },
+      },
     });
 
     if (!block) {
@@ -453,12 +519,32 @@ cagnottesRouter.get("/:slug/participants", async (req, res) => {
 
     const cfg = (block.config as FundraiserConfig) || {};
 
+    // Owner detection — same pattern as detail endpoint. Creator can always
+    // see their own donor list regardless of hideDonors.
+    const cookieToken = (req.cookies?.["izy-token"] as string) ?? null;
+    let isOwner = false;
+    if (cookieToken) {
+      const payload = await verifyToken(cookieToken);
+      if (payload?.sub && payload.sub === block.seller.id) {
+        isOwner = true;
+      }
+    }
+
     // Inherit the same Cache-Control branch as the detail endpoint — private
-    // cagnottes' participant lists must NEVER be cached.
-    if (cfg.visibility === "private") {
+    // cagnottes' participant lists must NEVER be cached. Owner responses are
+    // also uncacheable since they carry unmasked data.
+    if (cfg.visibility === "private" || isOwner) {
       res.setHeader("Cache-Control", "private, no-store");
     } else {
       res.setHeader("Cache-Control", "public, max-age=60");
+    }
+
+    // hideDonors enforcement — non-owners get an empty list. The public page
+    // skips rendering the participant wall when the flag is set, so this also
+    // stops direct API scraping.
+    if (cfg.hideDonors && !isOwner) {
+      res.json({ participants: [], nextCursor: null });
+      return;
     }
 
     const rows = await prisma.order.findMany({
@@ -486,8 +572,13 @@ cagnottesRouter.get("/:slug/participants", async (req, res) => {
     const page = hasMore ? rows.slice(0, query.limit) : rows;
     const nextCursor = hasMore ? page[page.length - 1].id : null;
 
+    // Owner bypasses hideAmount masking on individual donations.
+    const maskCfg: FundraiserConfig = isOwner
+      ? { ...cfg, hideAmount: false, hideDonors: false }
+      : cfg;
+
     res.json({
-      participants: page.map((o) => maskDonation(o, cfg)),
+      participants: page.map((o) => maskDonation(o, maskCfg)),
       nextCursor,
     });
   } catch (err) {

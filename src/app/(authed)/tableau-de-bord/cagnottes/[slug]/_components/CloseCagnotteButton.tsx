@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { CREATOR_DETAIL_LABELS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
 export interface CloseCagnotteButtonProps {
   blockId: string;
@@ -18,7 +18,6 @@ export function CloseCagnotteButton({
   blockId,
   status,
 }: CloseCagnotteButtonProps) {
-  const router = useRouter();
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -39,7 +38,13 @@ export function CloseCagnotteButton({
       const action = isClosed ? "reopen" : "close";
       await api(`/api/blocks/${blockId}/${action}`, { method: "POST" });
       setConfirmOpen(false);
-      router.refresh();
+      // router.refresh() was unreliable here: the creator detail page kept
+      // showing the stale status badge even after the backend flipped
+      // config.status. A full reload is a blunt but guaranteed fix — the
+      // action is confirmed + infrequent so the UX cost is acceptable.
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -53,14 +58,19 @@ export function CloseCagnotteButton({
   }
 
   return (
-    <div>
+    <>
       <button
         type="button"
         onClick={() => {
           setError(null);
           setConfirmOpen(true);
         }}
-        className="inline-flex min-h-12 items-center justify-center rounded-xl border border-red-300 bg-white px-4 py-3 text-sm font-semibold text-red-700 shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-red-50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 active:translate-y-0 active:scale-[0.98]"
+        className={cn(
+          "inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 active:translate-y-0 active:scale-[0.98]",
+          isClosed
+            ? "border-primary bg-primary text-white hover:bg-primary/90 focus-visible:ring-primary"
+            : "border-border bg-white text-primary hover:bg-muted focus-visible:ring-primary",
+        )}
       >
         {idleLabel}
       </button>
@@ -77,6 +87,6 @@ export function CloseCagnotteButton({
         errorMessage={error}
         onConfirm={handleConfirm}
       />
-    </div>
+    </>
   );
 }

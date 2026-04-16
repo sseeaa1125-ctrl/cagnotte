@@ -111,7 +111,12 @@ export function ShareSheet({
         </Button>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      {/* 2 columns at every breakpoint — historically this was a 4-col
+          grid on sm+, but inside the narrow sticky aside (max-w-md/sm)
+          the 4-col layout truncated labels ("WhatsAp", "Faceboo",
+          "Copier le lien"). Two columns gives every button the width
+          it needs to display its label cleanly. */}
+      <div className="grid grid-cols-2 gap-2">
         {/* WhatsApp FIRST — Senegalese priority */}
         <Button
           variant="social"

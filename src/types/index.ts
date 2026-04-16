@@ -1138,7 +1138,10 @@ export function ensureContrast(bgHex: string, textHex: string, minRatio = 3): st
 }
 
 // ── Opérateurs mobile money ──
-export type PaymentOperator = "wave_money" | "orange_money" | "maxit" | "mtn_money" | "moov" | "togocell" | "mobicash" | "card";
+// cagnottes.sn v1 — la carte bancaire a été retirée. Seuls les mobile
+// money sénégalais (wave_money, orange_money, moov = Free Money) sont
+// actifs en prod ; les autres restent typés pour la compat future WAEMU.
+export type PaymentOperator = "wave_money" | "orange_money" | "maxit" | "mtn_money" | "moov" | "togocell" | "mobicash";
 
 // Opérateurs actuellement activés chez Bictorys (mars 2026)
 // Les autres seront activables via l'admin quand Bictorys les active
@@ -1160,7 +1163,6 @@ export const ALL_OPERATORS: OperatorInfo[] = [
   { id: "moov", name: "Moov Money", color: "#0066B3", bgColor: "#EFF6FF", logoUrl: "/moov.png" },
   { id: "togocell", name: "Togocell", color: "#00A651", bgColor: "#ECFDF5", logoUrl: "/togocell.png" },
   { id: "mobicash", name: "Mobicash", color: "#E31937", bgColor: "#FEF2F2", logoUrl: "/mobicash.png" },
-  { id: "card", name: "Carte bancaire", color: "#6366F1", bgColor: "#EEF2FF", logoUrl: "/visa-mastercard.png" },
 ];
 
 // Pays supportés pour le checkout
@@ -1188,23 +1190,24 @@ export const PAYMENT_COUNTRIES: PaymentCountry[] = [
   { code: "OTHER", name: "Autre", flag: "🌍" },
 ];
 
-// Mapping pays → opérateurs ACTIFS (testés et confirmés Bictorys mars 2026)
-// Les autres combos seront activables via l'admin
+// Mapping pays → opérateurs ACTIFS (Bictorys, v1 sans carte bancaire).
+// cagnottes.sn est SN-only pour l'instant ; on garde un fallback OTHER
+// vide pour que les helpers ne cassent pas si on élargit plus tard.
 const COUNTRY_OPERATORS: Record<string, PaymentOperator[]> = {
-  SN: ["wave_money", "orange_money", "maxit", "card"],
-  CI: ["wave_money", "orange_money", "mtn_money", "card"],
-  OTHER: ["card"],
+  SN: ["wave_money", "orange_money", "moov"],
+  OTHER: [],
 };
 
-// Mapping complet (pour référence admin — toutes les combos possibles)
+// Mapping complet (pour référence admin — toutes les combos possibles
+// hors carte bancaire, retirée de la v1).
 export const ALL_COUNTRY_OPERATORS: Record<string, PaymentOperator[]> = {
-  SN: ["wave_money", "orange_money", "maxit", "card"],
-  CI: ["wave_money", "orange_money", "mtn_money", "moov", "card"],
-  BF: ["wave_money", "moov", "mobicash", "card"],
-  ML: ["orange_money", "mobicash", "card"],
-  TG: ["moov", "togocell", "card"],
-  BJ: ["mtn_money", "moov", "card"],
-  OTHER: ["card"],
+  SN: ["wave_money", "orange_money", "maxit", "moov"],
+  CI: ["wave_money", "orange_money", "mtn_money", "moov"],
+  BF: ["wave_money", "moov", "mobicash"],
+  ML: ["orange_money", "mobicash"],
+  TG: ["moov", "togocell"],
+  BJ: ["mtn_money", "moov"],
+  OTHER: [],
 };
 
 export function getOperatorsForCountry(countryCode: string): OperatorInfo[] {
@@ -1231,14 +1234,16 @@ export function isPhoneMismatch(countryCode: string, phone: string): boolean {
   return detectCountryFromPhone(phone) !== countryCode;
 }
 
-// Retourne si un opérateur est désactivé (phone mismatch → mobile money désactivé, carte toujours active)
-export function isOperatorDisabled(operatorId: PaymentOperator, countryCode: string, phone: string): boolean {
-  if (operatorId === "card") return false;
+// Retourne si un opérateur est désactivé (phone mismatch → mobile money
+// désactivé). Plus de branche carte bancaire depuis la v1.
+export function isOperatorDisabled(_operatorId: PaymentOperator, countryCode: string, phone: string): boolean {
   return isPhoneMismatch(countryCode, phone);
 }
 
 // Backward compat — les anciens imports de OPERATORS continuent de fonctionner
-export const OPERATORS = ALL_OPERATORS.filter((op) => ["wave_money", "orange_money", "maxit", "card"].includes(op.id));
+export const OPERATORS = ALL_OPERATORS.filter((op) =>
+  ["wave_money", "orange_money", "moov", "maxit"].includes(op.id),
+);
 
 // ── Icônes de blocs lien ──
 export type LinkIcon =

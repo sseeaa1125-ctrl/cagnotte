@@ -1,50 +1,32 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { requireSellerMe } from "@/lib/serverAuth";
 import { DashboardShell } from "./DashboardShell";
+
+// Private space — never indexed, never crawled, never cached by proxies.
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false },
+  },
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // Phase 5 plan 05-02 — (authed) layout with SERVER-SIDE AuthGuard.
 //
-// Why this is a server component (NO "use client"):
-//   - Redirects fire BEFORE any JSX renders → no FOUC, no client flash of
-//     protected content.
-//   - `cookies()` is only available in server components.
-//   - `api()` from @/lib/api is window-only (reads localStorage for CSRF,
-//     uses document.cookie). We must NEVER call it server-side. Instead we
-//     do a raw `fetch` with the cookie header forwarded.
-//
-// v1 simple path: any 401 / network-error on /api/auth/me → redirect to
-// /connexion. v2 can add a client-side refresh island to handle the
-// 15min-expiry → 7d-refresh-token race more gracefully.
+// Audit R-01 fix: auth resolution is now centralized in requireSellerMe()
+// which distinguishes 401 (redirect through /api/auth/refresh-and-return for
+// silent refresh) from terminal failures (redirect to /connexion). The
+// `next=` param is rebuilt from the x-pathname header set by src/middleware.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface SellerShape {
+interface LayoutSeller {
   id: string;
   displayName: string;
   slug: string;
   avatarUrl: string | null;
-  plan?: string;
-  onboardingCompleted?: boolean;
-  kycStatus?: string;
-}
-
-async function fetchSellerFromCookie(
-  token: string,
-): Promise<SellerShape | null> {
-  const backendUrl =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-  try {
-    const res = await fetch(`${backendUrl}/api/auth/me`, {
-      headers: { cookie: `izy-token=${token}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as { seller?: SellerShape };
-    return data.seller ?? null;
-  } catch {
-    return null;
-  }
 }
 
 export default async function AuthedLayout({
@@ -52,17 +34,7 @@ export default async function AuthedLayout({
 }: {
   children: ReactNode;
 }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("izy-token")?.value;
-
-  if (!token) {
-    redirect("/connexion?next=/tableau-de-bord");
-  }
-
-  const seller = await fetchSellerFromCookie(token);
-  if (!seller) {
-    redirect("/connexion?next=/tableau-de-bord");
-  }
+  const seller = await requireSellerMe<LayoutSeller>();
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,7 +44,11 @@ export default async function AuthedLayout({
           avatarUrl: seller.avatarUrl,
         }}
       />
-      <main className="container mx-auto animate-page-enter px-4 py-6 md:py-10">
+      {/* Mobile-only 180px bottom padding clears the fixed BottomNav
+          (h-16 + iOS safe-area) so the last content block never hides
+          under it. Desktop (md+) uses the normal py-10 rhythm since
+          BottomNav is md:hidden. */}
+      <main className="container mx-auto animate-page-enter px-4 pt-6 pb-24 md:pt-10 md:pb-10">
         {children}
       </main>
     </div>

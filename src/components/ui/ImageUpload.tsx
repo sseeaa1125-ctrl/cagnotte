@@ -84,11 +84,19 @@ export function ImageUpload({
 
   const fileName = isFile(value) ? value.name : null;
   const fileSize = isFile(value) ? formatSize(value.size) : null;
+  const generatedId = React.useId();
+  const inputId = `image-upload-${generatedId}`;
+  const helperId = helper || error ? `${inputId}-helper` : undefined;
 
   return (
     <div className={cn("flex w-full flex-col gap-1.5", className)}>
       {label ? (
-        <span className="text-sm font-medium text-primary">{label}</span>
+        <label
+          htmlFor={inputId}
+          className="text-sm font-medium text-primary"
+        >
+          {label}
+        </label>
       ) : null}
 
       <div
@@ -160,18 +168,25 @@ export function ImageUpload({
 
         <input
           ref={inputRef}
+          id={inputId}
           type="file"
           accept={accept}
           onChange={(e) => handleFiles(e.target.files)}
           className="sr-only"
-          aria-label={chooseLabel}
+          aria-label={label || chooseLabel}
+          aria-describedby={helperId}
+          aria-invalid={error ? true : undefined}
         />
       </div>
 
       {error ? (
-        <p className="text-xs text-red-500">{error}</p>
+        <p id={helperId} className="text-xs text-red-500" role="alert">
+          {error}
+        </p>
       ) : helper ? (
-        <p className="text-xs text-muted-foreground">{helper}</p>
+        <p id={helperId} className="text-xs text-muted-foreground">
+          {helper}
+        </p>
       ) : null}
     </div>
   );

@@ -8,7 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { api, ApiError, clearCsrfToken } from "@/lib/api";
+import { api, ApiError, clearCsrfToken, storeCsrfToken } from "@/lib/api";
 
 interface SellerInfo {
   id: string;
@@ -66,15 +66,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchSeller = useCallback(async () => {
     setError(null);
     try {
-      const res = await api<{ seller: SellerInfo }>("/api/auth/me");
+      const res = await api<{ seller: SellerInfo; csrfToken?: string }>(
+        "/api/auth/me",
+      );
       setSeller(res.seller);
+      // Re-hydrate CSRF token on every authed page load. Cross-origin dev
+      // (frontend :3000 / backend :4000) can't read the backend-scoped
+      // izy-csrf cookie from document.cookie, so we rely on localStorage —
+      // which the backend /me endpoint now refreshes on every call.
+      if (res.csrfToken) storeCsrfToken(res.csrfToken);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setSeller(null);
       } else if (err instanceof ApiError && err.status === 429) {
-        setError("Trop de requêtes. Patiente quelques minutes puis réessaye.");
+        setError("Trop de tentatives. Attends 10 minutes, puis réessaye.");
       } else {
-        const msg = err instanceof Error ? err.message : "Erreur de connexion au serveur";
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Connexion au serveur impossible. Vérifie ton réseau et réessaye.";
         setError(msg);
       }
     } finally {
@@ -108,9 +118,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// SSR-safe stub returned when `useAuth()` is called without a provider in
+// the tree. In dev, Turbopack HMR can temporarily lose AuthContext identity
+// across hot reloads — consumers briefly see a null context during SSR even
+// though the real provider exists up the tree. Throwing in that case
+// crashes the page with a misleading "missing provider" error. Instead we
+// return a loading-state stub that the client hydrates back to the real
+// provider on mount.
+const SSR_STUB: AuthContextValue = {
+  seller: null,
+  loading: true,
+  loggingOut: false,
+  error: null,
+  refreshSeller: async () => {},
+  logout: async () => {},
+};
+
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
+    // During SSR or the Turbopack HMR race, fall back to the stub so the
+    // page doesn't 500. On the client we still throw — a truly missing
+    // provider is a real bug worth surfacing.
+    if (typeof window === "undefined") return SSR_STUB;
     throw new Error("useAuth doit être utilisé dans un AuthProvider");
   }
   return ctx;

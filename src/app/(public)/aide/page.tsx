@@ -4,9 +4,9 @@ import { FAQ_SECTIONS } from "@/lib/faq-content";
 import { AideSearch } from "./AideSearch";
 
 export const metadata: Metadata = {
-  title: "Aide — cagnotte.sn",
+  title: "Centre d'aide",
   description:
-    "Centre d'aide cagnotte.sn. Réponses aux questions sur la création, la participation et l'utilisation de cagnottes en ligne au Sénégal.",
+    "Toutes les réponses pour créer, partager et recevoir les contributions de votre cagnotte en ligne au Sénégal.",
 };
 
 export default function AidePage() {

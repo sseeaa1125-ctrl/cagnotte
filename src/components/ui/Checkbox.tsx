@@ -37,7 +37,7 @@ export function Checkbox({
           disabled && "cursor-not-allowed opacity-60",
         )}
       >
-        <span className="relative flex h-5 w-5 flex-shrink-0 items-center justify-center">
+        <span className="relative flex h-6 w-6 flex-shrink-0 items-center justify-center">
           <input
             id={checkboxId}
             name={name}
@@ -50,7 +50,7 @@ export function Checkbox({
           />
           <span
             className={cn(
-              "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
+              "flex h-6 w-6 items-center justify-center rounded-md border-2 transition-colors",
               "peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-focus-visible:ring-offset-2",
               checked
                 ? "border-primary bg-primary text-primary-foreground"
@@ -60,7 +60,7 @@ export function Checkbox({
             )}
             aria-hidden
           >
-            {checked ? <Check size={14} strokeWidth={3} /> : null}
+            {checked ? <Check size={16} strokeWidth={3} /> : null}
           </span>
         </span>
 

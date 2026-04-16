@@ -18,10 +18,9 @@ export class BictorysProvider implements PaymentProvider {
       );
     }
 
-    let url = `${BICTORYS_API_URL}/pay/v1/charges?payment_type=${params.paymentType}`;
-    if (params.paymentType === "card") {
-      url += "&payment_category=card";
-    }
+    // cagnottes.sn v1 — the bank-card branch (`&payment_category=card`) was
+    // removed along with the UI picker. All charges are mobile money.
+    const url = `${BICTORYS_API_URL}/pay/v1/charges?payment_type=${params.paymentType}`;
 
     const body: Record<string, unknown> = {
       amount: params.amount,

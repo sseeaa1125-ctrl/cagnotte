@@ -9,6 +9,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Mail } from "lucide-react";
 import { Input, Button, useToast } from "@/components/ui";
 import { api, ApiError, BACKEND_URL, storeCsrfToken } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,10 @@ function ConnexionForm() {
   const [password, setPassword] = React.useState("");
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Phase 11 — Google-first collapsible pattern. Email fields stay hidden
+  // until the donor explicitly taps "Continuer avec Email". Short-form UX
+  // for mobile (fewer fields above the fold).
+  const [showEmailForm, setShowEmailForm] = React.useState(false);
 
   // One-shot toasts on mount based on query params.
   React.useEffect(() => {
@@ -77,7 +82,7 @@ function ConnexionForm() {
     try {
       const res = await api<LoginResponse>("/api/auth/login", {
         method: "POST",
-        body: { email, password },
+        body: { email: email.trim(), password },
       });
       storeCsrfToken(res.csrfToken);
       await refreshSeller();
@@ -118,8 +123,8 @@ function ConnexionForm() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-200px)] w-full max-w-md flex-col justify-center px-4 py-8 md:py-16">
-      <div className="rounded-2xl border border-border bg-background p-6 shadow-sm md:p-8">
+    <div className="mx-auto flex w-full max-w-md flex-col justify-center px-4 py-8 md:py-10">
+      <div className="rounded-2xl border border-border bg-background p-6 shadow-sm md:p-6">
         <h1 className="mb-2 text-center font-headings text-3xl font-bold text-primary">
           {AUTH_LABELS.loginTitle}
         </h1>
@@ -127,86 +132,104 @@ function ConnexionForm() {
           {AUTH_LABELS.loginSubtitle}
         </p>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
-          <Input
-            label={AUTH_LABELS.emailLabel}
-            type="email"
-            placeholder={AUTH_LABELS.emailPlaceholder}
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={error || undefined}
-            required
-          />
-
-          <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <label
-                htmlFor="login-password"
-                className="text-sm font-medium text-primary"
-              >
-                {AUTH_LABELS.passwordLabel}
-              </label>
-              <Link
-                href="/mot-de-passe-oublie"
-                className="text-sm font-medium text-primary hover:underline"
-              >
-                {AUTH_LABELS.forgotPasswordCta}
-              </Link>
-            </div>
-            <Input
-              id="login-password"
-              type="password"
-              placeholder={AUTH_LABELS.passwordPlaceholder}
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={error || undefined}
-              required
-            />
-          </div>
-
-          {error ? (
-            <p className="text-sm text-red-500" role="alert">
-              {error}
-            </p>
-          ) : null}
-
+        {/* Google button — primary CTA, always above the fold. */}
+        {FEATURE_SOCIAL_AUTH ? (
           <Button
-            type="submit"
-            variant="primary"
+            type="button"
+            variant="social"
+            socialProvider="google"
             size="lg"
             fullWidth
-            loading={submitting}
-            disabled={submitting}
+            onClick={handleGoogleLogin}
           >
-            {submitting ? AUTH_LABELS.loginLoading : AUTH_LABELS.loginCta}
+            {AUTH_LABELS.socialGoogleLabel}
           </Button>
-        </form>
+        ) : null}
 
-        {/* Social login CTAs — D-08: retained in JSX behind feature flag.
-            v1 never renders these (FEATURE_SOCIAL_AUTH = false). */}
+        {/* "ou" divider — only rendered when Google button is on, otherwise
+            email is the only option and the divider would look stranded. */}
         {FEATURE_SOCIAL_AUTH ? (
-          <div className="mt-6">
-            <div className="relative flex items-center py-4">
-              <div className="flex-grow border-t border-border" />
-              <span className="mx-4 text-xs text-muted-foreground">
-                {AUTH_LABELS.orContinueWith}
-              </span>
-              <div className="flex-grow border-t border-border" />
-            </div>
-            <div className="flex flex-col gap-3">
-              <Button
-                type="button"
-                variant="social"
-                socialProvider="google"
-                fullWidth
-                onClick={handleGoogleLogin}
-              >
-                {AUTH_LABELS.socialGoogleLabel}
-              </Button>
-            </div>
+          <div className="relative flex items-center py-4">
+            <div className="flex-grow border-t border-border" />
+            <span className="mx-4 text-xs text-muted-foreground">
+              {AUTH_LABELS.orContinueWith}
+            </span>
+            <div className="flex-grow border-t border-border" />
           </div>
+        ) : null}
+
+        {/* Email trigger — hidden once the form is revealed. */}
+        {!showEmailForm ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            fullWidth
+            onClick={() => setShowEmailForm(true)}
+            iconLeft={<Mail className="h-4 w-4" aria-hidden />}
+          >
+            Continuer avec Email
+          </Button>
+        ) : null}
+
+        {/* Email form — conditionally rendered. */}
+        {showEmailForm ? (
+          <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+            <Input
+              label={AUTH_LABELS.emailLabel}
+              type="email"
+              placeholder={AUTH_LABELS.emailPlaceholder}
+              autoComplete="email"
+              autoFocus
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="login-password"
+                  className="text-sm font-medium text-primary"
+                >
+                  {AUTH_LABELS.passwordLabel}
+                </label>
+                <Link
+                  href="/mot-de-passe-oublie"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  {AUTH_LABELS.forgotPasswordCta}
+                </Link>
+              </div>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder={AUTH_LABELS.passwordPlaceholder}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={error || undefined}
+                required
+              />
+            </div>
+
+            {error ? (
+              <p className="text-sm text-red-500" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={submitting}
+              disabled={submitting}
+            >
+              {submitting ? AUTH_LABELS.loginLoading : AUTH_LABELS.loginCta}
+            </Button>
+          </form>
         ) : null}
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

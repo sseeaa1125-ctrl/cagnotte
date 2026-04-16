@@ -132,25 +132,24 @@ const BICTORYS_COUNTRIES: Record<string, string[]> = {
   togocell: ["TG"],
   mobicash: ["BF", "ML"],
   maxit: ["SN"],  // Maxit = Orange Money rebrandé au Sénégal
-  // card : SN, CI officiellement — on force "SN" pour les autres pays
 };
 
 /**
  * Normalise le code pays pour l'API Bictorys.
- * - Card → toujours "SN" (Bictorys ne supporte card que SN/CI)
  * - Orange Money BF → "BK" (convention Bictorys pour Burkina)
+ * Note: les cartes bancaires sont retirées de la v1 — le branchement
+ * `card → "SN"` n'existe plus.
  */
 export function normalizeBictorysCountry(paymentType: string, country: string): string {
-  if (paymentType === "card") return "SN";
   if (paymentType === "orange_money" && country === "BF") return "BK";
   return country;
 }
 
 /**
  * Retourne un pays compatible avec le paymentType Bictorys.
- * Pour mobile money : priorité à l'indicatif téléphonique du client (un Sénégalais
- * à Paris avec un +221 doit passer sur Wave SN, pas Wave CI).
- * Pour carte : toujours SN.
+ * Mobile money uniquement en v1 : priorité à l'indicatif téléphonique du
+ * client (un Sénégalais à Paris avec un +221 doit passer sur Wave SN,
+ * pas Wave CI).
  */
 export function getBictorysCountry(
   detectedCountry: string | null,
@@ -158,9 +157,6 @@ export function getBictorysCountry(
   sellerCountry?: string | null,
   customerPhone?: string | null,
 ): string {
-  // Card → toujours SN
-  if (paymentType === "card") return "SN";
-
   const supported = BICTORYS_COUNTRIES[paymentType];
   if (!supported) {
     return detectedCountry || sellerCountry || "SN";

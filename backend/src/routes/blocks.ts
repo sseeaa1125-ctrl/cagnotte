@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { Prisma } from "../generated/prisma/client.js";
 import { requireAuth } from "../middleware/auth.js";
-import { verifyCsrf } from "../lib/auth.js";
+import { verifyCsrf, verifyToken } from "../lib/auth.js";
 import * as logger from "../lib/logger.js";
 import { validateBlockConfig } from "../lib/blocks/schemas.js";
 import { formatZodError } from "../lib/zodErrors.js";
@@ -169,7 +169,10 @@ blocksRouter.get("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/blocks/:id/progress — progression d'une cagnotte (public, pas d'auth)
+// GET /api/blocks/:id/progress — progression d'une cagnotte.
+// Public endpoint, but hideAmount/hideDonors are enforced for non-owners.
+// The creator (detected via optional izy-token cookie) always sees real
+// numbers. Mirrors the owner-detection pattern in routes/cagnottes.ts.
 blocksRouter.get("/:id/progress", async (req, res) => {
   try {
     const block = await prisma.block.findUnique({
@@ -184,6 +187,24 @@ blocksRouter.get("/:id/progress", async (req, res) => {
 
     const config = block.config as Record<string, unknown>;
     const goalAmount = (config.goalAmount as number) || 0;
+    const hideAmount = config.hideAmount === true;
+    const hideDonors = config.hideDonors === true;
+
+    // Owner detection — optional cookie. If present and sub === sellerId,
+    // bypass hideAmount/hideDonors so the dashboard card shows real totals.
+    const cookieToken = (req.cookies?.["izy-token"] as string) ?? null;
+    let isOwner = false;
+    if (cookieToken) {
+      const payload = await verifyToken(cookieToken);
+      if (payload?.sub && payload.sub === block.sellerId) {
+        isOwner = true;
+      }
+    }
+
+    // Owner responses must never be cached (they carry unmasked data).
+    if (isOwner) {
+      res.setHeader("Cache-Control", "private, no-store");
+    }
 
     const stats = await prisma.order.aggregate({
       where: {
@@ -195,9 +216,16 @@ blocksRouter.get("/:id/progress", async (req, res) => {
       _count: true,
     });
 
-    const collected = stats._sum.amount || 0;
-    const donorCount = stats._count || 0;
-    const percentage = goalAmount > 0 ? Math.min(Math.round((collected / goalAmount) * 100), 100) : 0;
+    const realCollected = stats._sum.amount || 0;
+    const realDonorCount = stats._count || 0;
+
+    const collected = isOwner || !hideAmount ? realCollected : null;
+    const donorCount = isOwner || !hideDonors ? realDonorCount : null;
+    // Percentage is derived from the real number only when amount is visible.
+    const percentage =
+      collected !== null && goalAmount > 0
+        ? Math.min(Math.round((collected / goalAmount) * 100), 100)
+        : null;
 
     res.json({
       goalAmount,
@@ -205,7 +233,8 @@ blocksRouter.get("/:id/progress", async (req, res) => {
       donorCount,
       percentage,
       endDate: (config.endDate as string) || null,
-      showDonorCount: config.showDonorCount !== false,
+      hideAmount,
+      hideDonors,
     });
   } catch (err) {
     logger.error("Erreur progress cagnotte", err);

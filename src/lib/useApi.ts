@@ -9,6 +9,24 @@ const cache = new Map<string, { data: unknown; ts: number }>();
 // Default stale time: 2 minutes
 const STALE_TIME = 2 * 60 * 1000;
 
+// Audit 015 P-03 — periodic TTL eviction. Without this the Map grew
+// unbounded across a long session (every unique GET path stayed resident
+// forever). The sweep runs every 5 min and drops entries older than 3×
+// the stale time (6 min). Guarded by `typeof window` so SSR / imports in
+// server components don't schedule timers.
+if (typeof window !== "undefined") {
+  const EVICTION_THRESHOLD = 3 * STALE_TIME;
+  window.setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, entry] of cache) {
+        if (now - entry.ts > EVICTION_THRESHOLD) cache.delete(key);
+      }
+    },
+    5 * 60 * 1000,
+  );
+}
+
 interface UseApiOptions {
   /** Skip fetching (e.g. when params not ready) */
   skip?: boolean;

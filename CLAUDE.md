@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Project Is
 
-**Cagnottes.sn** is a dedicated online-fundraiser (cagnotte) platform for the Senegalese market: a creator signs up, publishes one or more cagnottes with a shareable link (`cagnottes.sn/<slug>`), and contributors participate via **Bictorys** (Wave, Orange Money, Free Money, card). All UI is in French; prices are in FCFA (integer amounts, no decimals).
+**Cagnottes.sn** is a dedicated online-fundraiser (cagnotte) platform for the Senegalese market: a creator signs up, publishes one or more cagnottes with a shareable link (`cagnottes.sn/<slug>`), and contributors participate via **Bictorys** (Wave, Orange Money, Free Money). Bank cards were dropped in v1 (April 2026) — mobile money only. All UI is in French; prices are in FCFA (integer amounts, no decimals).
 
 This codebase is a **fork of Fari.store** (a multi-feature link-in-bio). Only the infrastructure needed for the fundraiser use-case was kept: auth, Bictorys payments, webhooks, file storage, email queue, withdrawal/payout. The rest of the fari.store surface (commerce, booking, community, partnership, etc.) was cleaned out in a series of `phase N` commits on `main` — see `git log --oneline` for the trail.
 
@@ -147,6 +147,8 @@ Started on server boot in `index.ts` via `setInterval` (⚠️ lost on restart, 
 - Axios → native `fetch`
 - MongoDB/Firebase → PostgreSQL + Prisma
 - **Stripe for payments → Bictorys** (Wave / Orange Money / Free Money)
+- **`dangerouslySetInnerHTML` / `innerHTML` / `eval` / `new Function()`.** User content (donor message, bio, title, description) is already stored raw in DB; the JSX text-node rendering is the XSS barrier. Any component that introduces HTML rendering of user content requires an explicit security review and `escapeHtml()` (or `sanitize-html`) on the backend. Audit 011 — see [audits/audit-011-audit-complet.md](audits/audit-011-audit-complet.md).
+- **Auto-retry of mutating verbs in [src/lib/api.ts](src/lib/api.ts).** POST/PUT/PATCH/DELETE must not be replayed on network errors — a lost response after a successful charge would create a duplicate `Order` / `Withdrawal`. Only `GET`/`HEAD` get `MAX_RETRIES = 1`. Audit 011 D-01.
 
 ### Styling
 - **Tailwind CSS v4 only.** No CSS modules, no styled-components, no `style={{}}` except for vendor theme CSS variables.

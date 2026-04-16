@@ -14,7 +14,10 @@ declare global {
 // P1: Cache court en mémoire pour éviter 1 query DB par requête authentifiée
 // TTL 30s — assez court pour détecter les changements de plan/suppression
 const AUTH_CACHE_TTL = 30_000;
-const authCache = new Map<string, { plan: string; slug: string; expiresAt: number }>();
+const authCache = new Map<
+  string,
+  { plan: string; slug: string; tokenVersion: number; expiresAt: number }
+>();
 
 // Nettoyage périodique toutes les 5min
 setInterval(() => {
@@ -51,9 +54,17 @@ export async function requireAuth(
     return;
   }
 
+  // Audit 012 S-03 — pre-migration tokens have no tokenVersion → default to 0
+  // so they stay compatible with the freshly-seeded DB default.
+  const payloadVersion = payload.tokenVersion ?? 0;
+
   // P1: Check in-memory cache first
   const cached = authCache.get(payload.sub);
   if (cached && cached.expiresAt > Date.now()) {
+    if (cached.tokenVersion !== payloadVersion) {
+      res.status(401).json({ error: "Session expirée" });
+      return;
+    }
     req.seller = { ...payload, plan: cached.plan as "FREE" | "PRO", slug: cached.slug };
     next();
     return;
@@ -63,7 +74,7 @@ export async function requireAuth(
   // NEW-S1: Filter deletedAt to block soft-deleted sellers with valid JWT
   const freshSeller = await prisma.seller.findFirst({
     where: { id: payload.sub, deletedAt: null },
-    select: { plan: true, slug: true },
+    select: { plan: true, slug: true, tokenVersion: true },
   });
   if (!freshSeller) {
     authCache.delete(payload.sub);
@@ -71,10 +82,18 @@ export async function requireAuth(
     return;
   }
 
+  // Audit 012 S-03 — reject tokens minted before a password change.
+  if (freshSeller.tokenVersion !== payloadVersion) {
+    authCache.delete(payload.sub);
+    res.status(401).json({ error: "Session expirée" });
+    return;
+  }
+
   // P1: Cache le résultat 30s
   authCache.set(payload.sub, {
     plan: freshSeller.plan,
     slug: freshSeller.slug,
+    tokenVersion: freshSeller.tokenVersion,
     expiresAt: Date.now() + AUTH_CACHE_TTL,
   });
 

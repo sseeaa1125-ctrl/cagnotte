@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Conditions générales d'utilisation — cagnotte.sn",
+  title: "Conditions générales d'utilisation",
   description:
-    "Conditions générales d'utilisation de cagnotte.sn, la plateforme de cagnottes en ligne du Sénégal.",
+    "Conditions générales d'utilisation de cagnotte.sn — la plateforme de cagnottes en ligne du Sénégal.",
 };
 
 export default function CGUPage() {
@@ -25,7 +25,7 @@ export default function CGUPage() {
             Les présentes conditions générales encadrent l&apos;utilisation de la
             plateforme cagnotte.sn, qui permet à toute personne majeure résidant
             au Sénégal de créer une cagnotte en ligne et de recevoir des
-            contributions via Wave, Orange Money, Free Money ou carte bancaire.
+            contributions via Wave, Orange Money ou Free Money.
           </p>
         </section>
 
@@ -34,23 +34,28 @@ export default function CGUPage() {
             2. Commissions
           </h2>
           <p>
-            cagnotte.sn prélève une commission sur chaque contribution&nbsp;:
-            <strong> 6&nbsp;% pour les cagnottes solidaires</strong> et
-            <strong> 8&nbsp;% pour les cagnottes festives</strong>. La
-            commission est affichée au donateur avant le paiement. Aucun frais
-            caché n&apos;est appliqué.
+            La participation à une cagnotte est <strong>gratuite</strong>{" "}
+            pour les donateurs : le montant affiché est le montant payé, sans
+            frais ajoutés. cagnotte.sn prélève une commission sur les
+            contributions reçues côté organisateur. Les frais applicables
+            sont présentés en clair au créateur au moment de la création de
+            sa cagnotte, en fonction du type choisi.
           </p>
         </section>
 
         <section>
           <h2 className="mb-3 font-headings text-2xl font-bold text-primary">
-            3. Retraits
+            3. Retraits — versement sous 72&nbsp;h
           </h2>
           <p>
             Les retraits sont soumis à la vérification d&apos;identité (KYC). Une
             fois votre compte validé, vous pouvez demander un retrait vers Wave,
-            Orange Money, Free Money ou un compte bancaire. Les virements sont
-            généralement traités sous 24&nbsp;h.
+            Orange Money, Free Money ou un compte bancaire.{" "}
+            <strong>
+              Les fonds sont versés sous 72&nbsp;h jours ouvrés
+            </strong>{" "}
+            après validation de la demande de retrait. Aucun délai supplémentaire
+            n&apos;est appliqué une fois la pièce d&apos;identité approuvée.
           </p>
         </section>
 
@@ -70,10 +75,6 @@ export default function CGUPage() {
           </p>
         </section>
 
-        <p className="pt-6 text-sm italic text-gray-600">
-          Document provisoire — la version finale sera publiée avant la mise en
-          production publique.
-        </p>
       </div>
     </article>
   );

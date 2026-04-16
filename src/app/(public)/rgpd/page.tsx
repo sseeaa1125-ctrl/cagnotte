@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "RGPD — cagnotte.sn",
+  title: "RGPD",
   description:
-    "Conformité RGPD de cagnotte.sn : vos droits sur vos données personnelles.",
+    "Conformité RGPD de cagnotte.sn — vos droits sur vos données personnelles au Sénégal.",
 };
 
 export default function RgpdPage() {
@@ -111,10 +111,6 @@ export default function RgpdPage() {
           </p>
         </section>
 
-        <p className="pt-6 text-sm italic text-gray-600">
-          Document provisoire — la version finale sera publiée avant la mise
-          en production publique.
-        </p>
       </div>
     </article>
   );

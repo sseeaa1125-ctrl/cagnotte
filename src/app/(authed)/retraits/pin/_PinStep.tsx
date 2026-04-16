@@ -103,18 +103,18 @@ export function PinStep() {
     <div className="mx-auto max-w-lg">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-6 rounded-[2.5rem] bg-white p-8 shadow-sm md:p-10"
+        className="flex flex-col gap-6 rounded-3xl bg-white p-5 shadow-sm sm:rounded-[2.5rem] sm:p-8 md:p-10"
       >
         {/* Shield hero — Banani WithdrawOTP */}
         <div className="relative mb-2 mt-2 inline-flex items-center justify-center self-center">
-          <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-blue-50">
+          <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-full bg-pink/60 ring-8 ring-pink/30">
             <ShieldCheck size={40} className="text-primary" aria-hidden />
           </div>
         </div>
 
         {/* Heading + persistent-PIN helper (NO phone-masked text) */}
         <div className="text-center">
-          <h1 className="mb-2 font-headings text-2xl font-black text-primary md:text-3xl">
+          <h1 className="mb-2 font-headings text-xl font-black text-primary sm:text-2xl md:text-3xl">
             {WITHDRAW_PIN_LABELS.pageTitle}
           </h1>
           <p className="text-sm text-gray-500 md:text-base">
@@ -138,7 +138,7 @@ export function PinStep() {
                 key={index}
                 className={cn(
                   "relative flex h-16 w-14 items-center justify-center rounded-2xl border-2 bg-white font-mono text-3xl font-black text-primary transition-all md:h-[72px] md:w-16",
-                  "focus-within:border-primary focus-within:ring-4 focus-within:ring-blue-50",
+                  "focus-within:border-primary focus-within:ring-4 focus-within:ring-pink",
                   error
                     ? "border-red-500"
                     : isActive
@@ -160,7 +160,7 @@ export function PinStep() {
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onFocus={() => setActiveIndex(index)}
                   onPaste={index === 0 ? handlePaste : undefined}
-                  aria-label={`Chiffre ${index + 1}`}
+                  aria-label={`Code PIN chiffre ${index + 1} sur ${PIN_LENGTH}`}
                   className="absolute inset-0 h-full w-full rounded-2xl bg-transparent text-center text-3xl font-black text-primary outline-none"
                 />
                 {ch ? null : isActive ? (

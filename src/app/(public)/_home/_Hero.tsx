@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { HOME_HERO_LABELS } from "@/lib/constants";
+import { RotatingHeadline } from "./_RotatingHeadline";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Banani home page Hero section.
@@ -30,7 +31,7 @@ export async function HomeHero() {
       >
         {HOME_HERO_LABELS.h1Part1}
         <br />
-        <span className="text-gradient">{HOME_HERO_LABELS.h1Part2}</span>
+        <RotatingHeadline />
       </h1>
 
       <p

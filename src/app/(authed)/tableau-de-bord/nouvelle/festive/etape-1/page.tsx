@@ -121,7 +121,7 @@ export default function FestiveStep1Page() {
       />
 
       <form
-        className="flex flex-col gap-8"
+        className="flex flex-col gap-5 sm:gap-8"
         onSubmit={(e) => {
           e.preventDefault();
           handleContinue();
@@ -170,7 +170,7 @@ export default function FestiveStep1Page() {
             size="lg"
             iconRight={<ArrowRight size={18} />}
           >
-            {WIZARD_LABELS.continueCta}
+            {WIZARD_LABELS.continueCtaStep1}
           </Button>
         </div>
       </form>

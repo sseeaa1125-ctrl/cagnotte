@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Mentions légales — cagnotte.sn",
-  description: "Mentions légales de cagnotte.sn.",
+  title: "Mentions légales",
+  description:
+    "Informations légales et éditeur de cagnotte.sn, la plateforme de cagnottes en ligne basée à Dakar.",
 };
 
 export default function MentionsLegalesPage() {
@@ -55,10 +56,6 @@ export default function MentionsLegalesPage() {
           </p>
         </section>
 
-        <p className="pt-6 text-sm italic text-gray-600">
-          Document provisoire — la version finale sera publiée avant la mise en
-          production publique.
-        </p>
       </div>
     </article>
   );

@@ -43,9 +43,11 @@ export type SolidaireBeneficiary = "moi_meme" | "un_proche" | "une_association";
 export type Visibility = "public" | "private";
 
 export type GalleryItemDraft = {
-  kind: "image" | "youtube";
+  // "youtube" preserved as legacy alias for video items.
+  kind: "image" | "video" | "youtube";
   url: string;
   videoId?: string;
+  provider?: "youtube" | "vimeo" | "wistia" | "loom";
 };
 
 export type FestiveDraft = {

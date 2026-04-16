@@ -1,7 +1,11 @@
 import { notFound } from "next/navigation";
 import { ParticiperForm } from "./ParticiperForm";
-import { PARTICIPER_LABELS } from "@/lib/constants";
 import type { FundraiserSubtype } from "@/lib/commission";
+
+// Fallback presets if the creator never set custom amounts. Hard-capped to 3
+// so the participer UI always renders the same number of pills regardless
+// of how many the creator saved.
+const DEFAULT_SUGGESTED_AMOUNTS: readonly number[] = [2000, 5000, 10000];
 
 const BACKEND_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -28,6 +32,7 @@ interface CagnotteDetail {
   donorCount: number | null;
   hideAmount: boolean;
   hideDonors: boolean;
+  suggestedAmounts: number[] | null;
   seller: {
     id: string;
     slug: string;
@@ -60,6 +65,15 @@ export default async function ParticiperPage({
 
   const subtype = (cagnotte.subtype ?? "festive") as FundraiserSubtype;
 
+  // Read creator-set presets from the detail payload. Fall back to the
+  // built-in defaults if empty/missing. Cap at 3 to match the form's
+  // pill layout.
+  const creatorPresets =
+    Array.isArray(cagnotte.suggestedAmounts) && cagnotte.suggestedAmounts.length > 0
+      ? cagnotte.suggestedAmounts
+      : DEFAULT_SUGGESTED_AMOUNTS;
+  const suggestedAmounts = creatorPresets.slice(0, 3);
+
   return (
     <ParticiperForm
       cagnotte={{
@@ -76,7 +90,7 @@ export default async function ParticiperPage({
           : null,
       }}
       slug={slug}
-      suggestedAmounts={PARTICIPER_LABELS.suggestedAmounts}
+      suggestedAmounts={suggestedAmounts}
     />
   );
 }

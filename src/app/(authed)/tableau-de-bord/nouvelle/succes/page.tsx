@@ -76,11 +76,11 @@ export default async function CreateSuccessPage({ searchParams }: PageProps) {
       <ConfettiBurst />
       <DraftClearer />
 
-      <header className="mb-8 flex flex-col items-center gap-3 text-center">
-        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-trustpilot/10 text-trustpilot">
+      <header className="mb-6 flex flex-col items-center gap-3 text-center sm:mb-8">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-trustpilot/10 text-trustpilot sm:h-16 sm:w-16">
           <svg
-            width="28"
-            height="28"
+            width="24"
+            height="24"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -92,7 +92,7 @@ export default async function CreateSuccessPage({ searchParams }: PageProps) {
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </span>
-        <h1 className="font-headings text-3xl font-bold text-primary md:text-4xl">
+        <h1 className="font-headings text-2xl font-bold text-primary sm:text-3xl md:text-4xl">
           {SUCCESS_LABELS.title}
         </h1>
         <p className="max-w-md text-sm text-muted-foreground">
@@ -132,7 +132,7 @@ export default async function CreateSuccessPage({ searchParams }: PageProps) {
       <div className="flex justify-center">
         <Link
           href="/tableau-de-bord"
-          className="inline-flex min-h-10 items-center gap-1 text-sm font-medium text-primary hover:underline"
+          className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-6 py-3 text-sm font-bold text-primary transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           {SUCCESS_LABELS.backToDashboardCta}
         </Link>

@@ -221,8 +221,8 @@ function VerifyEmailForm() {
                   value={digit}
                   onChange={(e) => handleChange(index, e)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={index === 0 ? handlePaste : undefined}
-                  aria-label={`Chiffre ${index + 1}`}
+                  onPaste={handlePaste}
+                  aria-label={`Chiffre ${index + 1} sur 6`}
                   className={cn(
                     "h-14 w-11 rounded-lg border bg-background text-center font-mono text-2xl text-primary",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -259,6 +259,7 @@ function VerifyEmailForm() {
             fullWidth
             disabled={cooldown > 0}
             onClick={onResend}
+            aria-live="polite"
           >
             {cooldown > 0
               ? VERIFY_EMAIL_LABELS.resendCooldown.replace(

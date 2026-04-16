@@ -2,6 +2,7 @@ import * as React from "react";
 import { Badge, ProgressBar } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { SUBTYPE_LABELS } from "@/lib/constants";
+import { computeProgress } from "@/lib/progress";
 import { cn } from "@/lib/utils";
 
 export interface CampaignCardProps {
@@ -41,7 +42,7 @@ export function CampaignCard({
     endDate,
   } = cagnotte;
 
-  const percent = goal > 0 ? Math.min(100, Math.round((raised / goal) * 100)) : 0;
+  const { percent, barWidth } = computeProgress(raised, goal);
   const isFestive = subtype === "festive";
   const donorLabel =
     donorCount === 1 ? "contributeur" : "contributeurs";
@@ -63,7 +64,7 @@ export function CampaignCard({
     <a
       href={href}
       className={cn(
-        "group flex flex-col overflow-hidden rounded-xl border border-border bg-background transition-all duration-200",
+        "group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-background transition-all duration-200",
         "hover:-translate-y-0.5 hover:border-primary hover:shadow-lg",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
         className,
@@ -76,6 +77,10 @@ export function CampaignCard({
           <img
             src={coverUrl}
             alt={title}
+            width={640}
+            height={360}
+            loading="lazy"
+            decoding="async"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
@@ -102,15 +107,29 @@ export function CampaignCard({
         </h3>
 
         <ProgressBar
-          value={percent}
+          value={barWidth}
           raisedLabel={`${formatPrice(raised)} collectés`}
           goalLabel={`sur ${formatPrice(goal)}`}
           color={isFestive ? "gold" : "primary"}
         />
 
-        <p className="text-xs text-muted-foreground">
-          {donorCount} {donorLabel}
-          {endDateLabel}
+        <p className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className="min-w-0 truncate">
+            {donorCount} {donorLabel}
+            {endDateLabel}
+          </span>
+          {goal > 0 ? (
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
+                percent >= 100
+                  ? "bg-[#E6F3EE] text-[#00B67A]"
+                  : "bg-pink/60 text-primary",
+              )}
+            >
+              {percent}%
+            </span>
+          ) : null}
         </p>
       </div>
     </a>

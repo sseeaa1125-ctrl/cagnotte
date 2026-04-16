@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, Lock } from "lucide-react";
 import { Avatar, Button, Input, useToast } from "@/components/ui";
 import { api, ApiError, BACKEND_URL } from "@/lib/api";
+import { invalidateCache } from "@/lib/useApi";
 import { PROFILE_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +36,13 @@ function splitDisplayName(displayName: string): {
   return { firstName: first ?? "", lastName: rest.join(" ") };
 }
 
+// Audit 023 HIGH-1 fix. Store 9 national digits in local state; strip a
+// leading 221 country code if the DB row was written with the full +221
+// prefix. Same contract as _BankForm.normalizePhone so the two forms agree.
+function normalizePhone(raw: string): string {
+  return raw.replace(/\D/g, "").replace(/^221/, "").slice(0, 9);
+}
+
 function readCsrfToken(): string {
   if (typeof window === "undefined") return "";
   const fromStorage = localStorage.getItem("izy-csrf");
@@ -51,7 +59,9 @@ export function ProfileForm({ initial }: { initial: ProfileFormInitial }) {
   const initialSplit = splitDisplayName(initial.displayName);
   const [firstName, setFirstName] = React.useState(initialSplit.firstName);
   const [lastName, setLastName] = React.useState(initialSplit.lastName);
-  const [phone, setPhone] = React.useState(initial.phone ?? "");
+  const [phone, setPhone] = React.useState(
+    normalizePhone(initial.phone ?? ""),
+  );
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(
     initial.avatarUrl,
   );
@@ -84,10 +94,15 @@ export function ProfileForm({ initial }: { initial: ProfileFormInitial }) {
         body: { avatarUrl: data.url },
       });
       setAvatarUrl(data.url);
+      // Audit 2026-04-14 #4 — bust the cached /api/auth/me payload so the
+      // navbar avatar reflects the new image without a hard reload.
+      invalidateCache("/api/auth/me");
       toast(PROFILE_LABELS.saved, "success");
       router.refresh();
     } catch (err) {
-      console.error("[profile] avatar upload failed", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[profile] avatar upload failed", err);
+      }
       toast(PROFILE_LABELS.errorAvatar, "error");
     } finally {
       setUploading(false);
@@ -97,16 +112,26 @@ export function ProfileForm({ initial }: { initial: ProfileFormInitial }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Audit 2026-04-14 #7 — double-submit guard. The button is also disabled
+    // by `loading`, but a fast double-press could still race the disable.
+    if (saving) return;
     setSaving(true);
     try {
       const merged = `${firstName.trim()} ${lastName.trim()}`.trim();
+      const trimmedPhone = phone.trim();
       await api("/api/sellers/profile", {
         method: "PUT",
         body: {
           displayName: merged,
-          phone: phone.trim() ? phone.trim() : null,
+          // Audit 023 HIGH-1: must include the +221 country code so the
+          // backend's cleanPhoneForStorage() writes a valid E.164 number.
+          // Previously this sent bare digits and the DB stored "+771234567".
+          phone: trimmedPhone ? `+221${trimmedPhone}` : null,
         },
       });
+      // Audit 2026-04-14 #4 — refresh the cached /api/auth/me so the navbar
+      // greeting picks up the new displayName immediately.
+      invalidateCache("/api/auth/me");
       toast(PROFILE_LABELS.saved, "success");
       router.refresh();
     } catch (err) {
@@ -204,10 +229,10 @@ export function ProfileForm({ initial }: { initial: ProfileFormInitial }) {
             autoComplete="tel-national"
             maxLength={9}
             value={phone}
-            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+            onChange={(e) => setPhone(normalizePhone(e.target.value))}
             placeholder={PROFILE_LABELS.phonePlaceholder}
             className={cn(
-              "min-h-12 flex-1 rounded-lg border border-border bg-background px-4 py-3 text-base text-primary placeholder:text-muted-foreground",
+              "min-h-12 w-full min-w-0 flex-1 rounded-lg border border-border bg-background px-4 py-3 text-base text-primary placeholder:text-muted-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             )}
           />
@@ -215,7 +240,13 @@ export function ProfileForm({ initial }: { initial: ProfileFormInitial }) {
       </div>
 
       <div className="flex items-center justify-end pt-2">
-        <Button type="submit" variant="primary" size="lg" loading={saving}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          loading={saving}
+          disabled={saving}
+        >
           {saving ? PROFILE_LABELS.saving : PROFILE_LABELS.save}
         </Button>
       </div>

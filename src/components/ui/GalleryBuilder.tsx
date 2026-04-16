@@ -1,15 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { Plus, Trash2, Youtube, ImagePlus } from "lucide-react";
+import { Plus, Trash2, Video, ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { extractYoutubeId, youtubeThumbnail } from "@/lib/youtube";
+import {
+  detectVideo,
+  VIDEO_PROVIDER_LABELS,
+  type VideoProvider,
+} from "@/lib/videoProviders";
 
 export interface GalleryItem {
-  kind: "image" | "youtube";
+  // "youtube" is a legacy alias for video kept so older rows keep validating.
+  kind: "image" | "video" | "youtube";
   url: string;
-  // For youtube items, the extracted video ID (stored alongside `url` so the
-  // public page doesn't need to re-parse on every render).
+  // Provider id (only for video items). For legacy "youtube" rows we
+  // resolve provider="youtube" at read time.
+  provider?: VideoProvider;
+  // Pre-extracted id so the public page doesn't have to re-parse on every
+  // render.
   videoId?: string;
 }
 
@@ -33,7 +41,7 @@ export function GalleryBuilder({
 }: GalleryBuilderProps) {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = React.useState(false);
-  const [youtubeInput, setYoutubeInput] = React.useState("");
+  const [videoInput, setVideoInput] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
 
   const items = value;
@@ -77,27 +85,40 @@ export function GalleryBuilder({
     }
   }
 
-  function handleAddYoutube() {
+  function handleAddVideo() {
     setError(null);
-    const id = extractYoutubeId(youtubeInput);
-    if (!id) {
-      setError("Lien YouTube invalide.");
+    const info = detectVideo(videoInput);
+    if (!info) {
+      setError(
+        "Lien vidéo non reconnu. Colle un lien YouTube, Vimeo, Wistia ou Loom.",
+      );
       return;
     }
     if (items.length >= max) {
       setError(`Maximum ${max} éléments.`);
       return;
     }
-    // De-dupe by video ID
-    if (items.some((it) => it.kind === "youtube" && it.videoId === id)) {
+    // De-dupe by provider + video ID
+    const dup = items.some((it) => {
+      if (it.kind === "image") return false;
+      const itemProvider =
+        it.provider ?? (it.kind === "youtube" ? "youtube" : null);
+      return itemProvider === info.provider && it.videoId === info.id;
+    });
+    if (dup) {
       setError("Cette vidéo est déjà dans la galerie.");
       return;
     }
     onChange([
       ...items,
-      { kind: "youtube", url: `https://youtu.be/${id}`, videoId: id },
+      {
+        kind: "video",
+        url: videoInput.trim(),
+        provider: info.provider,
+        videoId: info.id,
+      },
     ]);
-    setYoutubeInput("");
+    setVideoInput("");
   }
 
   function handleRemove(index: number) {
@@ -118,20 +139,50 @@ export function GalleryBuilder({
                 <img
                   src={item.url}
                   alt=""
+                  width={320}
+                  height={180}
+                  loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.videoId ? youtubeThumbnail(item.videoId) : ""}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white">
-                    <Youtube size={28} aria-hidden />
-                  </div>
-                </>
+                (() => {
+                  // Re-resolve from the URL so legacy "youtube"-only rows
+                  // and new multi-provider rows render through the same path.
+                  const info = detectVideo(item.url);
+                  const provider =
+                    item.provider ??
+                    info?.provider ??
+                    (item.kind === "youtube" ? "youtube" : null);
+                  const thumb = info?.thumbnailUrl ?? null;
+                  return (
+                    <>
+                      {thumb ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={thumb}
+                          alt=""
+                          width={320}
+                          height={180}
+                          loading="lazy"
+                          decoding="async"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-primary-hover text-white">
+                          <Video size={28} aria-hidden />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-end justify-start bg-black/30 p-2 text-white">
+                        <span className="rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider backdrop-blur">
+                          {provider
+                            ? VIDEO_PROVIDER_LABELS[provider]
+                            : "Vidéo"}
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()
               )}
               <button
                 type="button"
@@ -170,25 +221,34 @@ export function GalleryBuilder({
         <div className="flex flex-col gap-2 sm:flex-row">
           <input
             type="url"
-            value={youtubeInput}
-            onChange={(e) => setYoutubeInput(e.target.value)}
-            placeholder="Lien YouTube (https://youtu.be/…)"
+            value={videoInput}
+            onChange={(e) => setVideoInput(e.target.value)}
+            placeholder="Lien YouTube, Vimeo, Wistia ou Loom"
             disabled={isFull}
+            aria-label="Lien vidéo à ajouter à la galerie"
             className="min-h-12 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddVideo();
+              }
+            }}
           />
           <button
             type="button"
-            onClick={handleAddYoutube}
-            disabled={isFull || !youtubeInput.trim()}
+            onClick={handleAddVideo}
+            disabled={isFull || !videoInput.trim()}
             className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus size={16} />
-            Ajouter
+            Ajouter la vidéo
           </button>
         </div>
 
         <p className="text-xs text-muted-foreground">
-          Jusqu&apos;à {max} images ou vidéos YouTube. {items.length}/{max}.
+          Jusqu&apos;à {max} images ou vidéos (YouTube, Vimeo, Wistia, Loom).{" "}
+          {items.length}/{max}. Les vidéos sont des liens — pas
+          d&apos;upload de fichier vidéo.
         </p>
 
         {error ? (

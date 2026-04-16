@@ -1,9 +1,16 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* Prevent browser native pull-to-refresh on PWA/mobile */
 html, body {
   overscroll-behavior: none;
 }
+
+/* Note: the 180px mobile bottom padding previously set here site-wide is
+   now applied only on the authed <main> (see src/app/(authed)/layout.tsx).
+   The padding clears the fixed BottomNav (h-16 + safe-area), which only
+   exists on the authed surface — public pages have a normal footer and
+   don't need the extra breathing room. */
 
 @theme inline {
   /* Fonts — Poppins added alongside existing Inter */
@@ -41,6 +48,129 @@ html, body {
   background-clip: text;
   color: transparent;
   -webkit-text-fill-color: transparent;
+}
+
+/* Phase 10 — Hero rotating headline.
+   Wider gradient stack swept back-and-forth via background-position so the
+   gradient *flows* behind each phrase. Slide-up odometer: a parent with
+   overflow-hidden clips the inner span, which enters from 100% below and
+   lifts to 0 with a soft cubic-bezier. Cleaned up once per key change. */
+.text-gradient-flow {
+  background-image: linear-gradient(
+    110deg,
+    #172866 0%,
+    #3a2f8a 20%,
+    #D14B7A 50%,
+    #3a2f8a 80%,
+    #172866 100%
+  );
+  background-size: 250% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: hero-gradient-flow 6s ease-in-out infinite;
+}
+
+@keyframes hero-gradient-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Slide the new phrase up from below the clipped viewport of its wrapper.
+   translateY(110%) starts just beneath the line, cubic-bezier(0.22,1,0.36,1)
+   gives the classic "soft overshoot" lift used on the Banani cards. */
+@keyframes hero-slide-up {
+  0%   { opacity: 0; transform: translateY(110%); }
+  20%  { opacity: 0; }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-hero-slide-up {
+  animation: hero-slide-up 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-gradient-flow {
+    animation: none;
+    background-position: 0% 50%;
+  }
+  .animate-hero-slide-up {
+    animation: none;
+  }
+}
+
+/* Phase 10 — Top announce banner. Slides in from above on mount and,
+   on dismiss, collapses its own height while sliding back up so the
+   navbar below reclaims the space smoothly (instead of snapping). */
+@keyframes top-banner-in {
+  0%   { opacity: 0; transform: translateY(-100%); }
+  60%  { opacity: 1; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes top-banner-out {
+  0%   { opacity: 1; transform: translateY(0); max-height: 120px; }
+  50%  { opacity: 0; }
+  100% { opacity: 0; transform: translateY(-100%); max-height: 0; }
+}
+
+.animate-top-banner-in {
+  animation: top-banner-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-top-banner-out {
+  overflow: hidden;
+  animation: top-banner-out 0.45s cubic-bezier(0.55, 0, 0.55, 0.2) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-top-banner-in,
+  .animate-top-banner-out {
+    animation: none;
+  }
+}
+
+/* Phase 10 v3 — Cagnotte detail / participer "premium minimalist" motion.
+   Two named keyframes:
+
+   - `button-shine-sweep` — drives a diagonal white-gradient stripe across
+     any button that wraps it in `.animate-button-shine-sweep`. The stripe
+     starts off-screen left (translateX 0 against its -50% left anchor),
+     sweeps to 300% in the first 40% of the cycle, then idles off-screen
+     right for the remainder so the loop feels restrained, not spammy.
+
+   - `progress-shimmer` — same pattern on the filled portion of
+     `AnimatedProgressBar`. Same on/off cadence, -20deg skew for a
+     slightly sharper sweep. */
+
+@keyframes button-shine-sweep {
+  0%   { transform: skewX(-12deg) translateX(0); }
+  40%  { transform: skewX(-12deg) translateX(300%); }
+  100% { transform: skewX(-12deg) translateX(300%); }
+}
+
+.animate-button-shine-sweep {
+  animation: button-shine-sweep 4s ease-in-out infinite;
+}
+
+@keyframes progress-shimmer {
+  0%   { transform: skewX(-20deg) translateX(0); }
+  55%  { transform: skewX(-20deg) translateX(320%); }
+  100% { transform: skewX(-20deg) translateX(320%); }
+}
+
+.animate-progress-shimmer {
+  animation: progress-shimmer 3.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-button-shine-sweep,
+  .animate-progress-shimmer {
+    animation: none;
+  }
 }
 
 /* UI3: Theme utility classes — reduce inline style={{}} in store components */

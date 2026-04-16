@@ -1,4 +1,18 @@
 import { z } from "zod";
+import { richTextLength, sanitizeRichText } from "../sanitize.js";
+
+// Rich-text description schema used by FUNDRAISER blocks. Sanitizes
+// the HTML on ingest and enforces the 5000-character max against the
+// *text content* (stripped of tags) — so `<p>` wrappers don't falsely
+// inflate the byte count. Empty documents collapse to undefined.
+const richTextDescriptionSchema = z
+  .string()
+  .transform((v) => sanitizeRichText(v) ?? "")
+  .refine((v) => richTextLength(v) <= 5000, {
+    message: "La description ne peut pas dépasser 5000 caractères.",
+  })
+  .transform((v) => (v ? v : undefined))
+  .optional();
 
 export const linkBlockConfigSchema = z.object({
   title: z.string().min(1).max(100),
@@ -34,7 +48,7 @@ const checkoutSectionSchema = z.object({
 export const paymentBlockConfigSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional(),
-  suggestedAmounts: z.array(z.number().min(500)).max(4).default([5000, 10000, 25000]),
+  suggestedAmounts: z.array(z.number().min(500)).max(3).default([5000, 10000, 25000]),
   minAmount: z.number().min(500).default(500),
   maxAmount: z.number().min(500).optional(),
   coverUrl: z.string().nullable().optional(),
@@ -49,7 +63,7 @@ export const paymentBlockConfigSchema = z.object({
 export const donationBlockConfigSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional(),
-  suggestedAmounts: z.array(z.number().min(500)).max(4).default([1000, 2000, 5000]),
+  suggestedAmounts: z.array(z.number().min(500)).max(3).default([1000, 2000, 5000]),
   minAmount: z.number().min(500).default(500),
   maxAmount: z.number().min(500).optional(),
   coverUrl: z.string().nullable().optional(),
@@ -83,11 +97,11 @@ export const donationBlockConfigSchema = z.object({
  */
 export const fundraiserBlockConfigSchema = z.object({
   title: z.string().min(1).max(200),
-  description: z.string().max(5000).optional(),
+  description: richTextDescriptionSchema,
   goalAmount: z.number().int().min(1000),
   endDate: z.string().nullable().optional(),
   showDonorCount: z.boolean().default(true),
-  suggestedAmounts: z.array(z.number().min(500)).max(4).default([2000, 5000, 10000]),
+  suggestedAmounts: z.array(z.number().min(500)).max(3).default([2000, 5000, 10000]),
   minAmount: z.number().min(500).default(500),
   maxAmount: z.number().min(500).optional(),
   coverUrl: z.string().nullable().optional(),
@@ -141,14 +155,24 @@ export const fundraiserBlockConfigSchema = z.object({
   // the link; only donations are blocked (orders.ts) and the public page
   // swaps the Participer CTA for a grey "Cagnotte clôturée" badge.
   status: z.enum(["active", "closed"]).default("active").optional(),
-  // Phase 10 — gallery of cover-secondary images + YouTube video links.
-  // Max 10 items; empty array is equivalent to no gallery. Stored in JSON.
+  // Phase 10 — gallery of cover-secondary images + multi-provider video
+  // links (YouTube, Vimeo, Wistia, Loom). Max 10 items; empty array is
+  // equivalent to no gallery. Stored in JSON.
+  //
+  // - `kind: "image"` → uploaded R2 image
+  // - `kind: "video"` → external link, never uploaded; the `provider` and
+  //   `videoId` fields drive the iframe embed contract on the public page.
+  // - `kind: "youtube"` is preserved as a legacy alias for `kind: "video"
+  //   provider: "youtube"` so old rows keep rendering without a migration.
   gallery: z
     .array(
       z.object({
-        kind: z.enum(["image", "youtube"]),
+        kind: z.enum(["image", "video", "youtube"]),
         url: z.string().max(500),
-        videoId: z.string().max(32).optional(),
+        videoId: z.string().max(64).optional(),
+        provider: z
+          .enum(["youtube", "vimeo", "wistia", "loom"])
+          .optional(),
       }),
     )
     .max(10)

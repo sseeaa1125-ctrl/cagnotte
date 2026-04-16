@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui";
-import { api, ApiError } from "@/lib/api";
+import { Pagination } from "@/components/ui";
+import { api } from "@/lib/api";
 import { PARTICIPATIONS_LABELS } from "@/lib/constants";
 import { formatPrice, formatRelativeTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -13,15 +13,13 @@ import type { ParticipationRow } from "./page";
 //
 // Desktop (md+): HTML <table> with cagnotte cell + date + amount + status
 //   pill + view link. Mobile (<md): stacked card grid.
-// Pagination: cursor-based "Charger plus" via GET /api/sellers/me/participations.
-// Cover URLs are pulled from block.config.cover and always prefixed through
-// /api/files/ (R2 proxy). Direct R2 URLs are rejected.
+// Pagination: page-based via GET /api/sellers/me/participations?page=N.
 // ─────────────────────────────────────────────────────────────────────────
 
 interface ParticipationsPayload {
   items: ParticipationRow[];
-  nextCursor: string | null;
-  hasMore: boolean;
+  totalCount: number;
+  totalPages: number;
 }
 
 function coverUrl(
@@ -34,10 +32,8 @@ function coverUrl(
     | string
     | undefined;
   if (!rawCover) return null;
-  // Already a proxy URL → pass through; otherwise wrap
   if (rawCover.startsWith("/api/files/")) return `${backendUrl}${rawCover}`;
   if (rawCover.includes("/api/files/")) return rawCover;
-  // Refuse direct R2 — fall back to null so we render the placeholder.
   return null;
 }
 
@@ -94,10 +90,9 @@ export function ParticipationsClient({
   initial: ParticipationsPayload;
 }) {
   const [items, setItems] = React.useState<ParticipationRow[]>(initial.items);
-  const [cursor, setCursor] = React.useState<string | null>(
-    initial.nextCursor,
-  );
-  const [hasMore, setHasMore] = React.useState<boolean>(initial.hasMore);
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(initial.totalPages);
+  const [totalCount, setTotalCount] = React.useState(initial.totalCount);
   const [loading, setLoading] = React.useState(false);
 
   const backendUrl = React.useMemo(
@@ -105,20 +100,22 @@ export function ParticipationsClient({
     [],
   );
 
-  const loadMore = async () => {
-    if (!cursor || loading) return;
+  const goToPage = async (newPage: number) => {
+    if (newPage === page || loading) return;
     setLoading(true);
     try {
       const data = await api<ParticipationsPayload>(
-        `/api/sellers/me/participations?cursor=${encodeURIComponent(cursor)}&limit=20`,
+        `/api/sellers/me/participations?page=${newPage}&limit=20`,
       );
-      setItems((prev) => [...prev, ...data.items]);
-      setCursor(data.nextCursor);
-      setHasMore(data.hasMore);
+      setItems(data.items);
+      setPage(newPage);
+      setTotalPages(data.totalPages);
+      setTotalCount(data.totalCount);
+      // Scroll to top of list
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      console.error("[participations] load more failed", err);
-      if (err instanceof ApiError) {
-        // noop — button will still be available
+      if (process.env.NODE_ENV !== "production") {
+        console.error("[participations] page fetch failed", err);
       }
     } finally {
       setLoading(false);
@@ -127,8 +124,18 @@ export function ParticipationsClient({
 
   return (
     <div>
+      {/* Result count */}
+      <p className="mb-4 text-sm text-muted-foreground">
+        {totalCount} {totalCount > 1 ? "participations" : "participation"}
+      </p>
+
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-3xl border border-border bg-white md:block">
+      <div
+        className={cn(
+          "hidden overflow-hidden rounded-3xl border border-border bg-white md:block",
+          loading && "pointer-events-none opacity-60",
+        )}
+      >
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-muted/50">
@@ -200,7 +207,12 @@ export function ParticipationsClient({
       </div>
 
       {/* Mobile cards */}
-      <div className="flex flex-col gap-3 md:hidden">
+      <div
+        className={cn(
+          "flex flex-col gap-3 md:hidden",
+          loading && "pointer-events-none opacity-60",
+        )}
+      >
         {items.map((row) => {
           const href = row.block?.slug
             ? `/c/${row.block.slug}`
@@ -235,20 +247,13 @@ export function ParticipationsClient({
         })}
       </div>
 
-      {hasMore ? (
-        <div className="mt-6 flex justify-center">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={loadMore}
-            loading={loading}
-          >
-            {loading
-              ? PARTICIPATIONS_LABELS.loading
-              : PARTICIPATIONS_LABELS.loadMore}
-          </Button>
-        </div>
-      ) : null}
+      {/* Pagination */}
+      <Pagination
+        page={page}
+        pageCount={totalPages}
+        onChange={goToPage}
+        className="mt-8"
+      />
     </div>
   );
 }

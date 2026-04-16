@@ -133,7 +133,7 @@ export function Combobox({
             <span className="truncate">
               {selected?.label ??
                 placeholder ??
-                "Sélectionnez une option..."}
+                "Sélectionne une option…"}
             </span>
           </span>
           <ChevronDown

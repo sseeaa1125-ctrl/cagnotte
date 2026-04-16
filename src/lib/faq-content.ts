@@ -55,7 +55,7 @@ export const FAQ_SECTIONS: readonly FaqSection[] = [
       },
       {
         q: "Quelle est la différence entre cagnotte festive et cagnotte solidaire ?",
-        a: "Les cagnottes festives servent à faire plaisir (anniversaire, pot de départ, cadeau commun). Les cagnottes solidaires soutiennent une cause (santé, éducation, urgence). Les frais diffèrent : 8% festive, 6% solidaire.",
+        a: "Les cagnottes festives servent à faire plaisir (anniversaire, pot de départ, cadeau commun). Les cagnottes solidaires soutiennent une cause (santé, éducation, urgence). Les frais applicables sont présentés à l'organisateur au moment de la création.",
       },
       {
         q: "Puis-je modifier ma cagnotte après sa création ?",
@@ -93,7 +93,7 @@ export const FAQ_SECTIONS: readonly FaqSection[] = [
     items: [
       {
         q: "Comment participer à une cagnotte ?",
-        a: "Ouvre le lien de la cagnotte, clique sur « Participer », choisis un montant, remplis tes informations et valide le paiement via Wave, Orange Money, Free Money ou carte bancaire.",
+        a: "Ouvre le lien de la cagnotte, clique sur « Participer », choisis un montant, remplis tes informations et valide le paiement via Wave, Orange Money ou Free Money.",
       },
       {
         q: "Puis-je rester anonyme ?",
@@ -151,7 +151,7 @@ export const FAQ_SECTIONS: readonly FaqSection[] = [
       },
       {
         q: "Quelle commission cagnotte.sn prélève-t-elle ?",
-        a: "6% pour les cagnottes solidaires, 8% pour les cagnottes festives. La commission est toujours affichée au donateur avant le paiement et déduite automatiquement du montant collecté. Zéro frais caché.",
+        a: "La participation à une cagnotte est gratuite pour les donateurs. cagnotte.sn prélève une commission sur les contributions reçues côté organisateur ; le taux applicable est présenté en clair au moment de la création de la cagnotte et dépend du type choisi (festive ou solidaire).",
       },
     ],
   },
@@ -165,7 +165,7 @@ export const FAQ_SECTIONS: readonly FaqSection[] = [
       },
       {
         q: "Quels sont les frais appliqués sur les contributions ?",
-        a: "6% pour les cagnottes solidaires, 8% pour les cagnottes festives. Ces frais couvrent les coûts de paiement (Wave, Orange Money, Free Money, carte bancaire), l'hébergement et le support client.",
+        a: "Les donateurs paient exactement le montant qu'ils choisissent, sans frais ajoutés. Une commission est appliquée à l'organisateur sur le total collecté ; elle couvre les coûts de paiement Mobile Money, l'hébergement et le support. Le taux exact est présenté au moment de la création de la cagnotte.",
       },
       {
         q: "Y a-t-il des frais sur les retraits ?",
@@ -183,7 +183,7 @@ export const FAQ_SECTIONS: readonly FaqSection[] = [
     items: [
       {
         q: "Mon paiement a échoué. Que faire ?",
-        a: "Vérifie ton solde Mobile Money ou ton plafond de carte bancaire. Si le problème persiste, essaie un autre moyen de paiement ou réessaye dans quelques minutes. Si un débit apparaît malgré l'échec, contacte contact@cagnottes.sn avec la référence de la transaction.",
+        a: "Vérifie ton solde Mobile Money et que ton opérateur autorise bien le montant. Si le problème persiste, essaie un autre Mobile Money ou réessaye dans quelques minutes. Si un débit apparaît malgré l'échec, contacte contact@cagnottes.sn avec la référence de la transaction.",
       },
       {
         q: "L'image de ma cagnotte ne s'affiche pas.",

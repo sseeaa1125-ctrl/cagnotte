@@ -14,7 +14,8 @@ No screens are yet implemented.
 
 ## Done
 
-_(empty — greenfield)_
+- [x] `cagnotte-public-v3` (screen 21/22, Banani leaf `main_next2_next1_next1.jsx`, fresh 2026-04-14 export) — `src/app/(public)/c/[slug]/page.tsx` — plan: [cagnotte-detail-v3-and-participer-v2.md](cagnotte-detail-v3-and-participer-v2.md) — 2026-04-14 — replaces v2. Simpler cover+story card → participants grid → sticky sidebar. New `AnimatedProgressBar` primitive + `button-shine-sweep` keyframe on "Je participe" CTA. Mobile fixed bottom CTA bar below `lg`. Reuses `ProgressPoll` + `ShareSheet`.
+- [x] `participer-v2` (screen 23, Banani leaf `main_next2_next1_next2.jsx`, fresh 2026-04-14 export) — `src/app/(public)/c/[slug]/participer/ParticiperForm.tsx` — plan: [cagnotte-detail-v3-and-participer-v2.md](cagnotte-detail-v3-and-participer-v2.md) — 2026-04-14 — 3 numbered step cards + sticky Récapitulatif with inline 3% voluntary contribution + mobile fixed bottom CTA bar. Shine-sweep animation on the "Procéder au paiement" button. FCFA throughout.
 
 ## In progress
 

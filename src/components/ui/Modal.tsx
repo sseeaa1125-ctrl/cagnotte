@@ -84,7 +84,7 @@ export function Modal({
 
   const node = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-[fadeIn_0.2s]"
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-3 pb-[calc(env(safe-area-inset-bottom)+12px)] animate-[fadeIn_0.2s] sm:p-4"
       onClick={() => {
         if (closeOnBackdrop) onClose();
       }}
@@ -98,17 +98,17 @@ export function Modal({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "relative w-full rounded-2xl bg-background shadow-xl animate-[scaleIn_0.2s] focus:outline-none",
+          "relative my-auto w-full max-h-[calc(100vh-24px)] overflow-y-auto rounded-2xl bg-background shadow-xl animate-[scaleIn_0.2s] focus:outline-none",
           SIZE_CLASSES[size],
           className,
         )}
       >
         {(title || true) && (
-          <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-border px-4 py-3 sm:px-6 sm:py-4">
             {title ? (
               <h2
                 id={titleId}
-                className="font-headings text-lg font-semibold text-primary"
+                className="font-headings text-base font-semibold text-primary sm:text-lg"
               >
                 {title}
               </h2>
@@ -126,7 +126,7 @@ export function Modal({
           </div>
         )}
 
-        <div className="p-6">{children}</div>
+        <div className="p-4 sm:p-6">{children}</div>
       </div>
     </div>
   );

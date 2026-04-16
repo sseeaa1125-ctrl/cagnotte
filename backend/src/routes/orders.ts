@@ -32,11 +32,18 @@ const createOrderSchema = z.object({
   sellerSlug: z.string(),
   orderType: z.enum(["SALE", "BOOKING", "PAYMENT", "DONATION"]),
   amount: z.number().int().min(500).max(10_000_000),
-  paymentType: z.enum(["orange_money", "wave_money", "maxit", "mtn_money", "moov", "togocell", "mobicash", "card"]), // Tous les types acceptés (actifs + futurs)
+  // cagnottes.sn v1 — donations SN uniquement. Les opérateurs acceptés
+  // sont Wave (wave_money), Orange Money (orange_money) et Maxit (maxit,
+  // canal Bictorys dédié au nouveau nom SN d'Orange Money). Les opérateurs
+  // régionaux (mtn_money CI, togocell TG, mobicash BF, moov BF/TG/BJ,
+  // etc.) sont retirés de l'enum public — un ré-élargissement WAEMU
+  // passera par une décision business explicite + ajout cas-par-cas.
+  paymentType: z.enum(["orange_money", "wave_money", "maxit"]),
   paymentCountry: z.string().length(2).optional(),
   customerEmail: z.string().email().optional(),
-  customerName: z.string().optional(),
-  customerPhone: z.string().min(1, "Numéro de téléphone requis"),
+  // Audit 011 B-01: cap free-text name to prevent DB bloat / DoS.
+  customerName: z.string().trim().max(120).optional(),
+  customerPhone: z.string().min(1, "Numéro de téléphone requis").max(30),
   productId: z.string().optional(),
   bookingServiceId: z.string().optional(),
   bookingDate: z.string().optional(),
@@ -74,6 +81,10 @@ const orderIpMinuteLimiter = rateLimit({
   legacyHeaders: false,
   store: new RedisRateLimitStore("order-ip-min"),
   message: { error: "Trop de commandes, réessaye dans une minute." },
+  // Stacked with orderIpHourLimiter below — both share the default IP key,
+  // which trips express-rate-limit's singleCount validator. The stacking is
+  // intentional (tighter minute + hourly ceilings), so disable the false-positive.
+  validate: { singleCount: false },
 });
 
 const orderIpHourLimiter = rateLimit({
@@ -83,6 +94,7 @@ const orderIpHourLimiter = rateLimit({
   legacyHeaders: false,
   store: new RedisRateLimitStore("order-ip-hour"),
   message: { error: "Trop de commandes cette heure. Patiente un moment." },
+  validate: { singleCount: false },
 });
 
 const orderEmailMinuteLimiter = rateLimit({

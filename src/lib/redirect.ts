@@ -20,7 +20,10 @@ const PAY_REDIRECT_ALLOWED_DOMAINS = [
   "checkout.bfrpay.com",
   "checkout.bfrpay.net",
   "pay.bfrpay.com",
-  "pay.bictorys.com",
+  // `bictorys.com` (racine) couvre pay.bictorys.com (prod) ET
+  // api.test.bictorys.com (simulateur test). Le match `endsWith(".bictorys.com")`
+  // n'ouvre que les sous-domaines Bictorys — acceptable en défense-en-profondeur.
+  "bictorys.com",
 ];
 
 export type OpenResult = "navigated" | "shared" | "copied" | "unsupported";
@@ -68,7 +71,9 @@ export function buildProxyRedirectUrl(bictorysUrl: string): string {
 export async function openPaymentUrl(url: string): Promise<OpenResult> {
   // Defense-in-depth allowlist.
   if (!isAllowedPayDomain(url)) {
-    console.warn("[openPaymentUrl] Unknown domain, refusing:", url);
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[openPaymentUrl] Unknown domain, refusing:", url);
+    }
     return "unsupported";
   }
 

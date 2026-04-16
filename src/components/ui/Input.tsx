@@ -84,7 +84,7 @@ export function Input({
       </div>
 
       {error ? (
-        <p id={`${inputId}-desc`} className="text-xs text-red-500">
+        <p id={`${inputId}-desc`} className="text-sm font-medium text-red-500">
           {error}
         </p>
       ) : helper ? (

@@ -267,7 +267,29 @@ const kycSubmitSchema = z.object({
   selfieUrl: z.string().url("URL du selfie invalide"),
 });
 
-sellersRouter.post("/kyc", verifyCsrf, requireAuth, async (req, res) => {
+// Audit 2026-04-14 #3 — KYC submission rate limit. Without it an attacker
+// could spam document uploads (each one already pinned to R2 by the upload
+// route) and force manual review queue saturation. 5 submissions per 24h
+// per IP is generous for legitimate retries after rejection but blocks
+// abuse cleanly.
+const kycSubmitLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisRateLimitStore("kyc-submit"),
+  message: {
+    error:
+      "Trop de soumissions KYC. Réessaye demain ou contacte support@cagnotte.sn.",
+  },
+});
+
+sellersRouter.post(
+  "/kyc",
+  kycSubmitLimiter,
+  verifyCsrf,
+  requireAuth,
+  async (req, res) => {
   try {
     const sellerId = req.seller!.sub;
     const data = kycSubmitSchema.parse(req.body);
@@ -313,7 +335,8 @@ sellersRouter.post("/kyc", verifyCsrf, requireAuth, async (req, res) => {
     logger.error("Erreur KYC submit", err);
     res.status(500).json({ error: "Erreur interne" });
   }
-});
+  },
+);
 
 // ── GET /api/sellers/me/participations — donor-side view of paid donations ──
 // Phase 6 plan 06-01 (ATHD-03). MUST be registered BEFORE the /:slug catch-all
@@ -339,42 +362,57 @@ sellersRouter.get("/me/participations", requireAuth, async (req, res) => {
 
     const rawLimit = parseInt((req.query.limit as string) || "20", 10);
     const limit = Math.min(Math.max(isNaN(rawLimit) ? 20 : rawLimit, 1), 50);
+    // Page-based pagination (1-indexed). Falls back to cursor if provided.
+    const rawPage = parseInt((req.query.page as string) || "1", 10);
+    const page = Math.max(isNaN(rawPage) ? 1 : rawPage, 1);
     const cursor = (req.query.cursor as string) || undefined;
 
-    const orders = await prisma.order.findMany({
-      where: {
-        customerEmail: seller.email,
-        paymentStatus: "PAID",
-        orderType: "DONATION",
-        blockId: { not: null },
-      },
-      orderBy: { createdAt: "desc" },
-      take: limit + 1,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      select: {
-        id: true,
-        reference: true,
-        amount: true,
-        customerName: true,
-        isAnonymous: true,
-        createdAt: true,
-        paidAt: true,
-        block: {
-          select: {
-            id: true,
-            slug: true,
-            title: true,
-            isActive: true,
-            config: true,
-            seller: { select: { displayName: true, slug: true } },
-          },
+    const where = {
+      customerEmail: seller.email,
+      paymentStatus: "PAID" as const,
+      orderType: "DONATION" as const,
+      blockId: { not: null },
+    };
+
+    const selectFields = {
+      id: true,
+      reference: true,
+      amount: true,
+      customerName: true,
+      isAnonymous: true,
+      createdAt: true,
+      paidAt: true,
+      block: {
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          isActive: true,
+          config: true,
+          seller: { select: { displayName: true, slug: true } },
         },
       },
-    });
+    } as const;
+
+    const [orders, totalCount] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        take: limit + 1,
+        ...(cursor
+          ? { cursor: { id: cursor }, skip: 1 }
+          : { skip: (page - 1) * limit }),
+        select: selectFields,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
     const hasMore = orders.length > limit;
     const items = hasMore ? orders.slice(0, limit) : orders;
     const nextCursor = hasMore ? items[items.length - 1].id : null;
-    res.json({ items, nextCursor, hasMore });
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.json({ items, nextCursor, hasMore, totalCount, totalPages, currentPage: page });
   } catch (err) {
     logger.error("Erreur /me/participations", err);
     res.status(500).json({ error: "Erreur interne" });

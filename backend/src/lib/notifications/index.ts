@@ -58,32 +58,43 @@ export interface CreateNotificationResult {
 }
 
 /**
- * Map NotificationType → Seller.notificationPrefs JSON key.
+ * Map NotificationType → list of Seller.notificationPrefs JSON keys.
  *
- * The prefs JSON shape is documented in routes/notifications.ts PATCH /prefs:
- *   { donations, milestones, payouts, kyc, endingSoon, cagnotteEnded, donationMessages }
+ * Returns BOTH the legacy Phase 2 key and the Phase 6 Banani key for each
+ * type. `createNotification` skips the notification if ANY of the returned
+ * keys is explicitly set to `false` — so a user flipping either toggle in
+ * any version of the prefs UI actually takes effect.
+ *
+ * Audit 026 HIGH-2: previously returned a single legacy key, which meant
+ * the Banani /profil/preferences toggles were silently ignored (frontend
+ * wrote `newParticipation: false`, backend only checked `donations`).
  */
-export function notifTypeToPrefKey(type: NotificationType): string {
+export function notifTypeToPrefKeys(
+  type: NotificationType,
+): readonly string[] {
   switch (type) {
     case "DONATION_RECEIVED":
-      return "donations";
+      return ["donations", "newParticipation"];
     case "MILESTONE_REACHED":
-      return "milestones";
+      return ["milestones", "milestoneReached"];
     case "CAGNOTTE_ENDING_SOON":
-      return "endingSoon";
+      return ["endingSoon", "endingSoonReminder"];
     case "CAGNOTTE_ENDED":
-      return "cagnotteEnded";
+      // No Banani equivalent — legacy key only
+      return ["cagnotteEnded"];
     case "DONATION_MESSAGE":
-      return "donationMessages";
+      // organizerUpdates is donor-side in Banani; donationMessages is
+      // creator-side. No clean overlap — legacy key only.
+      return ["donationMessages"];
     case "PAYOUT_COMPLETED":
     case "PAYOUT_FAILED":
-      return "payouts";
+      return ["payouts", "paymentReceipts"];
     case "KYC_APPROVED":
     case "KYC_REJECTED":
-      return "kyc";
+      return ["kyc", "paymentReceipts"];
     default: {
-      // Exhaustiveness — TypeScript will flag a missing case here at compile time
-      // if NotificationType ever grows.
+      // Exhaustiveness — TypeScript will flag a missing case here at compile
+      // time if NotificationType ever grows.
       const _exhaustive: never = type;
       return _exhaustive;
     }
@@ -105,9 +116,12 @@ export async function createNotification(
     }
 
     const prefs = (seller.notificationPrefs as Record<string, boolean> | null) || {};
-    const prefKey = notifTypeToPrefKey(input.type);
-    if (prefs[prefKey] === false) {
-      logger.log(`[notifications] Skip ${input.type} for ${input.sellerId} — pref ${prefKey} disabled`);
+    const prefKeys = notifTypeToPrefKeys(input.type);
+    // Audit 026 HIGH-2: skip if ANY legacy OR Banani key is set to false.
+    // Default-safe: missing keys mean enabled (matches Phase 2 behavior).
+    const disabledKey = prefKeys.find((k) => prefs[k] === false);
+    if (disabledKey) {
+      logger.log(`[notifications] Skip ${input.type} for ${input.sellerId} — pref ${disabledKey} disabled`);
       return { created: false, notification: null };
     }
 

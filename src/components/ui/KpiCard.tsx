@@ -34,7 +34,9 @@ export function KpiCard({
         </div>
       </div>
 
-      <p className="text-2xl font-bold text-primary">{value}</p>
+      <p className="break-words font-headings text-xl font-black text-primary sm:text-2xl">
+        {value}
+      </p>
 
       {trend ? (
         <div

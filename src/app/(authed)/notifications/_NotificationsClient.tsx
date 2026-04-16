@@ -195,7 +195,7 @@ export function NotificationsClient({
         ) : null}
       </header>
 
-      <div className="rounded-3xl border border-border bg-white shadow-sm">
+      <div className="rounded-2xl border border-border bg-white shadow-sm">
         {/* Tabs */}
         <div
           role="tablist"
@@ -206,8 +206,9 @@ export function NotificationsClient({
             href="/notifications?filter=all"
             role="tab"
             aria-selected={activeFilter === "all"}
+            aria-current={activeFilter === "all" ? "page" : undefined}
             className={cn(
-              "min-h-12 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
+              "inline-flex min-h-12 items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               activeFilter === "all"
                 ? "bg-muted text-primary"
@@ -220,8 +221,9 @@ export function NotificationsClient({
             href="/notifications?filter=unread"
             role="tab"
             aria-selected={activeFilter === "unread"}
+            aria-current={activeFilter === "unread" ? "page" : undefined}
             className={cn(
-              "min-h-12 rounded-xl px-4 py-2 text-sm font-medium transition-colors",
+              "inline-flex min-h-12 items-center rounded-xl px-4 py-2 text-sm font-medium transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               activeFilter === "unread"
                 ? "bg-muted text-primary"
@@ -235,7 +237,7 @@ export function NotificationsClient({
         {/* Feed */}
         <ul className="divide-y divide-border">
           {visible.length === 0 ? (
-            <li className="px-6 py-12 text-center text-sm text-muted-foreground">
+            <li className="px-6 py-8 text-center text-sm text-muted-foreground">
               {NOTIF_FEED_LABELS.empty}
             </li>
           ) : (

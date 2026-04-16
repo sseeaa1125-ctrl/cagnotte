@@ -41,9 +41,13 @@ const VARIANT_CLASSES: Record<Variant, string> = {
     "bg-background text-primary border border-border shadow-sm hover:bg-muted hover:shadow-md active:scale-[0.98]",
 };
 
+// `lg` steps down to `md` on mobile so callers don't need to think about
+// responsive sizing per-usage. Audit 025: the 56px lg button overwhelmed
+// forms, wizards, and inline CTAs on 375px. It now renders at 48px
+// (min-h-12) on mobile and grows to the full 56px at sm+ (≥ 640px).
 const SIZE_CLASSES: Record<Size, string> = {
   md: "min-h-12 px-5 py-3.5 text-sm font-semibold",
-  lg: "min-h-14 px-6 py-4 text-base font-semibold",
+  lg: "min-h-12 px-5 py-3.5 text-sm font-semibold sm:min-h-14 sm:px-6 sm:py-4 sm:text-base",
 };
 
 const SOCIAL_CLASSES: Record<SocialProvider, string> = {

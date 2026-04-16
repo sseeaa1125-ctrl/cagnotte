@@ -43,7 +43,7 @@ export interface DatePickerProps {
   className?: string;
 }
 
-const DEFAULT_PLACEHOLDER = "Sélectionnez une date...";
+const DEFAULT_PLACEHOLDER = "Sélectionne une date…";
 
 const MONTHS_FR = [
   "janvier",

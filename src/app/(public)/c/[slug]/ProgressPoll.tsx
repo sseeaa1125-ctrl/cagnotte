@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { ProgressBar } from "@/components/ui";
+import { AnimatedProgressBar } from "@/components/ui";
 import { api } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
+import { computeProgress } from "@/lib/progress";
 
 interface ProgressPollProps {
   slug: string;
@@ -21,6 +22,12 @@ interface CagnotteDetailResponse {
 
 const POLL_INTERVAL_MS = 20_000;
 
+// Phase 10 v3 — Full progress card for the detail page sticky sidebar.
+// Renders the amount + AnimatedProgressBar + percent/participations row,
+// all wired to a 20s visibility-aware poll of /api/cagnottes/:slug so the
+// sidebar stays live while the tab is focused. The underlying
+// AnimatedProgressBar replays its mount animation the first time and
+// then glides to each new target via a CSS width transition.
 export function ProgressPoll({
   slug,
   initialTotalRaised,
@@ -67,29 +74,45 @@ export function ProgressPoll({
     };
   }, [slug]);
 
-  const percent =
-    goalAmount > 0
-      ? Math.min(100, Math.round((totalRaised / goalAmount) * 100))
-      : 0;
+  const { percent, barWidth } = computeProgress(totalRaised, goalAmount);
 
   return (
-    <div className="space-y-3">
-      {!hideAmount && (
-        <div>
-          <p className="font-headings text-2xl font-bold text-primary">
+    <div className="mb-8">
+      {!hideAmount ? (
+        // Stacked layout — prevents truncation at every width. The
+        // amount uses clamp() so it scales smoothly between 24px (375px
+        // mobile) and 36px (desktop sticky sidebar), and tabular-nums
+        // keeps digit widths consistent while it animates via polling.
+        <div className="mb-3 flex flex-col gap-1">
+          <span className="break-words font-headings font-black leading-[1.1] text-primary tabular-nums text-[clamp(1.5rem,5vw,2.25rem)]">
             {formatPrice(totalRaised)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            collectés sur {formatPrice(goalAmount)}
-          </p>
+          </span>
+          {goalAmount > 0 ? (
+            <span className="text-sm font-medium text-gray-500">
+              sur {formatPrice(goalAmount)}
+            </span>
+          ) : null}
         </div>
-      )}
-      <ProgressBar value={percent} />
-      {!hideDonors && (
-        <p className="text-sm text-muted-foreground">
-          {donorCount} {donorCount === 1 ? "participant" : "participants"}
+      ) : (
+        <p className="mb-3 text-sm italic text-gray-500">
+          Montant masqué par le créateur
         </p>
       )}
+
+      <AnimatedProgressBar percent={barWidth} />
+
+      <div className="mt-3 flex items-center justify-between text-xs font-bold sm:text-sm">
+        {goalAmount > 0 ? (
+          <span className="text-primary">{percent}% de l&apos;objectif</span>
+        ) : (
+          <span />
+        )}
+        {!hideDonors ? (
+          <span className="text-gray-500">
+            {donorCount} participation{donorCount > 1 ? "s" : ""}
+          </span>
+        ) : null}
+      </div>
     </div>
   );
 }

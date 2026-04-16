@@ -35,6 +35,9 @@ interface ParticipationsPayload {
   items: ParticipationRow[];
   nextCursor: string | null;
   hasMore: boolean;
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
 }
 
 async function fetchParticipations(
@@ -85,8 +88,8 @@ export default async function ParticipationsPage() {
     fetchSellerEmail(token),
   ]);
   const items = payload?.items ?? [];
-  const nextCursor = payload?.nextCursor ?? null;
-  const hasMore = payload?.hasMore ?? false;
+  const totalCount = payload?.totalCount ?? 0;
+  const totalPages = payload?.totalPages ?? 1;
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -108,22 +111,17 @@ export default async function ParticipationsPage() {
 
       {items.length === 0 ? (
         <EmptyState
-          icon={<Gift size={28} aria-hidden />}
+          icon={<Gift size={24} aria-hidden />}
           title={PARTICIPATIONS_LABELS.empty}
           cta={
-            <Button
-              as="a"
-              href="/cagnottes"
-              variant="primary"
-              size="lg"
-            >
+            <Button as="a" href="/cagnottes" variant="primary" size="lg">
               {PARTICIPATIONS_LABELS.emptyCta}
             </Button>
           }
         />
       ) : (
         <ParticipationsClient
-          initial={{ items, nextCursor, hasMore }}
+          initial={{ items, totalCount, totalPages }}
         />
       )}
     </div>

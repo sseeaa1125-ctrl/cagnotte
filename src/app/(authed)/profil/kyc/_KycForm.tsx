@@ -180,11 +180,14 @@ export function KycForm({
   // NONE / REJECTED — upload form
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!idFile || !selfieFile) {
-      toast(KYC_LABELS.missingFiles, "error");
+    // Audit 2026-04-14 #25 — double-submit guard. Two simultaneous KYC
+    // POSTs would create duplicate R2 uploads AND race the rate limiter.
+    if (submitting) return;
+    if (fullName.trim().length < 2) {
+      toast(KYC_LABELS.nameTooShort, "error");
       return;
     }
-    if (fullName.trim().length < 2) {
+    if (!idFile || !selfieFile) {
       toast(KYC_LABELS.missingFiles, "error");
       return;
     }

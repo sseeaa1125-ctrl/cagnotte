@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Info } from "lucide-react";
 import { Button, Input, RadioCard, useToast } from "@/components/ui";
@@ -72,13 +73,15 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* Provider picker — Wave + Orange ONLY (D-22) */}
-      <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-sm font-medium text-primary">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {/* Provider picker — Wave + Orange ONLY (D-22). No fieldset
+          wrapper: the legend was rendered like a section heading and the
+          extra nesting was adding perceived padding on mobile. */}
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-primary">
           {BANK_LABELS.providerLabel}
-        </legend>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        </p>
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
           <RadioCard
             name="bank-provider"
             value="wave_money"
@@ -87,8 +90,14 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
             title={BANK_LABELS.providerWave}
             description={BANK_LABELS.providerWaveHelper}
             icon={
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3374FF] font-headings text-lg font-black text-white">
-                W
+              <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-border">
+                <Image
+                  src="/wave.png"
+                  alt="Wave"
+                  width={40}
+                  height={40}
+                  className="h-8 w-8 object-contain"
+                />
               </span>
             }
           />
@@ -100,24 +109,23 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
             title={BANK_LABELS.providerOrange}
             description={BANK_LABELS.providerOrangeHelper}
             icon={
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FF6600] font-headings text-lg font-black text-white">
-                O
+              <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white ring-1 ring-border">
+                <Image
+                  src="/orange-money.png"
+                  alt="Orange Money"
+                  width={40}
+                  height={40}
+                  className="h-8 w-8 object-contain"
+                />
               </span>
             }
           />
         </div>
-
-        <div className="mt-1 flex items-start gap-2 rounded-xl bg-blue-50/60 p-3">
-          <Info
-            size={16}
-            className="mt-0.5 flex-shrink-0 text-blue-700"
-            aria-hidden
-          />
-          <p className="text-xs text-blue-900">
-            {BANK_LABELS.noFreeMoneyNotice}
-          </p>
-        </div>
-      </fieldset>
+        <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+          <Info size={14} className="mt-0.5 flex-shrink-0" aria-hidden />
+          {BANK_LABELS.noFreeMoneyNotice}
+        </p>
+      </div>
 
       {/* Phone with +221 prefix badge */}
       <div className="flex w-full flex-col gap-1.5">
@@ -128,7 +136,7 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
           {BANK_LABELS.phoneLabel}
         </label>
         <div className="flex items-center gap-2">
-          <span className="flex h-12 items-center rounded-lg border border-border bg-muted px-3 text-sm font-medium text-primary">
+          <span className="flex h-12 flex-shrink-0 items-center rounded-lg border border-border bg-muted px-3 text-sm font-medium text-primary">
             +221
           </span>
           <input
@@ -139,9 +147,9 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
             maxLength={9}
             value={phone}
             onChange={(e) => setPhone(normalizePhone(e.target.value))}
-            placeholder={BANK_LABELS.phoneHelper}
+            placeholder="77 123 45 67"
             className={cn(
-              "min-h-12 flex-1 rounded-lg border border-border bg-background px-4 py-3 text-base text-primary placeholder:text-muted-foreground",
+              "min-h-12 w-full min-w-0 flex-1 rounded-lg border border-border bg-background px-4 py-3 text-base text-primary placeholder:text-muted-foreground",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             )}
           />
@@ -160,24 +168,14 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
         autoComplete="name"
       />
 
-      {/* Security notice */}
-      <div className="flex items-start gap-2 rounded-xl bg-blue-50/60 p-4">
-        <Info
-          size={18}
-          className="mt-0.5 flex-shrink-0 text-blue-700"
-          aria-hidden
-        />
-        <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold text-blue-900">
-            {BANK_LABELS.securityNoticeTitle}
-          </p>
-          <p className="text-xs text-blue-900/80">
-            {BANK_LABELS.securityNoticeBody}
-          </p>
-        </div>
-      </div>
+      {/* Security notice — compact inline caption (no more nested
+          padded box inside a padded card inside a padded shell). */}
+      <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
+        <Info size={14} className="mt-0.5 flex-shrink-0" aria-hidden />
+        <span>{BANK_LABELS.securityNoticeBody}</span>
+      </p>
 
-      <div className="flex items-center justify-end pt-2">
+      <div className="flex flex-col items-end gap-1.5 pt-1">
         <Button
           type="submit"
           variant="primary"
@@ -187,6 +185,15 @@ export function BankForm({ initial }: { initial: BankFormInitial }) {
         >
           {saving ? BANK_LABELS.saving : BANK_LABELS.save}
         </Button>
+        {!canSubmit && !saving && (
+          <p className="text-xs text-muted-foreground">
+            {phone.length < 9
+              ? "Numéro à 9 chiffres requis"
+              : name.trim().length === 0
+                ? "Nom du titulaire requis"
+                : ""}
+          </p>
+        )}
       </div>
     </form>
   );

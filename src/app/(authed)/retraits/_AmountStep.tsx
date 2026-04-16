@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Lock, Plus } from "lucide-react";
@@ -91,22 +92,22 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
     <div className="mx-auto max-w-3xl">
       <form
         onSubmit={handleContinue}
-        className="flex flex-col gap-6 overflow-hidden rounded-3xl bg-white shadow-sm"
+        className="flex flex-col gap-6 overflow-hidden rounded-2xl bg-white shadow-sm"
       >
         {/* Dark-navy hero header — Banani WithdrawFundsForm */}
-        <header className="bg-primary px-6 py-8 text-white md:px-10 md:py-10">
-          <h1 className="font-headings text-2xl font-black md:text-3xl">
+        <header className="bg-primary px-4 py-6 text-white sm:px-6 sm:py-6 md:px-8 md:py-8">
+          <h1 className="font-headings text-xl font-black sm:text-2xl md:text-3xl">
             {WITHDRAW_LABELS.pageTitle}
           </h1>
-          <p className="mt-2 max-w-md text-sm font-medium text-blue-100">
+          <p className="mt-2 max-w-md text-sm font-medium text-white/70">
             {WITHDRAW_LABELS.pageHelper}
           </p>
         </header>
 
-        <div className="flex flex-col gap-8 px-6 pb-6 md:px-10 md:pb-10">
+        <div className="flex flex-col gap-6 px-4 pb-5 sm:gap-6 sm:px-6 sm:pb-6 md:px-8 md:pb-8">
           {/* Balance card */}
-          <div className="flex items-center justify-between rounded-2xl bg-gray-50 p-5">
-            <div>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-gray-50 p-4 sm:flex-nowrap sm:p-5">
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-wide text-gray-500">
                 {WITHDRAWAL_LABELS.balanceLabel}
               </p>
@@ -114,22 +115,22 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
                 {WITHDRAWAL_LABELS.balanceHelper}
               </p>
             </div>
-            <p className="font-headings text-2xl font-black text-primary md:text-3xl">
+            <p className="font-headings text-xl font-black text-primary sm:text-2xl md:text-3xl">
               {formatPrice(balance)}
             </p>
           </div>
 
           {/* Step 1 — Montant à retirer */}
           <section className="flex flex-col gap-3">
-            <h2 className="flex items-center gap-3 font-headings text-xl font-black text-primary">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
+            <h2 className="flex items-center gap-3 font-headings text-lg font-black text-primary sm:text-xl">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
                 1
               </span>
               {WITHDRAW_LABELS.step1Title}
             </h2>
             <div
               className={cn(
-                "flex items-center gap-2 rounded-2xl border-2 border-primary bg-blue-50/30 px-4 py-4 md:px-6",
+                "flex items-center gap-2 rounded-2xl border-2 border-primary bg-pink/40 px-4 py-4 md:px-6",
               )}
             >
               <input
@@ -143,6 +144,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
                 }
                 placeholder="0"
                 className="min-w-0 flex-1 bg-transparent font-headings text-2xl font-black text-primary placeholder:text-primary/30 focus:outline-none md:text-3xl"
+                aria-label="Montant à retirer en FCFA"
                 aria-describedby="withdrawal-amount-helper"
               />
               <span className="font-headings text-lg font-bold text-primary md:text-xl">
@@ -151,7 +153,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
               <button
                 type="button"
                 onClick={handleMax}
-                className="inline-flex min-h-10 items-center rounded-full bg-blue-100 px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="inline-flex min-h-10 items-center rounded-full bg-pink px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-[#F4D3DE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 {WITHDRAW_LABELS.maxChip}
               </button>
@@ -166,8 +168,8 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
 
           {/* Step 2 — Où envoyer l'argent ? */}
           <section className="flex flex-col gap-4">
-            <h2 className="flex items-center gap-3 font-headings text-xl font-black text-primary">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
+            <h2 className="flex items-center gap-3 font-headings text-lg font-black text-primary sm:text-xl">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-primary">
                 2
               </span>
               {WITHDRAW_LABELS.step2Title}
@@ -208,7 +210,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
 
             <Link
               href="/profil/coordonnees-bancaires"
-              className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 px-4 py-4 text-sm font-bold text-gray-500 transition-colors hover:border-primary hover:text-primary"
+              className="flex min-h-14 items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-4 text-sm font-bold text-muted-foreground shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-pink/40 hover:text-primary hover:shadow-md active:translate-y-0 active:scale-[0.98]"
             >
               <Plus size={16} aria-hidden />
               {WITHDRAW_LABELS.addAccountCta}
@@ -272,7 +274,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
                 <span className="text-sm text-gray-500">
                   {WITHDRAW_LABELS.summaryFees}
                 </span>
-                <span className="text-sm font-semibold text-green-600">
+                <span className="text-sm font-semibold text-[#00B67A]">
                   {WITHDRAW_LABELS.summaryFeesFree}
                 </span>
               </div>
@@ -280,7 +282,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
                 <span className="text-sm font-semibold text-primary">
                   {WITHDRAW_LABELS.summaryNet}
                 </span>
-                <span className="font-headings text-xl font-black text-green-600">
+                <span className="font-headings text-xl font-black text-[#00B67A]">
                   {formatPrice(displayAmount)}
                 </span>
               </div>
@@ -332,10 +334,10 @@ function OperatorTile({
   return (
     <label
       className={cn(
-        "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 p-4 transition-colors",
+        "flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 p-3 transition-colors sm:p-4 md:p-5",
         "focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2",
         checked
-          ? "border-primary bg-blue-50/30"
+          ? "border-primary bg-pink/40"
           : "border-gray-100 bg-white hover:border-primary",
       )}
     >
@@ -359,13 +361,14 @@ function OperatorTile({
             <span className="h-2.5 w-2.5 rounded-full bg-primary" />
           ) : null}
         </span>
-        <span
-          className={cn(
-            "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl font-headings text-xl font-black text-white shadow-sm",
-            brand === "wave" ? "bg-[#3374FF]" : "bg-[#FF6600]",
-          )}
-        >
-          {brand === "wave" ? "W" : "O"}
+        <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-border">
+          <Image
+            src={brand === "wave" ? "/wave.png" : "/orange-money.png"}
+            alt={brand === "wave" ? "Wave" : "Orange Money"}
+            width={48}
+            height={48}
+            className="h-10 w-10 object-contain"
+          />
         </span>
         <div className="min-w-0">
           <p className="truncate font-headings text-base font-bold text-primary">
@@ -377,7 +380,7 @@ function OperatorTile({
         </div>
       </div>
       {instant ? (
-        <span className="hidden rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-600 sm:inline-flex">
+        <span className="inline-flex rounded-full bg-[#E6F3EE] px-3 py-1 text-xs font-bold text-[#00B67A]">
           {WITHDRAW_LABELS.instantBadge}
         </span>
       ) : null}

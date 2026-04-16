@@ -39,14 +39,17 @@ export function Pagination({
 
   return (
     <nav
-      className={cn("flex items-center justify-center gap-1", className)}
+      className={cn(
+        "flex flex-wrap items-center justify-center gap-1.5 sm:gap-1",
+        className,
+      )}
       aria-label="Pagination"
     >
       <button
         type="button"
         onClick={() => canPrev && onChange(page - 1)}
         disabled={!canPrev}
-        className="flex min-h-10 min-w-10 items-center justify-center rounded-md border border-border text-primary hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="flex min-h-12 min-w-12 md:min-h-10 md:min-w-10 items-center justify-center rounded-md border border-border text-primary hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         aria-label="Page précédente"
       >
         <ChevronLeft size={18} />
@@ -56,7 +59,7 @@ export function Pagination({
         item === "..." ? (
           <span
             key={`ellipsis-${idx}`}
-            className="flex min-h-10 min-w-10 items-center justify-center text-muted-foreground"
+            className="flex min-h-12 min-w-12 md:min-h-10 md:min-w-10 items-center justify-center text-muted-foreground"
             aria-hidden
           >
             …
@@ -68,7 +71,7 @@ export function Pagination({
             onClick={() => onChange(item)}
             aria-current={item === page ? "page" : undefined}
             className={cn(
-              "flex min-h-10 min-w-10 items-center justify-center rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+              "flex min-h-12 min-w-12 md:min-h-10 md:min-w-10 items-center justify-center rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               item === page
                 ? "bg-primary text-primary-foreground"
                 : "border border-border text-primary hover:bg-muted",
@@ -83,7 +86,7 @@ export function Pagination({
         type="button"
         onClick={() => canNext && onChange(page + 1)}
         disabled={!canNext}
-        className="flex min-h-10 min-w-10 items-center justify-center rounded-md border border-border text-primary hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        className="flex min-h-12 min-w-12 md:min-h-10 md:min-w-10 items-center justify-center rounded-md border border-border text-primary hover:bg-muted disabled:opacity-40 disabled:hover:bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         aria-label="Page suivante"
       >
         <ChevronRight size={18} />

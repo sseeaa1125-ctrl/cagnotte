@@ -3,7 +3,7 @@ import Link from "next/link";
 import {
   User,
   Lock,
-  CreditCard,
+  Wallet,
   Bell,
   ShieldCheck,
   ShieldAlert,
@@ -109,7 +109,7 @@ export function ProfileSidebar({
     {
       label: PROFILE_SIDEBAR.tabBank,
       href: "/profil/coordonnees-bancaires",
-      icon: <CreditCard size={18} />,
+      icon: <Wallet size={18} />,
       active: activeTab === "bank",
     },
     {

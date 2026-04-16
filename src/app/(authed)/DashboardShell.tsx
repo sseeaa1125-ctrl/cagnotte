@@ -1,17 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { BottomNav } from "@/components/layout/BottomNav";
 import { DashboardNavbar } from "@/components/layout/DashboardNavbar";
 import { ConfirmDialog } from "@/components/ui";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Client island that wraps the Phase 3 DashboardNavbar so we can pass the
-// AuthContext logout callback without turning the (authed) layout into a
-// client component. Server layout owns the redirect-guard, this wrapper
-// owns the logout action + confirmation dialog.
+// Client island that wraps the DashboardNavbar + BottomNav so we can pass
+// the AuthContext logout callback without turning the (authed) layout into
+// a client component. Server layout owns the redirect-guard, this wrapper
+// owns the logout action + confirmation dialog + mobile bottom nav.
 //
-// unreadCount is hardcoded to 0 in v1 — Phase 6 will wire the bell badge
-// to /api/notifications/count via a small client island.
+// Audit 026 HIGH-1: BottomNav owns its own /api/notifications/count polling
+// now. No unreadCount prop drilling from here.
 
 interface DashboardShellProps {
   seller: { displayName: string; avatarUrl: string | null };
@@ -32,9 +33,9 @@ export function DashboardShell({ seller }: DashboardShellProps) {
     <>
       <DashboardNavbar
         seller={seller}
-        unreadCount={0}
         onLogout={() => setConfirmOpen(true)}
       />
+      <BottomNav />
       <ConfirmDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}

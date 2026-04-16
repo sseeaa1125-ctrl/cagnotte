@@ -33,7 +33,7 @@ export function Tabs({ tabs, value, onChange, className }: TabsProps) {
             aria-selected={active}
             onClick={() => onChange(tab.value)}
             className={cn(
-              "inline-flex min-h-10 flex-shrink-0 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors",
+              "inline-flex min-h-12 flex-shrink-0 items-center rounded-full px-4 py-2 text-sm font-medium transition-colors md:min-h-10",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
               active
                 ? "bg-primary text-primary-foreground"

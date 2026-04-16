@@ -32,8 +32,16 @@ export class RedisRateLimitStore implements Store {
   private keyPrefix: string;
   private windowMs!: number;
 
+  // express-rate-limit v8 singleCount validator reads these two properties to
+  // distinguish store instances. Without them every RedisRateLimitStore shares
+  // the same identity ("RedisRateLimitStore" + empty prefix), and stacked
+  // limiters on the same request trigger ERR_ERL_DOUBLE_COUNT false positives.
+  readonly prefix: string;
+  readonly localKeys: boolean = true;
+
   constructor(keyPrefix: string) {
     this.keyPrefix = keyPrefix;
+    this.prefix = keyPrefix;
   }
 
   /**

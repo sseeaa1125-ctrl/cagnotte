@@ -2,10 +2,10 @@ import { Resend } from "resend";
 import * as logger from "./logger.js";
 
 if (!process.env.RESEND_API_KEY) {
-  console.warn("[Email] ⚠️ RESEND_API_KEY manquant — les emails ne seront pas envoyés");
+  logger.warn("[Email] RESEND_API_KEY manquant — les emails ne seront pas envoyés");
 }
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM_EMAIL = `Izy Store <${process.env.EMAIL_FROM || "noreply@izy.store"}>`;
+const FROM_EMAIL = `cagnotte.sn <${process.env.EMAIL_FROM || "noreply@cagnotte.sn"}>`;
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 interface SendEmailParams {

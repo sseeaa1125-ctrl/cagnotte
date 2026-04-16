@@ -22,13 +22,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid encoding" }, { status: 400 });
   }
 
-  // Sécurité: n'autoriser que les domaines de paiement connus
+  // Sécurité: n'autoriser que les domaines de paiement connus.
+  // `bictorys.com` (racine) couvre pay.bictorys.com (prod) ET
+  // api.test.bictorys.com (simulateur test).
   const ALLOWED_DOMAINS = [
     "pay.wave.com",
     "checkout.bfrpay.com",
     "checkout.bfrpay.net",
     "pay.bfrpay.com",
-    "pay.bictorys.com",
+    "bictorys.com",
   ];
 
   try {

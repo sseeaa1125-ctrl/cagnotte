@@ -35,13 +35,24 @@ const PAYOUT_LIMITS = {
   cooldownMinutes: 1,
 };
 
+// cagnottes.sn v1 — retraits uniquement vers un numéro sénégalais (Wave
+// ou Orange Money). `phoneCountry` est forcé à "SN" au schéma pour
+// prévenir toute tentative de retrait international via un hint pays
+// différent ; la vérification post-normalisation (`+221`) est un second
+// garde-fou.
 const createWithdrawalSchema = z.object({
   amount: z.number().int().min(PAYOUT_LIMITS.minAmount, `Le montant minimum est de ${PAYOUT_LIMITS.minAmount.toLocaleString("fr-FR")} FCFA`),
   phone: z.string().min(8, "Numéro de téléphone invalide"),
-  phoneCountry: z.string().length(2).optional(),
+  phoneCountry: z.literal("SN").optional(),
   provider: z.enum(["wave_money", "orange_money"]),
   recipientName: z.string().min(2, "Le nom du titulaire est requis").max(100).trim(),
   withdrawalPin: z.string().length(4).regex(/^\d{4}$/).optional(),
+  // Audit 015 D-05 — optional client-supplied idempotency key. When a frontend
+  // retries a withdrawal (network error, Ctrl+R), sending the same UUID lets
+  // the backend return the existing Withdrawal instead of creating a duplicate.
+  // Backed by Withdrawal.idempotencyKey @unique; if absent, the server still
+  // generates a fresh UUID so existing clients keep working.
+  idempotencyKey: z.string().uuid().optional(),
 });
 
 // ── GET /api/withdrawals — liste des retraits du vendeur ──
@@ -162,6 +173,41 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
   try {
     const data = createWithdrawalSchema.parse(req.body);
 
+    // ── Audit 015 D-05 — Idempotency replay check ──
+    // If the client provided an idempotencyKey and a Withdrawal with that
+    // key already exists for this seller, short-circuit and return the
+    // existing row. Prevents Ctrl+R / network-retry from creating duplicate
+    // withdrawals before the rate limiters / "PENDING in progress" check
+    // catch it. The underlying Withdrawal.idempotencyKey @unique constraint
+    // would still protect us at write time, but this surfaces a clean 200
+    // instead of a 500 on a unique-violation.
+    if (data.idempotencyKey) {
+      const existing = await prisma.withdrawal.findUnique({
+        where: { idempotencyKey: data.idempotencyKey },
+        select: {
+          id: true,
+          sellerId: true,
+          amount: true,
+          status: true,
+          reference: true,
+          createdAt: true,
+        },
+      });
+      if (existing && existing.sellerId === sellerId) {
+        res.status(200).json({
+          idempotent: true,
+          withdrawal: {
+            id: existing.id,
+            amount: existing.amount,
+            status: existing.status,
+            reference: existing.reference,
+            createdAt: existing.createdAt,
+          },
+        });
+        return;
+      }
+    }
+
     // ── 0a. Vérifier que les retraits ne sont pas bloqués par l'admin ──
     const sellerCheck = await prisma.seller.findUnique({
       where: { id: sellerId },
@@ -195,10 +241,17 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
       }
     }
 
-    // ── 1. Normaliser et valider le téléphone (C9: multi-pays) ──
-    const normalizedPhone = normalizePhone(data.phone, data.phoneCountry);
-    if (!normalizedPhone) {
-      res.status(400).json({ error: "Numéro de téléphone invalide. Vérifie le format et le pays sélectionné." });
+    // ── 1. Normaliser et valider le téléphone — Sénégal uniquement en v1.
+    // `normalizePhone` accepte plusieurs pays WAEMU ; on hint "SN" pour
+    // les numéros locaux sans indicatif, puis on rejette explicitement
+    // tout ce qui ne matche pas +221XXXXXXXXX. Les retraits vers CI/ML/BF
+    // sont désactivés jusqu'à une décision business v2.
+    const normalizedPhone = normalizePhone(data.phone, "SN");
+    if (!normalizedPhone || !normalizedPhone.startsWith("+221")) {
+      res.status(400).json({
+        error:
+          "Retrait disponible uniquement vers un numéro sénégalais (Wave ou Orange Money). Vérifie le format +221XXXXXXXXX.",
+      });
       return;
     }
     const payoutCountry = getCountryFromPhone(normalizedPhone);
@@ -255,7 +308,10 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
 
     // ── 6. Générer les clés uniques ──
     const reference = `payout_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
-    const idempotencyKey = crypto.randomUUID();
+    // D-05: honor client-supplied idempotency key when present, otherwise
+    // mint a fresh one. The pre-check above already handled the "replay"
+    // case so we only land here for genuine new requests.
+    const idempotencyKey = data.idempotencyKey ?? crypto.randomUUID();
 
     // ── 7. Créer le withdrawal en base + vérifier le solde (serializable) ──
     const withdrawal = await prisma.$transaction(

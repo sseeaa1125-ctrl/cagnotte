@@ -1,15 +1,17 @@
 import { HomeHero } from "./_home/_Hero";
 import { HomePublicCampaignsList } from "./_home/_PublicCampaignsList";
 import { HomeFeaturesPink } from "./_home/_FeaturesPink";
-import { HomeSolidaryCampaigns } from "./_home/_SolidaryCampaigns";
 import { HomeFAQ } from "./_home/_FAQ";
 
 // ─────────────────────────────────────────────────────────────────────────
-// Phase 9 fixpack — Banani home page composition.
+// Banani home page composition.
 // The (public) layout already wraps every child with
 // TopBanner + PublicNavbar + main + PreFooter + Footer — we only add the
-// 5 route-scoped sections here.
-// Source: .planning/banani/screens/phase-9/home-source.md (main.jsx)
+// route-scoped sections here.
+//
+// Phase 10 — `HomeSolidaryCampaigns` was removed from the home page per
+// product direction (shown on /cagnottes?subtype=solidaire instead). The
+// component file is kept for that future reuse.
 // ─────────────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
@@ -18,17 +20,21 @@ export default async function HomePage() {
       <HomeHero />
       <HomePublicCampaignsList />
       <HomeFeaturesPink />
-      <HomeSolidaryCampaigns />
       <HomeFAQ />
     </>
   );
 }
 
-// Enable short ISR at the page level so fresh deployments show fresh data.
-export const revalidate = 60;
+// Dynamic rendering — the featured cagnottes section must reflect live
+// donation totals on every visit (matches /c/[slug] polling cadence).
+// The other home sections (hero, features, FAQ) are static but rendering
+// them dynamically costs nothing since there are no fetches.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "La cagnotte qui fait du bien — cagnotte.sn",
+  title: {
+    absolute: "cagnotte.sn — La cagnotte qui fait du bien",
+  },
   description:
-    "Des cagnottes en ligne au Sénégal pour faire plaisir à vos proches et soutenir celles et ceux qui en ont besoin. Wave, Orange Money, Free Money, carte bancaire.",
+    "Créez votre cagnotte en ligne au Sénégal. Collectez des contributions via Wave, Orange Money ou Free Money pour vos baptêmes, mariages, tabaski ou projets solidaires.",
 };

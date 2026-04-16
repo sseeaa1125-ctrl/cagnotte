@@ -9,7 +9,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Gift, ArrowRight } from "lucide-react";
+import { Gift, ArrowRight, Mail } from "lucide-react";
 import { Input, Button, Checkbox, useToast } from "@/components/ui";
 import { api, ApiError, BACKEND_URL } from "@/lib/api";
 import {
@@ -44,6 +44,8 @@ function InscriptionForm() {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [slugPreview, setSlugPreview] = React.useState("");
+  // Phase 11 — Google-first collapsible pattern. Mirror of /connexion.
+  const [showEmailForm, setShowEmailForm] = React.useState(false);
 
   // Phase 8 fixpack — surface Google OAuth error query params as toasts.
   React.useEffect(() => {
@@ -114,10 +116,11 @@ function InscriptionForm() {
         return;
       }
 
+      const trimmedEmail = email.trim();
       try {
         await api<SignupResponse>("/api/auth/signup", {
           method: "POST",
-          body: { email, password, displayName, slug },
+          body: { email: trimmedEmail, password, displayName, slug },
         });
       } catch (err) {
         if (err instanceof ApiError && err.status === 409) {
@@ -132,7 +135,7 @@ function InscriptionForm() {
             const fallbackSlug = await ensureAvailableSellerSlug(`${base}-2`);
             await api<SignupResponse>("/api/auth/signup", {
               method: "POST",
-              body: { email, password, displayName, slug: fallbackSlug },
+              body: { email: trimmedEmail, password, displayName, slug: fallbackSlug },
             });
           } catch {
             setError(AUTH_LABELS.errorSlugTaken);
@@ -164,11 +167,11 @@ function InscriptionForm() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-200px)] w-full max-w-md flex-col justify-center px-4 py-8 md:py-16">
-      <div className="rounded-2xl border border-border bg-background p-6 shadow-sm md:p-8">
+    <div className="mx-auto flex w-full max-w-md flex-col justify-center px-4 py-8 md:py-10">
+      <div className="rounded-2xl border border-border bg-background p-6 shadow-sm md:p-6">
         {/* Icon badge */}
         <div className="mb-6 flex justify-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-pink">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pink">
             <Gift className="h-8 w-8 text-primary" aria-hidden />
           </div>
         </div>
@@ -180,122 +183,139 @@ function InscriptionForm() {
           {AUTH_LABELS.signupSubtitle}
         </p>
 
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Input
-              label={AUTH_LABELS.firstNameLabel}
-              placeholder={AUTH_LABELS.firstNamePlaceholder}
-              autoComplete="given-name"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              required
-            />
-            <Input
-              label={AUTH_LABELS.lastNameLabel}
-              placeholder={AUTH_LABELS.lastNamePlaceholder}
-              autoComplete="family-name"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              required
-            />
-          </div>
-
-          <Input
-            label={AUTH_LABELS.emailLabel}
-            type="email"
-            placeholder={AUTH_LABELS.emailPlaceholder}
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-
-          <Input
-            label={AUTH_LABELS.passwordLabel}
-            type="password"
-            placeholder={AUTH_LABELS.passwordPlaceholder}
-            autoComplete="new-password"
-            minLength={8}
-            helper={AUTH_LABELS.passwordHint}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-
-          {slugPreview ? (
-            <p className="text-xs text-muted-foreground">
-              {AUTH_LABELS.slugPreviewLabel}{" "}
-              <span className="font-mono text-primary">
-                cagnotte.sn/{slugPreview}
-              </span>
-            </p>
-          ) : null}
-
-          <Checkbox
-            checked={tosAccepted}
-            onChange={setTosAccepted}
-            label={
-              <span>
-                {AUTH_LABELS.tosLabel.replace(
-                  "conditions générales d'utilisation de cagnotte.sn",
-                  "",
-                )}
-                <Link
-                  href="/cgu"
-                  className="underline hover:text-primary-hover"
-                >
-                  conditions générales d{"'"}utilisation
-                </Link>{" "}
-                de cagnotte.sn
-              </span>
-            }
-            error={
-              error === AUTH_LABELS.tosError ? AUTH_LABELS.tosError : undefined
-            }
-          />
-
-          {error && error !== AUTH_LABELS.tosError ? (
-            <p className="text-sm text-red-500" role="alert">
-              {error}
-            </p>
-          ) : null}
-
+        {/* Google button — primary CTA, always above the fold. */}
+        {FEATURE_SOCIAL_AUTH ? (
           <Button
-            type="submit"
-            variant="primary"
+            type="button"
+            variant="social"
+            socialProvider="google"
             size="lg"
             fullWidth
-            loading={submitting}
-            disabled={!tosAccepted || submitting}
-            iconRight={<ArrowRight className="h-4 w-4" aria-hidden />}
+            onClick={handleGoogleSignup}
           >
-            {submitting ? AUTH_LABELS.signupLoading : AUTH_LABELS.signupCta}
+            {AUTH_LABELS.socialGoogleLabel}
           </Button>
-        </form>
+        ) : null}
 
-        {/* Social login CTAs — D-08: retained in JSX behind feature flag.
-            v1 never renders these (FEATURE_SOCIAL_AUTH = false). */}
         {FEATURE_SOCIAL_AUTH ? (
-          <div className="mt-6">
-            <div className="relative flex items-center py-4">
-              <div className="flex-grow border-t border-border" />
-              <span className="mx-4 text-xs text-muted-foreground">
-                {AUTH_LABELS.orContinueWith}
-              </span>
-              <div className="flex-grow border-t border-border" />
-            </div>
-            <div className="flex flex-col gap-3">
-              <Button
-                type="button"
-                variant="social"
-                socialProvider="google"
-                fullWidth
-                onClick={handleGoogleSignup}
-              >
-                {AUTH_LABELS.socialGoogleLabel}
-              </Button>
-            </div>
+          <div className="relative flex items-center py-4">
+            <div className="flex-grow border-t border-border" />
+            <span className="mx-4 text-xs text-muted-foreground">
+              {AUTH_LABELS.orContinueWith}
+            </span>
+            <div className="flex-grow border-t border-border" />
           </div>
+        ) : null}
+
+        {/* Email trigger — hidden once the form is revealed. */}
+        {!showEmailForm ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            fullWidth
+            onClick={() => setShowEmailForm(true)}
+            iconLeft={<Mail className="h-4 w-4" aria-hidden />}
+          >
+            Continuer avec Email
+          </Button>
+        ) : null}
+
+        {/* Email signup form — conditionally rendered. */}
+        {showEmailForm ? (
+          <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Input
+                label={AUTH_LABELS.firstNameLabel}
+                placeholder={AUTH_LABELS.firstNamePlaceholder}
+                autoComplete="given-name"
+                autoFocus
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+              />
+              <Input
+                label={AUTH_LABELS.lastNameLabel}
+                placeholder={AUTH_LABELS.lastNamePlaceholder}
+                autoComplete="family-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+              />
+            </div>
+
+            <Input
+              label={AUTH_LABELS.emailLabel}
+              type="email"
+              placeholder={AUTH_LABELS.emailPlaceholder}
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+
+            <Input
+              label={AUTH_LABELS.passwordLabel}
+              type="password"
+              placeholder={AUTH_LABELS.passwordPlaceholder}
+              autoComplete="new-password"
+              minLength={8}
+              helper={AUTH_LABELS.passwordHint}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            {slugPreview ? (
+              <p className="text-xs text-muted-foreground">
+                {AUTH_LABELS.slugPreviewLabel}{" "}
+                <span className="font-mono text-primary">
+                  cagnotte.sn/{slugPreview}
+                </span>
+              </p>
+            ) : null}
+
+            <Checkbox
+              checked={tosAccepted}
+              onChange={setTosAccepted}
+              label={
+                <span>
+                  {AUTH_LABELS.tosLabel.replace(
+                    "conditions générales d'utilisation de cagnotte.sn",
+                    "",
+                  )}
+                  <Link
+                    href="/cgu"
+                    className="underline hover:text-primary-hover"
+                  >
+                    conditions générales d{"'"}utilisation
+                  </Link>{" "}
+                  de cagnotte.sn
+                </span>
+              }
+              error={
+                error === AUTH_LABELS.tosError ? AUTH_LABELS.tosError : undefined
+              }
+            />
+
+            {error && error !== AUTH_LABELS.tosError ? (
+              <p className="text-sm text-red-500" role="alert">
+                {error}
+              </p>
+            ) : null}
+
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={submitting}
+              disabled={!tosAccepted || submitting}
+              iconRight={<ArrowRight className="h-4 w-4" aria-hidden />}
+            >
+              {submitting ? AUTH_LABELS.signupLoading : AUTH_LABELS.signupCta}
+            </Button>
+          </form>
         ) : null}
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

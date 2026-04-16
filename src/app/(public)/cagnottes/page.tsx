@@ -21,21 +21,46 @@ interface ApiCagnotte {
 interface ListResponse {
   cagnottes: ApiCagnotte[];
   nextCursor: string | null;
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
 }
 
-async function getInitial(): Promise<ListResponse> {
+type SubtypeFilter = "all" | "festive" | "solidaire";
+
+interface InitialFetchOpts {
+  subtype: SubtypeFilter;
+  q: string;
+}
+
+async function getInitial(opts: InitialFetchOpts): Promise<ListResponse> {
+  const params = new URLSearchParams();
+  params.set("limit", "20");
+  if (opts.subtype !== "all") params.set("subtype", opts.subtype);
+  if (opts.q) params.set("q", opts.q);
   try {
-    const res = await fetch(`${BACKEND_API_URL}/api/cagnottes?limit=20`, {
-      next: { revalidate: 60 },
-    });
-    if (!res.ok) return { cagnottes: [], nextCursor: null };
+    // `cache: 'no-store'` keeps the listing live — a new donation is
+    // visible on the first reload rather than up to 60s later. Matches
+    // the LP featured section and the detail page polling cadence.
+    const res = await fetch(
+      `${BACKEND_API_URL}/api/cagnottes?${params.toString()}`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) {
+      console.error(
+        `[cagnottes/getInitial] ${res.status} ${res.statusText}`,
+      );
+      return { cagnottes: [], nextCursor: null, totalCount: 0, totalPages: 1, currentPage: 1 };
+    }
     return (await res.json()) as ListResponse;
-  } catch {
-    return { cagnottes: [], nextCursor: null };
+  } catch (err) {
+    console.error("[cagnottes/getInitial] fetch threw:", err);
+    return { cagnottes: [], nextCursor: null, totalCount: 0, totalPages: 1, currentPage: 1 };
   }
 }
 
-export const revalidate = 60;
+// Dynamic rendering — matches the LP and detail page freshness policy.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Toutes les cagnottes",
@@ -43,22 +68,27 @@ export const metadata = {
     "Découvre toutes les cagnottes festives et solidaires publiées sur cagnotte.sn.",
 };
 
-type SubtypeFilter = "all" | "festive" | "solidaire";
-
 function parseSubtype(raw: string | string[] | undefined): SubtypeFilter {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (value === "festive" || value === "solidaire") return value;
   return "all";
 }
 
+function parseQuery(raw: string | string[] | undefined): string {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, 100);
+}
+
 export default async function ToutesLesCagnottesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subtype?: string }>;
+  searchParams: Promise<{ subtype?: string; q?: string }>;
 }) {
   const params = await searchParams;
   const initialSubtype = parseSubtype(params.subtype);
-  const initial = await getInitial();
+  const initialQuery = parseQuery(params.q);
+  const initial = await getInitial({ subtype: initialSubtype, q: initialQuery });
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
       <header className="mb-8 max-w-2xl">
@@ -71,8 +101,10 @@ export default async function ToutesLesCagnottesPage({
       </header>
       <LoadMoreCagnottes
         initialCagnottes={initial.cagnottes}
-        initialCursor={initial.nextCursor}
+        initialTotalCount={initial.totalCount ?? 0}
+        initialTotalPages={initial.totalPages ?? 1}
         initialSubtype={initialSubtype}
+        initialQuery={initialQuery}
       />
     </div>
   );

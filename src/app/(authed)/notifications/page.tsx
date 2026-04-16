@@ -105,7 +105,7 @@ export default async function NotificationsPage({
             </p>
           </header>
           <EmptyState
-            icon={<BellOff size={28} aria-hidden />}
+            icon={<BellOff size={24} aria-hidden />}
             title={NOTIF_FEED_LABELS.empty}
           />
         </>

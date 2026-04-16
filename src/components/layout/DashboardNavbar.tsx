@@ -2,13 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/ui";
 import { NAV_LABELS, MISC } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
 export interface DashboardNavbarProps {
-  unreadCount: number;
   seller: { displayName: string; avatarUrl: string | null } | null;
   onLogout: () => void;
   className?: string;
@@ -21,11 +20,11 @@ const NAV_ITEMS: Array<{ label: string; href: string }> = [
 ];
 
 export function DashboardNavbar({
-  unreadCount,
   seller,
   onLogout,
   className,
 }: DashboardNavbarProps) {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
 
@@ -44,10 +43,14 @@ export function DashboardNavbar({
     return () => document.removeEventListener("click", handler);
   }, [menuOpen]);
 
-  if (!seller) return null;
+  // Close the dropdown whenever the active route changes. Handles every
+  // navigation path — menu item clicks, center-nav clicks, browser back/
+  // forward — without each Link needing its own onClick handler.
+  React.useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
-  const showBadge = unreadCount > 0;
-  const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount);
+  if (!seller) return null;
 
   return (
     <header
@@ -82,24 +85,11 @@ export function DashboardNavbar({
           ))}
         </nav>
 
-        {/* Right: notif bell + avatar */}
+        {/* Right: avatar only. The standalone notification bell was removed —
+            the desktop center nav already has a "Notifications" link and the
+            mobile BottomNav owns the notifications tab. One entry point per
+            context, no duplicate bell. */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/notifications"
-            className="relative flex h-12 w-12 items-center justify-center rounded-full text-primary hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-            aria-label={`${NAV_LABELS.notifications} (${unreadCount})`}
-          >
-            <Bell size={20} />
-            {showBadge ? (
-              <span
-                className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground ring-2 ring-background"
-                aria-hidden
-              >
-                {badgeLabel}
-              </span>
-            ) : null}
-          </Link>
-
           <div ref={menuRef} className="relative">
             <button
               type="button"

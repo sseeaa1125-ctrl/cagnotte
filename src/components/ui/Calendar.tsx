@@ -181,7 +181,7 @@ export function Calendar({
 
   const displayText = value
     ? formatFrenchDate(value)
-    : (placeholder ?? "Sélectionnez une date...");
+    : (placeholder ?? "Sélectionne une date…");
 
   return (
     <div className="flex w-full flex-col gap-1.5">

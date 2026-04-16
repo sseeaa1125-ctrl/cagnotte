@@ -40,10 +40,13 @@ interface CagnottePayload {
 }
 
 interface ProgressPayload {
-  collected: number;
-  donorCount: number;
+  // Backend returns null for hideAmount/hideDonors to non-owners. The stats
+  // page runs with the owner cookie so these are always concrete numbers in
+  // practice, but the null branch is kept for defensive parsing.
+  collected: number | null;
+  donorCount: number | null;
   goalAmount: number;
-  percentage: number;
+  percentage: number | null;
 }
 
 interface ParticipantItem {
@@ -156,7 +159,7 @@ export default async function StatsPage({
       </header>
 
       {/* KPIs */}
-      <section className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <section className="mb-6 grid grid-cols-1 gap-4 sm:mb-8 md:grid-cols-3">
         <KpiCard
           icon={<Wallet size={18} aria-hidden />}
           label={STATS_LABELS.kpiRaised}
@@ -175,7 +178,7 @@ export default async function StatsPage({
       </section>
 
       {/* Timeline */}
-      <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm sm:mb-8 sm:p-6">
         <h2 className="mb-4 font-headings text-lg font-semibold text-primary">
           {STATS_LABELS.timeline}
         </h2>
@@ -189,7 +192,7 @@ export default async function StatsPage({
       </section>
 
       {/* Top messages */}
-      <section className="mb-8 rounded-2xl bg-white p-6 shadow-sm">
+      <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm sm:mb-8 sm:p-6">
         <h2 className="mb-4 flex items-center gap-2 font-headings text-lg font-semibold text-primary">
           <MessageCircle size={18} aria-hidden />
           {STATS_LABELS.topMessages}

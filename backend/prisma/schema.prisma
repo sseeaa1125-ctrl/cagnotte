@@ -16,6 +16,12 @@ model Seller {
   password      String?
   googleId      String? @unique
   emailVerified Boolean @default(false)
+  // Audit 012 S-03 — bumped on password change / forced logout. Included
+  // in the access + refresh JWT payload; requireAuth rejects any token
+  // whose embedded version is stale vs the DB value. Existing pre-migration
+  // tokens have no version in payload → default to 0 → still match the
+  // freshly-seeded DB default, so sessions survive the migration.
+  tokenVersion  Int     @default(0)
 
   slug        String  @unique
   displayName String
@@ -159,6 +165,13 @@ model Block {
   // CAGNOTTE_ENDING_SOON fire so the hourly sweep + boot catch-up never re-fires
   // for the same block. Notification.dedupeKey is the secondary safety net.
   endingSoonNotifiedAt DateTime?
+
+  // Audit 026 MED-1 — cagnotte-ended cron dedup field. Set on first
+  // CAGNOTTE_ENDED fire (block.endDate passed). Same dual-guard pattern as
+  // endingSoonNotifiedAt: this field is the SQL-level filter, and
+  // Notification.dedupeKey(`cagnotte_ended:{blockId}`) is the secondary
+  // at-most-once safety net against concurrent cron ticks.
+  endedNotifiedAt DateTime?
 
   product             Product?
   bookingService      BookingService?

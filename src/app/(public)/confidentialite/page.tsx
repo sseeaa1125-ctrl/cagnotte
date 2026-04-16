@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — cagnotte.sn",
+  title: "Politique de confidentialité",
   description:
     "Politique de confidentialité et gestion des données personnelles de cagnotte.sn.",
 };
@@ -56,10 +56,6 @@ export default function ConfidentialitePage() {
           </p>
         </section>
 
-        <p className="pt-6 text-sm italic text-gray-600">
-          Document provisoire — la version finale sera publiée avant la mise en
-          production publique.
-        </p>
       </div>
     </article>
   );

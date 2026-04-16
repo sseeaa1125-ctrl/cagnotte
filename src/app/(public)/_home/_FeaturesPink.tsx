@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { Apple, CreditCard, Smartphone } from "lucide-react";
 import { HOME_FEATURES_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -17,12 +16,35 @@ type Mode = "plaisir" | "soutenir";
 
 const CARD_ICONS = [null, "payments", null] as const;
 
+// v1 — Wave / Orange Money / Free Money only. Bank-card icon was removed
+// along with the card checkout flow.
 function PaymentIcons() {
   return (
-    <div className="mt-auto flex items-center gap-4 text-gray-700">
-      <Apple size={24} aria-hidden />
-      <CreditCard size={24} aria-hidden />
-      <Smartphone size={24} aria-hidden />
+    <div className="mt-auto flex items-center justify-center gap-3">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/wave.png"
+        alt="Wave"
+        width={32}
+        height={32}
+        className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5"
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/orange-money.png"
+        alt="Orange Money"
+        width={32}
+        height={32}
+        className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5"
+      />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/free-money.png"
+        alt="Free Money"
+        width={32}
+        height={32}
+        className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5"
+      />
     </div>
   );
 }
@@ -121,9 +143,14 @@ export function HomeFeaturesPink() {
               </p>
               {CARD_ICONS[idx] === "payments" ? <PaymentIcons /> : null}
               {card.cta ? (
-                <span className="mt-auto rounded-full border border-gray-200 px-6 py-2 text-xs font-bold text-primary">
+                <a
+                  href="/cgu"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-auto inline-flex min-h-10 items-center rounded-full border border-gray-200 px-6 py-2 text-xs font-bold text-primary transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-primary hover:bg-pink/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                >
                   {card.cta}
-                </span>
+                </a>
               ) : null}
             </div>
           ))}
