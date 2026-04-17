@@ -66,13 +66,30 @@ export function Modal({
     };
   }, [open]);
 
-  // Esc key
+  // Esc key + Audit 032 C-03 — focus trap (WCAG 2.4.3)
   React.useEffect(() => {
-    if (!open || !closeOnEsc) return;
+    if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && closeOnEsc) {
         e.stopPropagation();
         onClose();
+        return;
+      }
+      // Focus trap: cycle Tab within the dialog
+      if (e.key === "Tab") {
+        const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusables?.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
     window.addEventListener("keydown", handler);

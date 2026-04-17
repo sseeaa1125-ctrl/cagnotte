@@ -28,6 +28,8 @@ import {
   milestoneTemplate,
   endingSoonTemplate,
   cagnotteEndedTemplate,
+  payoutCancelledTemplate,
+  withdrawalBlockedTemplate,
   donationMessageTemplate,
   payoutCompletedTemplate,
   payoutFailedTemplate,
@@ -107,6 +109,7 @@ export async function fireDonationReceived(
       donorDisplayName: order.customerName || null,
       wasAnonymous: !!order.isAnonymous,
       amount: order.amount,
+      cagnotteTitle: block.title,
     },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
   });
@@ -129,7 +132,7 @@ export async function fireMilestone(
     body: tpl.body,
     icon: tpl.icon,
     blockId: block.id,
-    data: { threshold, goalAmount: blockGoalAmount(block) },
+    data: { threshold, goalAmount: blockGoalAmount(block), cagnotteTitle: block.title },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "standard" },
   });
 }
@@ -148,7 +151,7 @@ export async function fireEndingSoon(
     body: tpl.body,
     icon: tpl.icon,
     blockId: block.id,
-    data: { endDate: endDate.toISOString() },
+    data: { endDate: endDate.toISOString(), cagnotteTitle: block.title },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "standard" },
   });
 }
@@ -168,7 +171,7 @@ export async function fireCagnotteEnded(
     body: tpl.body,
     icon: tpl.icon,
     blockId: block.id,
-    data: { totalRaised, donorCount },
+    data: { totalRaised, donorCount, cagnotteTitle: block.title },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "standard" },
   });
 }
@@ -197,6 +200,7 @@ export async function fireDonationMessage(
       donorDisplayName: order.customerName || null,
       wasAnonymous: !!order.isAnonymous,
       isPrivate: !!order.messageIsPrivate,
+      cagnotteTitle: block.title,
     },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
   });
@@ -277,6 +281,43 @@ export async function fireKycRejected(
     body: tpl.body,
     icon: tpl.icon,
     data: { reason },
+    email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
+  });
+}
+
+// ── 10. PAYOUT_CANCELLED (admin cancellation during 48h window) ──
+export async function firePayoutCancelled(
+  withdrawal: WithdrawalForDispatch,
+  reason: string,
+): Promise<CreateNotificationResult> {
+  const tpl = payoutCancelledTemplate({ amount: withdrawal.amount }, reason);
+  return createNotification({
+    sellerId: withdrawal.sellerId,
+    type: "PAYOUT_FAILED" satisfies NotificationType,
+    dedupeKey: `payout:${withdrawal.id}:cancelled`,
+    title: tpl.title,
+    body: tpl.body,
+    icon: tpl.icon,
+    withdrawalId: withdrawal.id,
+    data: { amount: withdrawal.amount, reason, cancelledByAdmin: true },
+    email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
+  });
+}
+
+// ── 11. WITHDRAWAL_BLOCKED (admin blocks all withdrawals for a seller) ──
+export async function fireWithdrawalBlocked(
+  seller: SellerForDispatch,
+  reason: string,
+): Promise<CreateNotificationResult> {
+  const tpl = withdrawalBlockedTemplate({}, reason);
+  return createNotification({
+    sellerId: seller.id,
+    type: "SYSTEM" satisfies NotificationType,
+    dedupeKey: `withdrawal_blocked:${seller.id}:${Date.now()}`,
+    title: tpl.title,
+    body: tpl.body,
+    icon: tpl.icon,
+    data: { reason, withdrawalBlocked: true },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
   });
 }

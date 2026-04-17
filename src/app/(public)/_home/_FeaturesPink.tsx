@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { HOME_FEATURES_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -21,30 +22,9 @@ const CARD_ICONS = [null, "payments", null] as const;
 function PaymentIcons() {
   return (
     <div className="mt-auto flex items-center justify-center gap-3">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/wave.png"
-        alt="Wave"
-        width={32}
-        height={32}
-        className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5"
-      />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/orange-money.png"
-        alt="Orange Money"
-        width={32}
-        height={32}
-        className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5"
-      />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/free-money.png"
-        alt="Free Money"
-        width={32}
-        height={32}
-        className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5"
-      />
+      <Image src="/wave.png" alt="Wave" width={32} height={32} className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5" />
+      <Image src="/orange-money.png" alt="Orange Money" width={32} height={32} className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5" />
+      <Image src="/free-money.png" alt="Free Money" width={32} height={32} className="h-8 w-8 rounded-md object-cover ring-1 ring-black/5" />
     </div>
   );
 }
@@ -62,7 +42,7 @@ export function HomeFeaturesPink() {
     <section
       className={cn(
         "relative mx-4 my-8 overflow-hidden rounded-[2rem] px-4 py-14 text-center transition-colors duration-500 ease-out sm:my-10 sm:rounded-[2.5rem] sm:py-16 md:mx-12 md:my-12 md:rounded-[3rem] md:px-8 md:py-24",
-        isSoutenir ? "bg-[#DFECFB]" : "bg-[#FBE6ED]",
+        isSoutenir ? "bg-soutenir-bg" : "bg-[#FBE6ED]",
       )}
     >
       <div
@@ -132,7 +112,7 @@ export function HomeFeaturesPink() {
               key={card.title}
               className="flex flex-col items-center rounded-3xl bg-white p-8 text-center shadow-xl shadow-black/5 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/10"
             >
-              <span className="mb-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+              <span className="mb-4 text-[10px] font-bold uppercase tracking-widest text-gray-500">
                 {card.kicker}
               </span>
               <h3 className="mb-4 flex min-h-[64px] items-center font-headings text-xl font-black text-primary md:text-2xl">

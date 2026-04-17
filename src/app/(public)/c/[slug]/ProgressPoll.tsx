@@ -77,7 +77,8 @@ export function ProgressPoll({
   const { percent, barWidth } = computeProgress(totalRaised, goalAmount);
 
   return (
-    <div className="mb-8">
+    // Audit 032 I-01 — WCAG 4.1.3: announce live-polled progress updates
+    <div className="mb-8" role="status" aria-live="polite" aria-atomic="true">
       {!hideAmount ? (
         // Stacked layout — prevents truncation at every width. The
         // amount uses clamp() so it scales smoothly between 24px (375px

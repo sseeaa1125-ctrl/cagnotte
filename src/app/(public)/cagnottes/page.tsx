@@ -65,7 +65,19 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Toutes les cagnottes",
   description:
-    "Découvre toutes les cagnottes festives et solidaires publiées sur cagnotte.sn.",
+    "Découvre toutes les cagnottes festives et solidaires au Sénégal. Collecte via Wave, Orange Money — baptêmes, mariages, causes solidaires sur cagnotte.sn.",
+  alternates: { canonical: "https://cagnotte.sn/cagnottes" },
+  openGraph: {
+    title: "Toutes les cagnottes",
+    description:
+      "Découvre toutes les cagnottes festives et solidaires au Sénégal. Collecte via Wave, Orange Money — baptêmes, mariages, causes solidaires sur cagnotte.sn.",
+  },
+  twitter: {
+    card: "summary_large_image" as const,
+    title: "Toutes les cagnottes",
+    description:
+      "Découvre toutes les cagnottes festives et solidaires au Sénégal. Collecte via Wave, Orange Money — baptêmes, mariages, causes solidaires sur cagnotte.sn.",
+  },
 };
 
 function parseSubtype(raw: string | string[] | undefined): SubtypeFilter {

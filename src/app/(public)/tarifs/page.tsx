@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Tarifs — Gratuit pour les donateurs",
   description:
     "La création et la participation à une cagnotte sont 100 % gratuites. Les frais éventuels s'appliquent uniquement à l'organisateur lors de la création de sa cagnotte.",
+  alternates: { canonical: "https://cagnotte.sn/tarifs" },
 };
 
 const FESTIVE_FEATURES = [
@@ -27,7 +28,7 @@ export default function TarifsPage() {
   return (
     <article className="container mx-auto max-w-5xl px-4 py-16">
       <header className="mb-12 text-center">
-        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400">
+        <p className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-500">
           Tarifs
         </p>
         <h1 className="mb-4 font-headings text-3xl font-black leading-tight text-primary md:text-5xl">

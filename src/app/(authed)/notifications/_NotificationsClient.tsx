@@ -68,22 +68,23 @@ const ICON_MAP: Record<
 function iconBubbleClass(type: string): string {
   switch (type) {
     case "DONATION_RECEIVED":
+      return "bg-pink-100 text-pink-600";
     case "PAYOUT_COMPLETED":
     case "KYC_APPROVED":
       return "bg-green-100 text-green-700";
     case "DONATION_MESSAGE":
-      return "bg-pink-100 text-pink-600";
+      return "bg-purple-100 text-purple-600";
     case "MILESTONE_REACHED":
-      return "bg-blue-100 text-blue-600";
+      return "bg-blue-100 text-primary";
     case "CAGNOTTE_ENDING_SOON":
-      return "bg-orange-100 text-orange-600";
+      return "bg-amber-100 text-amber-600";
     case "CAGNOTTE_ENDED":
-      return "bg-gray-100 text-gray-600";
+      return "bg-gray-100 text-gray-500";
     case "PAYOUT_FAILED":
     case "KYC_REJECTED":
       return "bg-red-100 text-red-600";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-blue-50 text-primary";
   }
 }
 
@@ -109,11 +110,16 @@ export function NotificationsClient({
     [items, activeFilter],
   );
 
-  const handleMarkRead = async (id: string) => {
+  const [expandedId, setExpandedId] = React.useState<string | null>(null);
+
+  const handleNotificationClick = async (id: string) => {
+    // Toggle expansion
+    setExpandedId((prev) => (prev === id ? null : id));
+
+    // Mark as read if unread
     const target = items.find((n) => n.id === id);
     if (!target || target.readAt) return;
     const prev = items;
-    // Optimistic
     setItems((p) =>
       p.map((n) =>
         n.id === id ? { ...n, readAt: new Date().toISOString() } : n,
@@ -248,13 +254,15 @@ export function NotificationsClient({
                 <li key={n.id}>
                   <button
                     type="button"
-                    onClick={() => handleMarkRead(n.id)}
+                    onClick={() => handleNotificationClick(n.id)}
                     className={cn(
                       "flex w-full items-start gap-3 p-4 text-left transition-colors min-h-12 hover:bg-muted/30",
                       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                      isUnread && "bg-blue-50/30",
+                      isUnread && "bg-pink-50/40",
+                      expandedId === n.id && "bg-muted/20",
                     )}
                     aria-label={isUnread ? "Marquer comme lue" : undefined}
+                    aria-expanded={expandedId === n.id}
                   >
                     <div
                       className={cn(
@@ -265,19 +273,36 @@ export function NotificationsClient({
                     >
                       <Icon size={20} />
                       {isUnread ? (
-                        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-red-500" />
+                        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-primary" />
                       ) : null}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm text-muted-foreground">
                         {renderNotificationContent({
                           type: n.type,
+                          title: n.title,
+                          body: n.body,
                           data: n.data,
                         })}
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {formatRelativeTime(n.createdAt)}
                       </p>
+                      {/* Expanded detail — show title + body */}
+                      {expandedId === n.id && (n.title || n.body) ? (
+                        <div className="mt-3 rounded-xl bg-muted/40 p-3">
+                          {n.title ? (
+                            <p className="text-sm font-semibold text-primary">
+                              {n.title}
+                            </p>
+                          ) : null}
+                          {n.body ? (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {n.body}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
                   </button>
                 </li>

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui";
 import { WITHDRAWAL_LABELS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { AmountStep } from "./_AmountStep";
+import { RetraitsTabs } from "./_RetraitsTabs";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Phase 6 plan 06-02 — /retraits (step 1: amount + recipient picker).
@@ -96,7 +97,7 @@ function ProgressChecklist({ state }: { state: GateState }) {
               className={cn(
                 "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
                 item.done
-                  ? "bg-[#E6F3EE] text-[#00B67A]"
+                  ? "bg-success-bg text-success"
                   : "bg-amber-50 text-amber-600",
               )}
             >
@@ -216,13 +217,15 @@ export default async function RetraitsPage() {
     data.payoutProvider === "orange_money" ? "orange_money" : "wave_money";
 
   return (
-    <AmountStep
-      balance={data.balance}
-      initial={{
-        provider: initialProvider,
-        phone: data.payoutPhone ?? "",
-        recipientName: data.payoutName ?? "",
-      }}
-    />
+    <RetraitsTabs>
+      <AmountStep
+        balance={data.balance}
+        initial={{
+          provider: initialProvider,
+          phone: data.payoutPhone ?? "",
+          recipientName: data.payoutName ?? "",
+        }}
+      />
+    </RetraitsTabs>
   );
 }

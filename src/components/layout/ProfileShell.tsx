@@ -108,7 +108,7 @@ function KycPill({ status }: { status: string }) {
     "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold";
   if (status === "APPROVED") {
     return (
-      <span className={cn(base, "bg-accent text-[#00B67A]")}>
+      <span className={cn(base, "bg-accent text-success")}>
         <ShieldCheck size={12} aria-hidden />
         Vérifié
       </span>

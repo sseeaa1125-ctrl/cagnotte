@@ -27,6 +27,10 @@ const nextConfig: NextConfig = {
   },
   // L1: Security headers + image optimization
   images: {
+    // In dev, backend images resolve to private IPs (localhost:4000) which
+    // Next.js image optimizer blocks. Skip optimization for these — in prod
+    // the URLs point to the real domain and optimization works normally.
+    unoptimized: process.env.NODE_ENV === "development",
     remotePatterns: [
       {
         protocol: "https",

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Lock, Mail } from "lucide-react";
 import { Checkbox, Input, Textarea } from "@/components/ui";
@@ -159,7 +160,7 @@ export function ParticiperForm({
   const STEP_H2 =
     "mb-5 flex items-center gap-3 font-headings text-base font-black text-primary sm:text-lg md:text-xl";
   const STEP_BADGE =
-    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#F4D3DE] text-xs font-black text-primary sm:text-sm";
+    "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-pink-dark text-xs font-black text-primary sm:text-sm";
   const SHINE_SPAN =
     "pointer-events-none absolute inset-y-0 -left-[50%] w-[50%] animate-button-shine-sweep bg-gradient-to-r from-transparent via-white/30 to-transparent";
 
@@ -355,10 +356,12 @@ export function ParticiperForm({
               <div className="mb-6 flex items-center gap-4 border-b border-gray-100 pb-6">
                 <div className="relative shrink-0">
                   {cagnotte.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={cagnotte.coverUrl}
                       alt=""
+                      width={72}
+                      height={72}
+                      sizes="72px"
                       className="h-[72px] w-[72px] rounded-2xl object-cover shadow-[0_8px_20px_rgb(23,40,102,0.15)] ring-1 ring-black/5"
                     />
                   ) : (
@@ -377,7 +380,7 @@ export function ParticiperForm({
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
                     Vous participez à
                   </p>
                   <h4 className="line-clamp-2 font-headings text-[15px] font-black leading-[1.2] text-primary">
@@ -469,7 +472,7 @@ export function ParticiperForm({
                 </span>
               </button>
 
-              <p className="mt-4 text-center text-[11px] font-medium text-gray-400">
+              <p className="mt-4 text-center text-[11px] font-medium text-gray-500">
                 En cliquant, vous acceptez nos{" "}
                 <Link href="/cgu" className="text-primary hover:underline">
                   CGU
@@ -478,6 +481,35 @@ export function ParticiperForm({
               </p>
             </div>
           </aside>
+        </div>
+      </div>
+
+      {/* Audit 033 S-02 — fixed bottom CTA bar on mobile. Hidden on lg+
+          where the sticky aside is already visible. Safe-area padding
+          for iPhone home indicator. */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-4px_20px_rgb(0,0,0,0.06)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">Total</p>
+            <p className="font-headings text-lg font-black tabular-nums text-primary">
+              {formatPrice(totalAmount)}
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={submitting}
+            className={cn(
+              PAY_BTN_BASE,
+              "min-h-12 shrink-0 px-5 py-3 text-sm",
+              "disabled:cursor-not-allowed disabled:opacity-70",
+            )}
+          >
+            <span aria-hidden className={SHINE_SPAN} />
+            <span className="relative flex items-center gap-2 whitespace-nowrap">
+              Participer
+              <Lock size={14} aria-hidden />
+            </span>
+          </button>
         </div>
       </div>
 

@@ -694,7 +694,7 @@ sellersRouter.get("/:slug", async (req, res) => {
         imageStyle: true,
         timezone: true,
         kycStatus: true,
-        isFlagged: true,
+        // Audit 030 HI-06 — isFlagged removed from public endpoint (admin-only state)
         metaPixelId: true,
         googleAdsId: true,
         googleAnalyticsId: true,
@@ -1132,7 +1132,7 @@ sellersRouter.post("/withdrawal-pin/forgot", forgotPinLimiter, verifyCsrf, requi
 
     queueAuthEmail({
       to: seller.email,
-      subject: "Réinitialisation du code de retrait — Izy Store",
+      subject: "Réinitialisation du code de retrait — Cagnottes.sn",
       html: `<h2>Code de retrait oublié</h2>
         <p>Entre ce code pour réinitialiser ton code de retrait :</p>
         <div style="margin:20px 0;padding:20px;background-color:#F0FDFA;border-radius:12px;text-align:center;">

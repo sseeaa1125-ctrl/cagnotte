@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { HOME_FEATURED_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
@@ -109,10 +110,12 @@ export async function HomePublicCampaignsList() {
               >
                 <div className="relative h-40 overflow-hidden sm:h-44 lg:h-48">
                   {c.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={c.coverUrl}
                       alt={c.title}
+                      width={640}
+                      height={360}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   ) : (
@@ -155,7 +158,7 @@ export async function HomePublicCampaignsList() {
                     ) : (
                       <div className="mb-4 sm:mb-5 lg:mb-6" />
                     )}
-                    <span className="block w-full rounded-xl bg-[#F4D3DE] py-3 text-center text-sm font-bold text-primary shadow-sm transition-colors group-hover:bg-[#efc7d5] sm:py-3.5 sm:text-base">
+                    <span className="block w-full rounded-xl bg-pink-dark py-3 text-center text-sm font-bold text-primary shadow-sm transition-colors group-hover:bg-pink-cta-hover sm:py-3.5 sm:text-base">
                       {HOME_FEATURED_LABELS.participate}
                     </span>
                   </div>

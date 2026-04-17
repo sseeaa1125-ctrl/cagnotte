@@ -99,8 +99,9 @@ export default function MerciPage() {
     if (typeof document === "undefined") return;
     const handler = () => {
       if (document.visibilityState === "visible" && status === "PENDING") {
-        // Force a re-tick by bumping attempts; the main effect will fire again.
-        setAttempts((n) => (n >= MAX_POLLS ? n : n));
+        // Audit 030 H-04 — bump attempts to re-trigger the polling effect.
+        // Old code was a no-op (n => n doesn't change state).
+        setAttempts((n) => (n >= MAX_POLLS ? n : n + 1));
       }
     };
     document.addEventListener("visibilitychange", handler);
@@ -138,7 +139,7 @@ export default function MerciPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-2xl space-y-6 px-4 py-12 text-center">
+    <div className="container mx-auto max-w-2xl space-y-6 px-4 py-12 text-center" role="status" aria-live="polite">
       {status === "PENDING" && (
         <>
           <Clock
@@ -149,9 +150,14 @@ export default function MerciPage() {
           <h1 className="font-headings text-2xl font-bold text-primary">
             {MERCI_LABELS.headingPending}
           </h1>
+          {/* Audit 033 F-03 — user-friendly progress instead of "Tentative N/40" */}
           <p className="text-sm text-muted-foreground">
-            Tentative {Math.min(attempts + 1, MAX_POLLS)}/{MAX_POLLS}
+            Vérification en cours...
           </p>
+          {/* Audit 033 V-04 — indeterminate progress bar for visual feedback */}
+          <div className="mx-auto h-1.5 w-48 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full w-1/3 animate-[indeterminate_1.5s_ease-in-out_infinite] rounded-full bg-primary" />
+          </div>
         </>
       )}
 
@@ -160,14 +166,14 @@ export default function MerciPage() {
           {/* Phase 7 plan 07-03 — animate-ping halo matches /retraits/succes. */}
           <div className="relative mx-auto h-24 w-24">
             <div
-              className="absolute inset-0 animate-ping rounded-full bg-[#00B67A]/20"
+              className="absolute inset-0 animate-ping rounded-full bg-success/20"
               aria-hidden
             />
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[#E6F3EE]">
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-success-bg">
               <Check
                 size={48}
                 strokeWidth={3}
-                className="text-[#00B67A]"
+                className="text-success"
                 aria-hidden
               />
             </div>
@@ -197,7 +203,7 @@ export default function MerciPage() {
           )}
           {order?.reference ? (
             <section className="mx-auto max-w-md rounded-2xl border border-gray-200 bg-white p-5 text-center shadow-sm">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-400">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wider text-gray-500">
                 {MERCI_LABELS.confirmationCodeLabel}
               </p>
               <p className="font-mono text-xl font-bold text-primary">

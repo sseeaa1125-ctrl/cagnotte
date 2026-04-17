@@ -41,7 +41,7 @@ function StatusBanner({ variant }: { variant: KycVariant }) {
     approved: {
       icon: <ShieldCheck size={18} aria-hidden />,
       text: KYC_LABELS.approvedBanner,
-      className: "bg-accent text-[#00B67A]",
+      className: "bg-accent text-success",
     },
     rejected: {
       icon: <ShieldAlert size={18} aria-hidden />,

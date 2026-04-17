@@ -1,4 +1,5 @@
 import * as React from "react";
+import Image from "next/image";
 import { Badge, ProgressBar } from "@/components/ui";
 import { formatPrice } from "@/lib/format";
 import { SUBTYPE_LABELS } from "@/lib/constants";
@@ -73,14 +74,12 @@ export function CampaignCard({
       {/* Cover */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
         {coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={coverUrl}
             alt={title}
             width={640}
             height={360}
-            loading="lazy"
-            decoding="async"
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
@@ -123,7 +122,7 @@ export function CampaignCard({
               className={cn(
                 "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums",
                 percent >= 100
-                  ? "bg-[#E6F3EE] text-[#00B67A]"
+                  ? "bg-success-bg text-success"
                   : "bg-pink/60 text-primary",
               )}
             >

@@ -92,6 +92,9 @@ export function notifTypeToPrefKeys(
     case "KYC_APPROVED":
     case "KYC_REJECTED":
       return ["kyc", "paymentReceipts"];
+    case "SYSTEM":
+      // Admin broadcasts — always delivered, no user pref opt-out
+      return [];
     default: {
       // Exhaustiveness — TypeScript will flag a missing case here at compile
       // time if NotificationType ever grows.

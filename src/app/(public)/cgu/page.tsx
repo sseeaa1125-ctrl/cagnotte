@@ -4,6 +4,8 @@ export const metadata: Metadata = {
   title: "Conditions générales d'utilisation",
   description:
     "Conditions générales d'utilisation de cagnotte.sn — la plateforme de cagnottes en ligne du Sénégal.",
+  alternates: { canonical: "https://cagnotte.sn/cgu" },
+  robots: { index: true, follow: true },
 };
 
 export default function CGUPage() {

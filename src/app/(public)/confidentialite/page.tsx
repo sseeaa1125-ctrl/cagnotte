@@ -4,6 +4,8 @@ export const metadata: Metadata = {
   title: "Politique de confidentialité",
   description:
     "Politique de confidentialité et gestion des données personnelles de cagnotte.sn.",
+  alternates: { canonical: "https://cagnotte.sn/confidentialite" },
+  robots: { index: true, follow: true },
 };
 
 export default function ConfidentialitePage() {

@@ -247,13 +247,17 @@ blocksRouter.get("/:id/donations", async (req, res) => {
   try {
     const block = await prisma.block.findUnique({
       where: { id: req.params.id as string },
-      select: { id: true, type: true, isActive: true },
+      select: { id: true, type: true, isActive: true, config: true },
     });
 
     if (!block || block.type !== "FUNDRAISER" || !block.isActive) {
       res.status(404).json({ error: "Cagnotte introuvable" });
       return;
     }
+
+    // Audit 032 S-02 — respect hideAmount config flag
+    const config = block.config as Record<string, unknown> | null;
+    const hideAmount = config?.hideAmount === true;
 
     const donations = await prisma.order.findMany({
       where: {
@@ -268,16 +272,20 @@ blocksRouter.get("/:id/donations", async (req, res) => {
         amount: true,
         customerName: true,
         donorMessage: true,
+        isAnonymous: true,
+        messageIsPrivate: true,
         createdAt: true,
       },
     });
 
+    // Audit 030 HI-01 — respect isAnonymous / messageIsPrivate flags
+    // Audit 032 S-02 — respect hideAmount flag
     res.json({
       donations: donations.map((d) => ({
         id: d.id,
-        amount: d.amount,
-        name: d.customerName || "Anonyme",
-        message: d.donorMessage || null,
+        amount: hideAmount ? null : d.amount,
+        name: d.isAnonymous ? "Anonyme" : (d.customerName || "Anonyme"),
+        message: d.messageIsPrivate ? null : (d.donorMessage || null),
         createdAt: d.createdAt,
       })),
     });

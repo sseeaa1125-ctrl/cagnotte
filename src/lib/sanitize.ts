@@ -49,18 +49,18 @@ export function sanitizeRichText(input: string | undefined | null): string {
  * we wrap them in <p>…</p> with <br> for each newline so they render
  * inside the prose container without visual regression.
  */
+// Audit 030 CR-06 — always route through sanitizeRichText regardless of
+// whether input "looks like HTML". The old looksLikeHtml fork was fragile:
+// sanitize-html handles plain text fine (returns it unchanged).
 export function normalizeLegacyDescription(input: string): string {
   if (!input) return "";
-  const looksLikeHtml = /<\/?(p|strong|em|b|i|u|a|br)\b/i.test(input);
-  if (looksLikeHtml) return sanitizeRichText(input);
-  const escaped = input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-  const withBreaks = escaped.replace(/\n/g, "<br>");
-  return `<p>${withBreaks}</p>`;
+  const sanitized = sanitizeRichText(input);
+  // Plain text (no tags survived sanitization) → wrap in <p> with <br> for newlines
+  if (!/<\/?[a-z]/i.test(sanitized)) {
+    const withBreaks = sanitized.replace(/\n/g, "<br>");
+    return `<p>${withBreaks}</p>`;
+  }
+  return sanitized;
 }
 
 /**

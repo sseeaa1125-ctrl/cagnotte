@@ -1079,12 +1079,12 @@ export const WITHDRAWAL_LABELS = {
   successBodySuffix: " a bien été prise en compte.",
   successToLabel: "Vers le compte",
   successDelayLabel: "Délai estimé",
-  successDelayInstant: "Immédiat",
+  successDelayInstant: "Sous 48h",
   successStatusLabel: "Statut",
-  successStatusPending: "En cours de traitement",
-  successInfoTitle: "Un SMS de confirmation arrive",
+  successStatusPending: "En attente de traitement",
+  successInfoTitle: "Retrait sous 48h",
   successInfo:
-    "Tu vas recevoir un SMS de confirmation de notre partenaire de paiement d'ici quelques minutes.",
+    "Ta demande est enregistree. Elle sera traitee sous 48h ouvrees. Tu recevras un SMS de confirmation de notre partenaire de paiement.",
   successBackToDashboard: "Aller au tableau de bord",
   successBackToCagnottes: "Voir mes cagnottes",
   kycBlockedTitle: "Vérifie ton identité",
@@ -1165,9 +1165,10 @@ export const WITHDRAW_PIN_LABELS = {
 } as const;
 
 export const WITHDRAW_SUCCESS_LABELS = {
-  title: "Retrait confirmé !",
-  helper: "Ton retrait sera traité dans les prochaines minutes.",
+  title: "Demande enregistree !",
+  helper: "Ta demande de retrait a bien ete prise en compte. Elle sera traitee sous 48h.",
   backCta: "Retour au tableau de bord",
+  historyCta: "Voir mes retraits",
 } as const;
 
 export const BANK_ACCOUNTS_LABELS = {

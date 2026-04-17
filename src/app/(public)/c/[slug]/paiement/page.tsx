@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -283,6 +284,8 @@ export default function PaiementPage() {
         cagnotteSlug: stashed.cagnotteSlug,
         orderType: stashed.orderType,
         amount: stashed.amount,
+        baseAmount: stashed.baseAmount,
+        voluntaryContribution: stashed.voluntaryContribution,
         paymentType: provider,
         customerName: stashed.customerName,
         customerEmail: stashed.customerEmail,
@@ -523,30 +526,9 @@ export default function PaiementPage() {
                 {/* Header logos — hidden on mobile (redundant with the
                     provider picker below). */}
                 <div className="hidden shrink-0 items-center gap-1.5 sm:flex">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/wave.png"
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 rounded-md object-cover ring-1 ring-black/5"
-                  />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/orange-money.png"
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 rounded-md object-cover ring-1 ring-black/5"
-                  />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/maxit.png"
-                    alt=""
-                    width={28}
-                    height={28}
-                    className="h-7 w-7 rounded-md object-cover ring-1 ring-black/5"
-                  />
+                  <Image src="/wave.png" alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover ring-1 ring-black/5" />
+                  <Image src="/orange-money.png" alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover ring-1 ring-black/5" />
+                  <Image src="/maxit.png" alt="" width={28} height={28} className="h-7 w-7 rounded-md object-cover ring-1 ring-black/5" />
                 </div>
               </div>
 
@@ -562,7 +544,8 @@ export default function PaiementPage() {
                       type="button"
                       onClick={() => setProvider(p.id)}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl border-2 px-3 py-2.5 text-left transition-all duration-150 sm:flex-col sm:gap-1.5 sm:px-2 sm:py-3 sm:text-center",
+                        // Audit 033 S-04 — min-h-12 ensures 48px touch target on mobile
+                        "flex min-h-12 items-center gap-3 rounded-xl border-2 px-3 py-3 text-left transition-all duration-150 sm:flex-col sm:gap-1.5 sm:px-2 sm:py-3 sm:text-center",
                         active
                           ? "border-primary bg-white shadow-md"
                           : "border-gray-200 bg-white/80 hover:border-gray-300 active:scale-[0.98]",
@@ -571,8 +554,7 @@ export default function PaiementPage() {
                       aria-label={`Payer avec ${p.label}`}
                     >
                       {p.logo ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={p.logo}
                           alt=""
                           width={32}
@@ -633,10 +615,12 @@ export default function PaiementPage() {
               <div className="mb-6 flex items-center gap-4 border-b border-gray-100 pb-6">
                 <div className="relative shrink-0">
                   {stashed.cagnotteCoverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={stashed.cagnotteCoverUrl}
                       alt=""
+                      width={72}
+                      height={72}
+                      sizes="72px"
                       className="h-[72px] w-[72px] rounded-2xl object-cover shadow-[0_8px_20px_rgb(23,40,102,0.15)] ring-1 ring-black/5"
                     />
                   ) : (
@@ -655,7 +639,7 @@ export default function PaiementPage() {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                  <p className="mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-500">
                     Vous participez à
                   </p>
                   <h4 className="line-clamp-2 font-headings text-[15px] font-black leading-[1.2] text-primary">
@@ -741,7 +725,7 @@ export default function PaiementPage() {
                 </button>
               )}
 
-              <p className="mt-4 text-center text-[11px] font-medium text-gray-400">
+              <p className="mt-4 text-center text-[11px] font-medium text-gray-500">
                 Paiement 100 % sécurisé via Bictorys. En cliquant, vous
                 acceptez nos{" "}
                 <Link href="/cgu" className="text-primary hover:underline">
@@ -787,14 +771,14 @@ function WaitingCard(props: {
       <section className="flex flex-col items-center justify-center rounded-3xl border border-gray-100 bg-white p-8 text-center shadow-sm sm:p-10">
         <div className="relative mx-auto mb-5 h-24 w-24">
           <div
-            className="absolute inset-0 animate-ping rounded-full bg-[#00B67A]/20"
+            className="absolute inset-0 animate-ping rounded-full bg-success/20"
             aria-hidden
           />
-          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-[#E6F3EE]">
+          <div className="absolute inset-0 flex items-center justify-center rounded-full bg-success-bg">
             <Check
               size={48}
               strokeWidth={3}
-              className="text-[#00B67A]"
+              className="text-success"
               aria-hidden
             />
           </div>
@@ -917,7 +901,7 @@ function WaitingCard(props: {
               onClick={handleCopy}
               className={cn(
                 OUTLINE_BTN_CLASS,
-                copied && "border-[#00B67A] bg-[#E6F3EE] text-[#00B67A] hover:bg-[#E6F3EE]",
+                copied && "border-[#00B67A] bg-success-bg text-success hover:bg-success-bg",
                 !canShare && "col-span-2",
               )}
             >

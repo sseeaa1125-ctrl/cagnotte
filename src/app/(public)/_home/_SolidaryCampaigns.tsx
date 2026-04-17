@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { HOME_SOLIDAIRE_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
@@ -45,7 +46,8 @@ export async function HomeSolidaryCampaigns() {
   const cagnottes = await getSolidaires();
 
   return (
-    <section className="mx-4 my-8 rounded-[2rem] bg-[#E6F3EE] px-4 py-14 text-center sm:my-10 sm:rounded-[2.5rem] sm:py-16 md:mx-12 md:my-12 md:rounded-[3rem] md:px-8 md:py-24">
+    // Audit 033 S-01 — sm:mx-8 added to smooth the 16→48px margin jump
+    <section className="mx-4 my-8 rounded-[2rem] bg-success-bg px-4 py-14 text-center sm:mx-8 sm:my-10 sm:rounded-[2.5rem] sm:py-16 md:mx-12 md:my-12 md:rounded-[3rem] md:px-8 md:py-24">
       <h2 className="mb-4 font-headings text-2xl font-black leading-tight text-primary sm:mb-6 sm:text-3xl md:text-4xl lg:text-5xl">
         {HOME_SOLIDAIRE_LABELS.h2}
       </h2>
@@ -58,7 +60,8 @@ export async function HomeSolidaryCampaigns() {
           {HOME_SOLIDAIRE_LABELS.empty}
         </div>
       ) : (
-        <div className="mx-auto grid max-w-7xl gap-6 text-left md:grid-cols-4">
+        // Audit 033 V-01 — 2-col on mobile, 4-col on lg+ (was md:4 = cramped at 768px)
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 text-left sm:gap-6 lg:grid-cols-4">
           {cagnottes.map((c) => {
             const slug = c.slug as string;
             const raisedLabel =
@@ -73,10 +76,12 @@ export async function HomeSolidaryCampaigns() {
               >
                 <div className="mb-4 h-32 w-full overflow-hidden rounded-2xl bg-muted">
                   {c.coverUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={c.coverUrl}
                       alt={c.title}
+                      width={400}
+                      height={200}
+                      sizes="(max-width: 640px) 50vw, 25vw"
                       className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                     />
                   ) : (
@@ -93,7 +98,7 @@ export async function HomeSolidaryCampaigns() {
                     {raisedLabel} {HOME_SOLIDAIRE_LABELS.collectedSuffix}
                   </p>
                   <div className="mt-auto">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-400">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500">
                       <ArrowRight size={16} aria-hidden />
                     </span>
                   </div>

@@ -33,6 +33,8 @@ export default async function OGImage({
   let totalRaised = 0;
   let donorCount = 0;
   let sellerName = "";
+  let hideAmount = false;
+  let hideDonors = false;
 
   try {
     const res = await fetch(`${BACKEND_API_URL}/api/cagnottes/${slug}`, {
@@ -46,6 +48,8 @@ export default async function OGImage({
       totalRaised = d.totalRaised ?? 0;
       donorCount = d.donorCount ?? 0;
       sellerName = d.seller?.displayName ?? "";
+      hideAmount = !!d.hideAmount;
+      hideDonors = !!d.hideDonors;
     }
   } catch {
     // fallback to defaults
@@ -126,16 +130,18 @@ export default async function OGImage({
           {/* Amount row */}
           <div style={{ display: "flex", alignItems: "baseline", gap: "14px" }}>
             <div style={{ display: "flex", fontSize: "34px", fontWeight: 700, color: "#FBE6ED" }}>
-              {fmt(totalRaised)}
+              {hideAmount ? "Montant masqué" : fmt(totalRaised)}
             </div>
-            {goalAmount > 0 ? (
+            {!hideAmount && goalAmount > 0 ? (
               <div style={{ display: "flex", fontSize: "20px", color: "rgba(255,255,255,0.45)" }}>
                 sur {fmt(goalAmount)}
               </div>
-            ) : (
+            ) : !hideAmount ? (
               <div style={{ display: "flex", fontSize: "20px", color: "rgba(255,255,255,0.45)" }}>
                 collectés
               </div>
+            ) : (
+              <div style={{ display: "flex" }} />
             )}
           </div>
 
@@ -170,8 +176,10 @@ export default async function OGImage({
             }}
           >
             <div style={{ display: "flex", fontSize: "18px", color: "rgba(255,255,255,0.5)" }}>
-              {donorCount} {donorCount > 1 ? "contributeurs" : "contributeur"}
-              {goalAmount > 0 ? ` · ${progress}%` : ""}
+              {hideDonors
+                ? ""
+                : `${donorCount} ${donorCount > 1 ? "contributeurs" : "contributeur"}`}
+              {!hideAmount && goalAmount > 0 ? `${hideDonors ? "" : " · "}${progress}%` : ""}
             </div>
             <div style={{ display: "flex", fontSize: "22px", fontWeight: 700, color: "white", letterSpacing: "-0.3px" }}>
               cagnotte.sn

@@ -9,7 +9,9 @@ import { Button } from "./Button";
 import { Input } from "./Input";
 import { Modal } from "./Modal";
 import { cn } from "@/lib/utils";
-import { stripHtml } from "@/lib/sanitize";
+// Audit 031 PERF-01 — lightweight client-only stripHtml avoids pulling
+// sanitize-html (~160KB) into the client bundle.
+import { stripHtml } from "@/lib/sanitize-client";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Rich-text editor for cagnotte descriptions.

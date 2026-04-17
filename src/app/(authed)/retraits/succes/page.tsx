@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Info } from "lucide-react";
+import { Clock, Info } from "lucide-react";
 import { Button } from "@/components/ui";
 import { WITHDRAW_SUCCESS_LABELS, WITHDRAWAL_LABELS } from "@/lib/constants";
 import { formatPrice } from "@/lib/format";
@@ -45,14 +45,14 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
       <DraftClearer />
 
       <div className="rounded-[2.5rem] bg-white p-6 shadow-sm md:p-10">
-        {/* animate-ping green ring — Banani WithdrawSuccess */}
+        {/* animate-ping amber ring — pending state (48h delay) */}
         <div className="relative mx-auto mb-8 mt-4 flex h-24 w-24 items-center justify-center">
-          <div className="absolute inset-0 animate-ping rounded-full bg-[#00B67A]/20" />
-          <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-[#E6F3EE]">
-            <Check
+          <div className="absolute inset-0 animate-ping rounded-full bg-amber-400/20" />
+          <div className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full bg-amber-50">
+            <Clock
               size={48}
-              strokeWidth={3}
-              className="text-[#00B67A]"
+              strokeWidth={2.5}
+              className="text-amber-600"
               aria-hidden
             />
           </div>
@@ -86,7 +86,7 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
             <span className="text-sm text-muted-foreground">
               {WITHDRAWAL_LABELS.successDelayLabel}
             </span>
-            <span className="inline-flex items-center rounded-full bg-[#E6F3EE] px-3 py-1 text-xs font-semibold text-[#00B67A]">
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-600">
               {WITHDRAWAL_LABELS.successDelayInstant}
             </span>
           </div>
@@ -119,14 +119,14 @@ export default async function RetraitsSuccesPage({ searchParams }: PageProps) {
 
         {/* CTAs */}
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Link href="/tableau-de-bord">
+          <Link href="/retraits?tab=historique">
             <Button type="button" variant="primary" size="lg">
-              {WITHDRAW_SUCCESS_LABELS.backCta}
+              {WITHDRAW_SUCCESS_LABELS.historyCta}
             </Button>
           </Link>
-          <Link href="/cagnottes">
+          <Link href="/tableau-de-bord">
             <Button type="button" variant="outline" size="lg">
-              {WITHDRAWAL_LABELS.successBackToCagnottes}
+              {WITHDRAW_SUCCESS_LABELS.backCta}
             </Button>
           </Link>
         </div>

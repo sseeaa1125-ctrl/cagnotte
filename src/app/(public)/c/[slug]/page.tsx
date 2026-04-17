@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, ShieldCheck, Wallet } from "lucide-react";
 import { ShareSheet } from "@/components/share/ShareSheet";
 import { CagnotteMediaViewer } from "@/components/cagnottes/CagnotteMediaViewer";
@@ -127,7 +128,7 @@ export async function generateMetadata({
       title: cagnotte.title,
       description,
       url: `${PUBLIC_BASE_URL}/c/${slug}`,
-      type: "website",
+      type: "article",
       siteName: "cagnotte.sn",
       locale: "fr_FR",
     },
@@ -136,7 +137,13 @@ export async function generateMetadata({
       title: cagnotte.title,
       description,
     },
-    robots: { index: false, follow: false },
+    // Public cagnottes are indexable; private ones are noindex.
+    robots: cagnotte.visibility === "public"
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
+    alternates: {
+      canonical: `${PUBLIC_BASE_URL}/c/${slug}`,
+    },
   };
 }
 
@@ -210,7 +217,7 @@ export default async function CagnottePage({
           Participants ({donorCount})
         </h2>
         {donorCount > donorWall.length ? (
-          <span className="text-xs font-bold text-gray-400 sm:text-sm">
+          <span className="text-xs font-bold text-gray-500 sm:text-sm">
             10 plus récents
           </span>
         ) : null}
@@ -225,7 +232,7 @@ export default async function CagnottePage({
             >
               <div
                 aria-hidden
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F4D3DE] font-bold text-primary"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-dark font-bold text-primary"
               >
                 {initial(p.name)}
               </div>
@@ -237,7 +244,7 @@ export default async function CagnottePage({
                   <span
                     className={cn(
                       maskedAmount
-                        ? "italic text-gray-400"
+                        ? "italic text-gray-500"
                         : "font-bold text-primary",
                     )}
                   >
@@ -258,8 +265,33 @@ export default async function CagnottePage({
     </section>
   ) : null;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: cagnotte.title,
+    description: stripHtml(cagnotte.description ?? "") || undefined,
+    url: `${PUBLIC_BASE_URL}/c/${slug}`,
+    startDate: cagnotte.createdAt,
+    endDate: cagnotte.endDate || undefined,
+    organizer: {
+      "@type": "Person",
+      name: sellerName,
+    },
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OnlineEventAttendanceMode",
+    location: {
+      "@type": "VirtualLocation",
+      url: `${PUBLIC_BASE_URL}/c/${slug}`,
+    },
+    inLanguage: "fr",
+  };
+
   return (
     <article className="bg-gray-50 pb-10 sm:pb-12 md:pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-6 md:px-6 md:py-6 lg:px-8">
         {isPrivate ? (
           <div
@@ -291,20 +323,18 @@ export default async function CagnottePage({
                 {/* Organisée par row */}
                 <div className="mb-6 flex items-center gap-4 border-y border-gray-100 py-5 sm:py-4 md:mb-6">
                   {cagnotte.seller?.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={cagnotte.seller.avatarUrl}
                       alt=""
                       width={56}
                       height={56}
-                      loading="lazy"
-                      decoding="async"
+                      sizes="56px"
                       className="h-12 w-12 shrink-0 rounded-full object-cover sm:h-14 sm:w-14"
                     />
                   ) : (
                     <div
                       aria-hidden
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#F4D3DE] font-headings text-lg font-black text-primary sm:h-14 sm:w-14"
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-pink-dark font-headings text-lg font-black text-primary sm:h-14 sm:w-14"
                     >
                       {initial(sellerName)}
                     </div>
@@ -379,7 +409,7 @@ export default async function CagnottePage({
               ) : (
                 <Link
                   href={`/c/${slug}/participer`}
-                  className="group relative mb-4 flex min-h-14 w-full items-center justify-center overflow-hidden rounded-2xl bg-[#F4D3DE] py-4 font-headings text-lg font-black text-primary shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#efc7d5] hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
+                  className="group relative mb-4 flex min-h-14 w-full items-center justify-center overflow-hidden rounded-2xl bg-pink-dark py-4 font-headings text-lg font-black text-primary shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pink-cta-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
                 >
                   <span
                     aria-hidden

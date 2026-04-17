@@ -10,12 +10,14 @@ import { formatPrice } from "@/lib/format";
 // emitted by the notification dispatchers), we read `Notification.data`
 // (the typed payload passed to createNotification) and build the JSX here.
 //
-// This is a PURE function — no hooks, no state. Safe for server or client.
-// Handles missing fields defensively via nullish coalescing.
+// Data field names MUST match what the backend dispatchers pass in
+// `lib/notifications/dispatch.ts`. See each case for the exact contract.
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface NotificationData {
   type: string;
+  title?: string;
+  body?: string;
   data: Record<string, unknown> | null;
 }
 
@@ -41,8 +43,12 @@ export function renderNotificationContent(
   const type = (n.type || "").toUpperCase();
 
   switch (type) {
+    // dispatch.ts data: { donorDisplayName, wasAnonymous, amount, cagnotteTitle }
     case "DONATION_RECEIVED": {
-      const donor = asString(d.donorDisplayName, "Un donateur");
+      const donor = asString(
+        d.donorDisplayName,
+        d.wasAnonymous ? "Un participant anonyme" : "Un donateur",
+      );
       const title = asString(d.cagnotteTitle, "votre cagnotte");
       const amount = asNumber(d.amount);
       return (
@@ -54,8 +60,12 @@ export function renderNotificationContent(
       );
     }
 
+    // dispatch.ts data: { donorDisplayName, wasAnonymous, isPrivate, cagnotteTitle }
     case "DONATION_MESSAGE": {
-      const donor = asString(d.donorDisplayName, "Un donateur");
+      const donor = asString(
+        d.donorDisplayName,
+        d.wasAnonymous ? "Un participant anonyme" : "Un donateur",
+      );
       const title = asString(d.cagnotteTitle, "votre cagnotte");
       return (
         <>
@@ -65,8 +75,9 @@ export function renderNotificationContent(
       );
     }
 
+    // dispatch.ts data: { threshold (50|100), goalAmount, cagnotteTitle }
     case "MILESTONE_REACHED": {
-      const percent = asNumber(d.percent, 50);
+      const percent = asNumber(d.threshold, 50);
       const title = asString(d.cagnotteTitle, "votre cagnotte");
       return (
         <>
@@ -76,20 +87,21 @@ export function renderNotificationContent(
       );
     }
 
+    // dispatch.ts data: { endDate, cagnotteTitle }
     case "CAGNOTTE_ENDING_SOON": {
-      const days = asNumber(d.daysLeft, 3);
       const title = asString(d.cagnotteTitle, "votre cagnotte");
       return (
         <>
           Votre cagnotte <Bold>{title}</Bold> se termine dans{" "}
-          <Bold>{days} jours</Bold>. {"N'"}oubliez pas de la relancer !
+          <Bold>3 jours</Bold>. {"N'"}oubliez pas de la relancer !
         </>
       );
     }
 
+    // dispatch.ts data: { totalRaised, donorCount, cagnotteTitle }
     case "CAGNOTTE_ENDED": {
       const title = asString(d.cagnotteTitle, "votre cagnotte");
-      const total = asNumber(d.totalCollected);
+      const total = asNumber(d.totalRaised);
       return (
         <>
           Votre cagnotte <Bold>{title}</Bold> est terminée. Total collecté :{" "}
@@ -98,9 +110,10 @@ export function renderNotificationContent(
       );
     }
 
+    // dispatch.ts data: { amount, provider }
     case "PAYOUT_COMPLETED": {
       const amount = asNumber(d.amount);
-      const provider = asString(d.payoutProvider, "bancaire");
+      const provider = asString(d.provider, "Mobile Money");
       return (
         <>
           Le virement de <Bold>{formatPrice(amount)}</Bold> vers votre compte{" "}
@@ -109,12 +122,36 @@ export function renderNotificationContent(
       );
     }
 
+    // dispatch.ts data: { amount, reason, attempt } OR { amount, reason, cancelledByAdmin }
     case "PAYOUT_FAILED": {
       const amount = asNumber(d.amount);
+      const reason = asString(d.reason);
+
+      // Admin cancellation — different from a real payment failure
+      if (d.cancelledByAdmin) {
+        return (
+          <>
+            {"L'"}équipe cagnotte.sn a annulé votre demande de retrait de{" "}
+            <Bold>{formatPrice(amount)}</Bold>.
+            {reason ? (
+              <>
+                {" "}Motif : <Bold>{reason}</Bold>.
+              </>
+            ) : null}{" "}
+            Votre solde a été rétabli.
+          </>
+        );
+      }
+
       return (
         <>
-          Le virement de <Bold>{formatPrice(amount)}</Bold> a échoué. Veuillez
-          vérifier vos coordonnées bancaires.
+          Le virement de <Bold>{formatPrice(amount)}</Bold> a échoué.
+          {reason ? (
+            <>
+              {" "}Motif : <Bold>{reason}</Bold>.
+            </>
+          ) : null}{" "}
+          Veuillez vérifier vos coordonnées et réessayer.
         </>
       );
     }
@@ -137,10 +174,14 @@ export function renderNotificationContent(
       );
     }
 
+    // Admin notifications (broadcast/targeted) — render body from notification
     case "SYSTEM":
     default: {
-      const msg = asString(d.message);
-      return <>{msg}</>;
+      // Admin notifications store the message in notification.body, not data.message
+      const body = n.body || asString(d.message);
+      if (body) return <>{body}</>;
+      // Last resort: show title
+      return <>{n.title || ""}</>;
     }
   }
 }

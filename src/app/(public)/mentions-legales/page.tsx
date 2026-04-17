@@ -4,6 +4,8 @@ export const metadata: Metadata = {
   title: "Mentions légales",
   description:
     "Informations légales et éditeur de cagnotte.sn, la plateforme de cagnottes en ligne basée à Dakar.",
+  alternates: { canonical: "https://cagnotte.sn/mentions-legales" },
+  robots: { index: true, follow: true },
 };
 
 export default function MentionsLegalesPage() {

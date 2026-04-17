@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Avatar } from "@/components/ui";
+import { useUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 import { NAV_LABELS, MISC } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export function DashboardNavbar({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const unreadCount = useUnreadNotificationCount();
 
   React.useEffect(() => {
     if (!menuOpen) return;
@@ -67,22 +69,31 @@ export function DashboardNavbar({
           className="flex items-center font-headings text-2xl font-black tracking-tighter text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
         >
           {MISC.brandMark}
-          <span className="ml-1 text-lg font-medium text-gray-400">
+          <span className="ml-1 text-lg font-medium text-gray-500">
             {MISC.brandSuffix}
           </span>
         </Link>
 
         {/* Center nav (desktop) */}
         <nav className="hidden items-center gap-6 md:flex">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
-            >
-              {item.label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map((item) => {
+            const isNotif = item.href === "/notifications";
+            const showBadge = isNotif && unreadCount > 0;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="relative text-sm font-medium text-primary hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
+              >
+                {item.label}
+                {showBadge ? (
+                  <span className="absolute -right-4 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[9px] font-bold text-white">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                ) : null}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Right: avatar only. The standalone notification bell was removed —

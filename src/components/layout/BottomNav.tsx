@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, Heart, LayoutDashboard } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { useUnreadNotificationCount } from "@/hooks/useUnreadNotificationCount";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -31,51 +31,6 @@ import { cn } from "@/lib/utils";
 
 export interface BottomNavProps {
   className?: string;
-}
-
-const POLL_INTERVAL_MS = 60_000;
-
-function useUnreadNotificationCount(): number {
-  const [count, setCount] = React.useState(0);
-  const pathname = usePathname();
-
-  React.useEffect(() => {
-    let cancelled = false;
-
-    async function fetchCount() {
-      try {
-        const data = await api<{ total: number; unread: number }>(
-          "/api/notifications/count",
-        );
-        if (!cancelled && typeof data.unread === "number") {
-          setCount(data.unread);
-        }
-      } catch (err) {
-        // Silent on 401 — the user is mid auth-refresh, not an error.
-        // Also silent on network errors — we'll retry on the next tick.
-        if (err instanceof ApiError && err.status === 401) return;
-        // For any other error, keep the previous count (don't reset to 0).
-      }
-    }
-
-    fetchCount();
-    const interval = window.setInterval(fetchCount, POLL_INTERVAL_MS);
-
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") fetchCount();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-    // `pathname` in deps so a navigation — especially TO /notifications
-    // after marking items read — triggers an immediate re-fetch.
-  }, [pathname]);
-
-  return count;
 }
 
 interface TabDef {

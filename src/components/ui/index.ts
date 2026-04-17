@@ -3,7 +3,8 @@ export { Input } from "./Input";
 export type { InputProps } from "./Input";
 export { Textarea } from "./Textarea";
 export type { TextareaProps } from "./Textarea";
-export { RichTextEditor } from "./RichTextEditor";
+// Audit 031 PERF-02 — lazy wrapper keeps TipTap (~200KB) out of initial bundle
+export { RichTextEditor } from "./RichTextEditorLazy";
 export type { RichTextEditorProps } from "./RichTextEditor";
 export { Select } from "./Select";
 export type { SelectProps, SelectOption } from "./Select";

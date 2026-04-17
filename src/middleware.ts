@@ -25,6 +25,11 @@ const AUTHED_PREFIXES = [
   "/retraits",
 ];
 
+// Admin routes — separate cookie, separate refresh flow.
+const ADMIN_AUTHED_PREFIXES = ["/admin"];
+const ADMIN_PUBLIC_PATHS = ["/admin/connexion"];
+const ADMIN_ACCESS_COOKIE = "izy-admin-token";
+
 const ACCESS_COOKIE = "izy-token";
 
 function isAuthedPath(pathname: string): boolean {
@@ -52,6 +57,21 @@ export function middleware(request: NextRequest) {
     pathname.includes(".")
   ) {
     return passthroughWithPathname(request);
+  }
+
+  // Admin auth gate — redirect to /admin/connexion if no admin cookie.
+  // Admin public paths (login page) are excluded from the check.
+  const isAdminPath = ADMIN_AUTHED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  const isAdminPublic = ADMIN_PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
+  if (isAdminPath && !isAdminPublic && !request.cookies.get(ADMIN_ACCESS_COOKIE)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin/connexion";
+    url.search = "";
+    return NextResponse.redirect(url, 303);
   }
 
   // Silent refresh gate for protected pages.

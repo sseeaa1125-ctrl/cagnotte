@@ -119,7 +119,7 @@ export default function CreatePickerPage() {
           description={CREATE_PICKER_LABELS.festiveDescription}
           feeAmount={CREATE_PICKER_LABELS.festiveFeeAmount}
           cta={CREATE_PICKER_LABELS.festiveCta}
-          accentClass="bg-[#F4D3DE] hover:bg-[#efc7d5]"
+          accentClass="bg-pink-dark hover:bg-pink-cta-hover"
           ariaLabel={`${CREATE_PICKER_LABELS.festiveTitle} — ${CREATE_PICKER_LABELS.festiveFeeAmount} ${CREATE_PICKER_LABELS.festiveFeeLabel}. ${CREATE_PICKER_LABELS.festiveDescription}`}
           onClick={() =>
             router.push("/tableau-de-bord/nouvelle/festive/etape-1")

@@ -8,13 +8,15 @@ export interface SelectOption {
 }
 
 export interface SelectProps
-  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "className"> {
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "className" | "size"> {
   className?: string;
   label?: string;
   error?: string;
   helper?: string;
   options: SelectOption[];
   placeholder?: string;
+  /** Compact size for admin/dense layouts */
+  compact?: boolean;
 }
 
 export function Select({
@@ -24,6 +26,7 @@ export function Select({
   helper,
   options,
   placeholder,
+  compact,
   id,
   ...props
 }: SelectProps) {
@@ -31,7 +34,7 @@ export function Select({
   const selectId = id ?? reactId;
 
   return (
-    <div className="flex w-full flex-col gap-1.5">
+    <div className={cn("flex flex-col gap-1.5", compact ? "w-auto" : "w-full")}>
       {label ? (
         <label
           htmlFor={selectId}
@@ -45,9 +48,13 @@ export function Select({
         <select
           id={selectId}
           className={cn(
-            "min-h-12 w-full appearance-none rounded-lg border bg-background py-3 pl-4 pr-10 text-base text-primary",
+            "appearance-none rounded-lg border bg-background text-primary",
+            compact ? "w-auto" : "w-full",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
             "disabled:cursor-not-allowed disabled:opacity-60",
+            compact
+              ? "min-h-9 py-1.5 pl-3 pr-8 text-sm"
+              : "min-h-12 py-3 pl-4 pr-10 text-base",
             error ? "border-red-500" : "border-border",
             className,
           )}
@@ -69,8 +76,11 @@ export function Select({
           ))}
         </select>
         <ChevronDown
-          size={18}
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          size={compact ? 14 : 18}
+          className={cn(
+            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-muted-foreground",
+            compact ? "right-2" : "right-3",
+          )}
         />
       </div>
 

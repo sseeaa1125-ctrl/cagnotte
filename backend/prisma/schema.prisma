@@ -367,11 +367,13 @@ model Order {
 
   orderType OrderType
 
-  amount           Int
-  currency         String @default("XOF")
-  commissionRate   Int
-  commissionAmount Int
-  sellerAmount     Int
+  amount                Int
+  baseAmount            Int?              // Montant de base avant contribution volontaire
+  voluntaryContribution Int      @default(0) // "Soutenir cagnotte.sn" (3%)
+  currency              String   @default("XOF")
+  commissionRate        Int
+  commissionAmount      Int
+  sellerAmount          Int
 
   paymentStatus     PaymentStatus @default(PENDING)
   paymentProvider   String        @default("bictorys")
@@ -577,6 +579,7 @@ enum NotificationType {
   PAYOUT_FAILED
   KYC_APPROVED
   KYC_REJECTED
+  SYSTEM
 }
 
 // =============================================

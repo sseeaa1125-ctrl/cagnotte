@@ -40,14 +40,13 @@ const PUBLIC_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL ||
   "https://cagnotte.sn";
 
-// Inline navy CTA button — Outlook-safe. Brand color #172866 to match the
-// frontend `--color-primary` / Tailwind `text-primary`.
+// Inline navy CTA button — Outlook-safe. Brand color #172866.
 function ctaButton(label: string, path: string): string {
   const safeLabel = escapeHtml(label);
   const href = `${PUBLIC_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
-  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 24px 0;">
-    <tr><td style="border-radius: 12px; background-color: #172866;">
-      <a href="${href}" target="_blank" rel="noopener" style="display: inline-block; padding: 14px 28px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 12px;">${safeLabel}</a>
+  return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 28px 0 8px 0;">
+    <tr><td style="border-radius: 14px; background-color: #172866;">
+      <a href="${href}" target="_blank" rel="noopener" style="display: inline-block; padding: 16px 32px; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 14px; letter-spacing: 0.2px;">${safeLabel}</a>
     </td></tr>
   </table>`;
 }
@@ -183,7 +182,7 @@ export function donationMessageTemplate(input: DonationMessageInput): TemplateOu
     emailSubject: `Nouveau message sur ${input.cagnotteTitle}`,
     emailHtml: `<h2>Nouveau message</h2>
       <p><strong>${safeName}</strong> a laissé un message sur ta cagnotte <strong>« ${safeTitle} »</strong> :</p>
-      <blockquote style="margin:12px 0;padding:12px 16px;background-color:#F9FAFB;border-left:3px solid #172866;border-radius:8px;color:#374151;font-style:italic;">${safeMsg}</blockquote>
+      <blockquote style="margin:16px 0;padding:14px 18px;background-color:#FBE6ED;border-left:3px solid #172866;border-radius:10px;color:#374151;font-style:italic;">${safeMsg}</blockquote>
       ${ctaButton("Voir ma cagnotte", "/tableau-de-bord")}`,
   };
 }
@@ -223,7 +222,7 @@ export function payoutFailedTemplate(input: PayoutFailedInput, reason: string, a
   const fcfa = formatFcfa(input.amount);
   return {
     title: `Retrait échoué`,
-    body: `Ton retrait de ${fcfa} n'a pas pu être effectué. Raison : ${reason}. Vérifie ton numéro et réessaye.`,
+    body: `Ton retrait de ${fcfa} n'a pas pu être effectué. Raison : ${safeReason}. Vérifie ton numéro et réessaye.`,
     icon: "credit-card",
     emailSubject: `Retrait échoué — action requise`,
     emailHtml: `<h2>Retrait échoué</h2>
@@ -231,6 +230,47 @@ export function payoutFailedTemplate(input: PayoutFailedInput, reason: string, a
       <p>Raison : <strong>${safeReason}</strong></p>
       <p>Vérifie ton numéro Mobile Money et réessaye depuis ton tableau de bord.</p>
       ${ctaButton("Réessayer le retrait", "/retraits")}`,
+  };
+}
+
+// ── 8b. PAYOUT_CANCELLED (admin cancellation during 48h window) ──
+export interface PayoutCancelledInput {
+  amount: number;
+}
+
+export function payoutCancelledTemplate(input: PayoutCancelledInput, reason: string): TemplateOutput {
+  const safeReason = escapeHtml(reason);
+  const fcfa = formatFcfa(input.amount);
+  return {
+    title: `Retrait annulé`,
+    body: `Ta demande de retrait de ${fcfa} a été annulée. Raison : ${safeReason}. Contacte le support pour plus d'informations.`,
+    icon: "credit-card",
+    emailSubject: `Retrait de ${fcfa} annulé`,
+    emailHtml: `<h2>Retrait annulé</h2>
+      <p>Ta demande de retrait de <strong>${fcfa}</strong> a été annulée par l'équipe cagnottes.sn.</p>
+      <p>Raison : <strong>${safeReason}</strong></p>
+      <p>Ton solde a été rétabli. Si tu as des questions, contacte notre support.</p>
+      ${ctaButton("Voir mes retraits", "/retraits")}`,
+  };
+}
+
+// ── 8c. WITHDRAWAL_BLOCKED (admin blocks withdrawals for a seller) ──
+export interface WithdrawalBlockedInput {
+  sellerName?: string;
+}
+
+export function withdrawalBlockedTemplate(_input: WithdrawalBlockedInput, reason: string): TemplateOutput {
+  const safeReason = escapeHtml(reason);
+  return {
+    title: `Retraits suspendus`,
+    body: `Tes retraits ont été suspendus. Raison : ${safeReason}. Contacte le support.`,
+    icon: "shield-alert",
+    emailSubject: `Tes retraits ont été suspendus`,
+    emailHtml: `<h2>Retraits suspendus</h2>
+      <p>Tes retraits ont été temporairement suspendus par l'équipe cagnottes.sn.</p>
+      <p>Raison : <strong>${safeReason}</strong></p>
+      <p>Si tu penses que c'est une erreur ou si tu as les documents requis, contacte notre support.</p>
+      ${ctaButton("Contacter le support", "/aide")}`,
   };
 }
 
@@ -260,7 +300,7 @@ export function kycRejectedTemplate(_input: KycInput, reason: string): TemplateO
   const safeReason = escapeHtml(reason);
   return {
     title: `Documents refusés`,
-    body: `Tes documents d'identité ont été refusés. Raison : ${reason}. Soumets de nouveaux documents depuis ton profil.`,
+    body: `Tes documents d'identité ont été refusés. Raison : ${safeReason}. Soumets de nouveaux documents depuis ton profil.`,
     icon: "check-square",
     emailSubject: `Vérification d'identité refusée`,
     emailHtml: `<h2>Documents refusés</h2>

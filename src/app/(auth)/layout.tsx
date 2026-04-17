@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
+import type { Metadata } from "next";
 import { PublicNavbar } from "@/components/layout/PublicNavbar";
 import { Footer } from "@/components/layout/Footer";
 import { PreFooter } from "@/components/layout/PreFooter";
 import { TopBannerHost } from "../(public)/TopBannerHost";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 // Server Component (no "use client"). Phase 5 plan 05-01 — wraps every
 // /(auth)/ route (inscription, connexion, verification-email, mot-de-passe-*)

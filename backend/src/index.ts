@@ -15,6 +15,7 @@ import { sellersRouter } from "./routes/sellers.js";
 import { withdrawalsRouter } from "./routes/withdrawals.js";
 import { filesRouter } from "./routes/files.js";
 import { notificationsRouter } from "./routes/notifications.js";
+import { adminRouter } from "./routes/admin/index.js";
 import { verifyCsrf } from "./lib/auth.js";
 import { RedisRateLimitStore } from "./lib/rateLimitStore.js";
 import { requireAuth } from "./middleware/auth.js";
@@ -83,6 +84,16 @@ app.use(
 );
 
 app.use(compression());
+
+// ── Correlation ID middleware — attaches a unique request ID to every log ──
+import crypto from "crypto";
+import { setRequestId } from "./lib/logger.js";
+
+app.use((req, res, next) => {
+  const requestId = (req.headers["x-request-id"] as string) || crypto.randomUUID().slice(0, 8);
+  res.setHeader("x-request-id", requestId);
+  setRequestId(requestId, () => next());
+});
 
 // Top-level health check — placed BEFORE rate limiters so platform probes
 // (Railway, Uptime Robot, load balancers) never get throttled. Returns
@@ -154,6 +165,8 @@ const writeLimiter = rateLimit({
 });
 
 // Routes
+// Admin routes — mounted before seller routes, own CSRF via adminAuth.
+app.use("/api/admin", adminRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/sellers", writeLimiter, verifyCsrf, sellersRouter);
 app.use("/api/notifications", writeLimiter, verifyCsrf, notificationsRouter); // Phase 2 02-02
@@ -162,7 +175,8 @@ app.use("/api/orders", ordersRouter); // Public order creation — CSRF not need
 app.use("/api/cagnottes", cagnottesRouter); // Phase 2 02-01 — public GET-only, picks up global limiter
 app.use("/api/webhooks", webhooksRouter); // Webhook signature verification — no cookies
 app.use("/api/upload", writeLimiter, verifyCsrf, uploadRouter);
-app.use("/api/withdrawals", verifyCsrf, withdrawalsRouter);
+// Audit 030 HI-07 — requireAuth at mount level (defense-in-depth)
+app.use("/api/withdrawals", requireAuth, verifyCsrf, withdrawalsRouter);
 
 // Redirection post-paiement Bictorys (ngrok → frontend)
 app.get("/:slug/pending", (req, res) => {
@@ -260,34 +274,122 @@ async function cleanupOldWebhookLogs() {
   }
 }
 
-// Audit 017 — Réconciliation des withdrawals bloqués en PENDING/PROCESSING.
+// Audit 034 — Process PENDING withdrawals after 48h delay.
 //
-// Le happy path des withdrawals est synchrone : POST /api/withdrawals appelle
-// initiatePayout(), reçoit 200/201, et bascule PENDING → COMPLETED dans la
-// même requête. Ce cron couvre uniquement les edge cases :
+// Withdrawals are now created in PENDING status without calling Bictorys.
+// This cron picks up PENDING withdrawals older than 48h (that have NOT been
+// cancelled by admin) and submits them to Bictorys. This gives the admin
+// a 48h window to cancel suspicious withdrawals.
 //
-//   1. Crash serveur entre initiatePayout() et l'update Prisma → withdrawal
-//      avec bictorysTransactionId set mais status PENDING. On query Bictorys
-//      et on finalise.
-//   2. Network timeout sur initiatePayout → withdrawal sans
-//      bictorysTransactionId, status PENDING. Après 10 min on marque FAILED
-//      (le seller peut retenter — l'idempotencyKey côté Bictorys protège
-//      contre le double-payout si l'appel avait en fait réussi).
-//   3. Bictorys retourne "processing" (non terminal) → on attend le prochain
-//      tick.
-//
-// Sécurité : `checkPayoutStatus` retourne `null` sur toute ambiguïté (404,
-// parse error, timeout, statut inconnu) et on skip — aucun changement d'état
-// sur signal flou. Les notifications sont dispatchées POST-commit, jamais
-// dans le $transaction.
+// The cron also handles reconciliation of PROCESSING withdrawals (submitted
+// to Bictorys but not yet terminal).
+import { initiatePayout, parseBictorysPayoutError } from "./lib/payout.js";
+import { getCountryFromPhone } from "./lib/phone.js";
+
+const WITHDRAWAL_DELAY_MS = 48 * 60 * 60 * 1000; // 48 hours
+
+async function processReadyWithdrawals() {
+  const cutoff = new Date(Date.now() - WITHDRAWAL_DELAY_MS);
+  const BATCH = 10;
+
+  // Find PENDING withdrawals older than 48h that haven't been submitted yet
+  const ready = await prisma.withdrawal.findMany({
+    where: {
+      status: "PENDING",
+      bictorysTransactionId: null, // not yet submitted
+      createdAt: { lt: cutoff },
+    },
+    select: {
+      id: true,
+      sellerId: true,
+      reference: true,
+      amount: true,
+      provider: true,
+      phone: true,
+      recipientName: true,
+      idempotencyKey: true,
+    },
+    take: BATCH,
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (ready.length === 0) return;
+  logger.log(`[process-withdrawals] ${ready.length} retrait(s) pret(s) apres 48h`);
+
+  for (const w of ready) {
+    try {
+      const dispatchPayload = {
+        id: w.id,
+        sellerId: w.sellerId,
+        amount: w.amount,
+        phone: w.phone,
+        provider: w.provider,
+      };
+
+      const payoutCountry = getCountryFromPhone(w.phone);
+
+      const result = await initiatePayout(
+        {
+          amount: w.amount,
+          phone: w.phone,
+          operator: w.provider,
+          recipientName: w.recipientName || "Vendeur",
+          merchantReference: w.reference,
+          country: payoutCountry,
+        },
+        w.idempotencyKey || w.reference,
+      );
+
+      if (result.success) {
+        await prisma.withdrawal.update({
+          where: { id: w.id },
+          data: {
+            status: "COMPLETED",
+            bictorysTransactionId: result.data?.id || null,
+            merchantFee: result.data?.merchantFee || 0,
+            processedAt: new Date(),
+          },
+        });
+        firePayoutCompleted(dispatchPayload).catch((err) =>
+          logger.error("[process-withdrawals] firePayoutCompleted", err),
+        );
+        logger.log(`[process-withdrawals] ${w.reference} COMPLETED`);
+      } else {
+        const userMessage = parseBictorysPayoutError(result.httpStatus, result.error);
+        const failureReason = result.error?.slice(0, 500) || "Erreur Bictorys";
+        await prisma.withdrawal.update({
+          where: { id: w.id },
+          data: {
+            status: "REJECTED",
+            failureReason,
+            processedAt: new Date(),
+          },
+        });
+        firePayoutFailed(dispatchPayload, userMessage).catch((err) =>
+          logger.error("[process-withdrawals] firePayoutFailed", err),
+        );
+        logger.log(`[process-withdrawals] ${w.reference} REJECTED — ${failureReason}`);
+      }
+    } catch (err) {
+      logger.error(
+        `[process-withdrawals] erreur sur ${w.reference}`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+}
+
+// Reconcile PROCESSING withdrawals (submitted to Bictorys but status unknown)
 async function reconcileStaleWithdrawals() {
-  const STALE_MS = 10 * 60 * 1000; // 10 min
+  const STALE_MS = 10 * 60 * 1000; // 10 min after submission
   const cutoff = new Date(Date.now() - STALE_MS);
   const BATCH = 20;
 
+  // Only reconcile withdrawals that HAVE a bictorysTransactionId (already submitted)
   const stale = await prisma.withdrawal.findMany({
     where: {
-      status: { in: ["PENDING", "PROCESSING"] },
+      status: { in: ["PROCESSING"] },
+      bictorysTransactionId: { not: null },
       updatedAt: { lt: cutoff },
     },
     select: {
@@ -308,7 +410,6 @@ async function reconcileStaleWithdrawals() {
 
   for (const w of stale) {
     try {
-      // `WithdrawalForDispatch` shape partagée par les 2 dispatcher calls.
       const dispatchPayload = {
         id: w.id,
         sellerId: w.sellerId,
@@ -317,32 +418,9 @@ async function reconcileStaleWithdrawals() {
         provider: w.provider,
       };
 
-      // Cas 2 : pas de bictorysTransactionId → l'appel Bictorys n'a jamais
-      // répondu. On marque REJECTED pour débloquer le seller. Il pourra
-      // retenter (nouvelle idempotencyKey = nouveau withdrawal).
-      if (!w.bictorysTransactionId) {
-        const reason = "Expiré sans confirmation du provider après 10 minutes";
-        await prisma.withdrawal.update({
-          where: { id: w.id },
-          data: {
-            status: "REJECTED",
-            failureReason: reason,
-            processedAt: new Date(),
-          },
-        });
-        firePayoutFailed(dispatchPayload, reason).catch((err) =>
-          logger.error("[reconcile-withdrawals] firePayoutFailed", err),
-        );
-        logger.log(
-          `[reconcile-withdrawals] ${w.reference} marqué REJECTED (pas de txn id)`,
-        );
-        continue;
-      }
-
-      // Cas 1 & 3 : query Bictorys.
-      const status = await checkPayoutStatus(w.bictorysTransactionId);
-      if (!status) continue; // ambigu → skip
-      if (status.status === "pending") continue; // pas encore terminal
+      const status = await checkPayoutStatus(w.bictorysTransactionId!);
+      if (!status) continue;
+      if (status.status === "pending") continue;
 
       if (status.status === "succeeded") {
         await prisma.withdrawal.update({
@@ -352,11 +430,8 @@ async function reconcileStaleWithdrawals() {
         firePayoutCompleted(dispatchPayload).catch((err) =>
           logger.error("[reconcile-withdrawals] firePayoutCompleted", err),
         );
-        logger.log(
-          `[reconcile-withdrawals] ${w.reference} réconcilié COMPLETED`,
-        );
+        logger.log(`[reconcile-withdrawals] ${w.reference} réconcilié COMPLETED`);
       } else {
-        // status.status === "failed"
         const reason = status.reason || "Rejeté par le provider";
         await prisma.withdrawal.update({
           where: { id: w.id },
@@ -369,9 +444,7 @@ async function reconcileStaleWithdrawals() {
         firePayoutFailed(dispatchPayload, reason).catch((err) =>
           logger.error("[reconcile-withdrawals] firePayoutFailed", err),
         );
-        logger.log(
-          `[reconcile-withdrawals] ${w.reference} réconcilié REJECTED`,
-        );
+        logger.log(`[reconcile-withdrawals] ${w.reference} réconcilié REJECTED`);
       }
     } catch (err) {
       logger.error(
@@ -393,12 +466,14 @@ const safeCron = (fn: () => Promise<void>, label: string) => () =>
 setInterval(safeCron(expirePendingOrders, "expire-pending"), 5 * 60 * 1000);
 setInterval(safeCron(cleanupExpiredCodes, "cleanup-codes"), 60 * 60 * 1000);
 setInterval(safeCron(cleanupOldWebhookLogs, "cleanup-webhooks"), 6 * 60 * 60 * 1000);
-// Audit 017 — réconciliation des withdrawals toutes les 5 min (aligné sur
-// le TTL 10min du STALE_MS + 5min tick lag = latence max ~15 min).
+// Audit 034 — process PENDING withdrawals after 48h delay, every 15 min.
+setInterval(safeCron(processReadyWithdrawals, "process-withdrawals"), 15 * 60 * 1000);
+// Reconcile PROCESSING withdrawals every 5 min.
 setInterval(safeCron(reconcileStaleWithdrawals, "reconcile-withdrawals"), 5 * 60 * 1000);
 setTimeout(safeCron(expirePendingOrders, "expire-pending-boot"), 10_000);
 setTimeout(safeCron(cleanupExpiredCodes, "cleanup-codes-boot"), 15_000);
 setTimeout(safeCron(cleanupOldWebhookLogs, "cleanup-webhooks-boot"), 45_000);
+setTimeout(safeCron(processReadyWithdrawals, "process-withdrawals-boot"), 30_000);
 setTimeout(safeCron(reconcileStaleWithdrawals, "reconcile-withdrawals-boot"), 60_000);
 
 // Phase 2 plan 02-02 — ending-soon notification sweep (NOTF-04).
@@ -425,6 +500,26 @@ setTimeout(() => {
   runCagnotteEndedSweep().catch((err) => logger.error("[cagnotte-ended-boot-catchup]", err));
 }, 45_000);
 
-app.listen(PORT, () => {
+// ── Audit 030 CR-04 — Global error handler (must be 4-arg for Express) ──
+app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  logger.error("[unhandled-route-error]", err);
+  if (res.headersSent) return;
+  res.status(500).json({ error: "Erreur interne du serveur" });
+});
+
+const server = app.listen(PORT, () => {
   logger.log(`🚀 Cagnottes.sn Backend running on http://localhost:${PORT}`);
+});
+
+// ── Audit 030 CR-05 — Graceful shutdown ──
+async function gracefulShutdown(signal: string) {
+  logger.log(`[shutdown] ${signal} received, draining...`);
+  server.close(() => logger.log("[shutdown] HTTP server closed"));
+  await prisma.$disconnect().catch(() => {});
+  process.exit(0);
+}
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+process.on("unhandledRejection", (reason) => {
+  logger.error("[unhandledRejection]", reason instanceof Error ? reason : new Error(String(reason)));
 });

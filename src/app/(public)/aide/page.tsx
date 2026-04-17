@@ -7,13 +7,46 @@ export const metadata: Metadata = {
   title: "Centre d'aide",
   description:
     "Toutes les réponses pour créer, partager et recevoir les contributions de votre cagnotte en ligne au Sénégal.",
+  alternates: { canonical: "https://cagnotte.sn/aide" },
+  openGraph: {
+    title: "Centre d'aide — cagnotte.sn",
+    description:
+      "Toutes les réponses pour créer, partager et recevoir les contributions de votre cagnotte en ligne au Sénégal.",
+    url: "https://cagnotte.sn/aide",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Centre d'aide — cagnotte.sn",
+    description:
+      "Toutes les réponses pour créer, partager et recevoir les contributions de votre cagnotte en ligne au Sénégal.",
+  },
 };
 
 export default function AidePage() {
+  // FAQPage JSON-LD for Google rich results
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQ_SECTIONS.flatMap((section) =>
+      section.items.map((item) => ({
+        "@type": "Question",
+        name: item.q,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: item.a,
+        },
+      })),
+    ),
+  };
+
   return (
     <article className="container mx-auto max-w-3xl px-4 py-12 md:py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <header className="mb-10 text-center md:mb-14">
-        <p className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">
+        <p className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-500">
           Centre d&apos;aide
         </p>
         <h1 className="mb-4 font-headings text-3xl font-black leading-tight text-primary md:text-5xl">

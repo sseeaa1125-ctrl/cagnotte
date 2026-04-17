@@ -126,7 +126,7 @@ export function Combobox({
           <span
             className={cn(
               "flex min-w-0 flex-1 items-center gap-3 truncate text-base font-medium",
-              selected ? "text-primary" : "text-gray-400",
+              selected ? "text-primary" : "text-gray-500",
             )}
           >
             {selected?.icon}
@@ -140,7 +140,7 @@ export function Combobox({
             size={20}
             aria-hidden
             className={cn(
-              "flex-shrink-0 text-gray-400 transition-transform",
+              "flex-shrink-0 text-gray-500 transition-transform",
               open && "rotate-180",
             )}
           />

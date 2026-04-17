@@ -234,7 +234,7 @@ authRouter.post("/signup", signupLimiter, async (req, res) => {
     // M8: Send verification email via queue (non-bloquant, retry automatique)
     queueAuthEmail({
       to: data.email,
-      subject: "Vérifie ton email — Izy Store",
+      subject: "Vérifie ton email — Cagnottes.sn",
       html: `<h2>Vérifie ton email</h2>
         <p>Bienvenue sur Izy ! Entre ce code pour activer ton compte :</p>
         <div style="margin:20px 0;padding:20px;background-color:#F0FDFA;border-radius:12px;text-align:center;">
@@ -319,7 +319,7 @@ authRouter.post("/resend-code", resendCodeLimiter, async (req, res) => {
     // Queue auth email (non-bloquant, retry automatique)
     queueAuthEmail({
       to: email,
-      subject: "Nouveau code — Izy Store",
+      subject: "Nouveau code — Cagnottes.sn",
       html: `<h2>Nouveau code</h2>
         <p>Voici ton nouveau code de vérification :</p>
         <div style="margin:20px 0;padding:20px;background-color:#F0FDFA;border-radius:12px;text-align:center;">
@@ -731,7 +731,7 @@ authRouter.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
     // Queue auth email (non-bloquant, retry automatique)
     queueAuthEmail({
       to: email,
-      subject: "Réinitialisation du mot de passe — Izy Store",
+      subject: "Réinitialisation du mot de passe — Cagnottes.sn",
       html: `<h2>Mot de passe oublié</h2>
         <p>Entre ce code pour réinitialiser ton mot de passe :</p>
         <div style="margin:20px 0;padding:20px;background-color:#F0FDFA;border-radius:12px;text-align:center;">
@@ -803,9 +803,10 @@ authRouter.post("/reset-password", resetPasswordLimiter, async (req, res) => {
     });
 
     const hashed = await hashPassword(data.newPassword);
+    // Audit 030 HI-04 — bump tokenVersion to invalidate stolen sessions
     await prisma.seller.update({
       where: { email: data.email },
-      data: { password: hashed },
+      data: { password: hashed, tokenVersion: { increment: 1 } },
     });
 
     res.json({ message: "Mot de passe mis à jour. Tu peux te connecter." });
@@ -1085,7 +1086,14 @@ authRouter.get("/google/callback", async (req, res) => {
       path: "/api/auth",
     });
 
-    if (!code || !state || !cookieState || state !== cookieState) {
+    // Audit 030 CR-02 — timing-safe state comparison (prevents iterative brute-force)
+    if (!code || !state || !cookieState) {
+      res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
+      return;
+    }
+    const stateBuf = Buffer.from(state);
+    const cookieBuf = Buffer.from(cookieState);
+    if (stateBuf.length !== cookieBuf.length || !crypto.timingSafeEqual(stateBuf, cookieBuf)) {
       res.redirect(302, `${frontendUrl}/connexion?error=google_failed`);
       return;
     }

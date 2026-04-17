@@ -6,13 +6,10 @@ import { RedisRateLimitStore } from "../lib/rateLimitStore.js";
 import { prisma } from "../lib/prisma.js";
 import { requireAuth } from "../middleware/auth.js";
 import { verifyCsrf } from "../lib/auth.js";
-import { normalizePhone, maskPhone, getCountryFromPhone } from "../lib/phone.js";
-import { initiatePayout, parseBictorysPayoutError } from "../lib/payout.js";
+import { normalizePhone, maskPhone } from "../lib/phone.js";
 import { verifyPassword } from "../lib/auth.js";
 import * as logger from "../lib/logger.js";
 import { formatZodError } from "../lib/zodErrors.js";
-// Phase 2 plan 02-02 — payout state-transition notifications (NOTF-09 / NOTF-10)
-import { firePayoutCompleted, firePayoutFailed } from "../lib/notifications/dispatch.js";
 
 export const withdrawalsRouter = Router();
 
@@ -31,7 +28,8 @@ const PAYOUT_LIMITS = {
   minAmount: 1000,
   maxAmount: 500000,
   maxPerDay: 10,
-  maxAmountPerDay: 1000000,
+  maxAmountPerDay: 4000000,        // total toutes providers confondues
+  maxAmountPerDayPerProvider: 2000000, // 2M par provider par numéro par jour
   cooldownMinutes: 1,
 };
 
@@ -166,7 +164,7 @@ withdrawalsRouter.get("/balance", requireAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/withdrawals — demander un retrait (avec payout Bictorys) ──
+// ── POST /api/withdrawals — demander un retrait (48h delay, traité par cron) ──
 withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (req, res) => {
   const sellerId = req.seller!.sub;
 
@@ -254,7 +252,6 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
       });
       return;
     }
-    const payoutCountry = getCountryFromPhone(normalizedPhone);
 
     // ── 2. Vérifier le montant max ──
     if (data.amount > PAYOUT_LIMITS.maxAmount) {
@@ -272,7 +269,7 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
         createdAt: { gte: todayStart },
         status: { not: "REJECTED" },
       },
-      select: { amount: true, createdAt: true },
+      select: { amount: true, createdAt: true, provider: true, phone: true },
     });
 
     if (todayWithdrawals.length >= PAYOUT_LIMITS.maxPerDay) {
@@ -286,23 +283,31 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
       return;
     }
 
-    // ── 4. Cooldown : 5 minutes entre deux retraits ──
-    if (todayWithdrawals.length > 0) {
-      const lastWithdrawal = todayWithdrawals.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
-      const minutesSinceLast = (Date.now() - lastWithdrawal.createdAt.getTime()) / 60_000;
-      if (minutesSinceLast < PAYOUT_LIMITS.cooldownMinutes) {
-        const wait = Math.ceil(PAYOUT_LIMITS.cooldownMinutes - minutesSinceLast);
-        res.status(429).json({ error: `Attends ${wait} minute(s) avant de refaire un retrait.` });
-        return;
-      }
+    // ── 3b. Limite par provider par numéro par jour (2M Wave / 2M OM) ──
+    const todayProviderPhoneTotal = todayWithdrawals
+      .filter((w) => w.provider === data.provider && w.phone === normalizedPhone)
+      .reduce((sum, w) => sum + w.amount, 0);
+    if (todayProviderPhoneTotal + data.amount > PAYOUT_LIMITS.maxAmountPerDayPerProvider) {
+      const providerLabel = data.provider === "wave_money" ? "Wave" : "Orange Money";
+      res.status(429).json({
+        error: `Limite quotidienne de ${PAYOUT_LIMITS.maxAmountPerDayPerProvider.toLocaleString("fr-FR")} FCFA par numero ${providerLabel} atteinte. Essaie avec un autre numero ou un autre operateur.`,
+      });
+      return;
     }
 
-    // ── 5. Vérifier qu'il n'y a pas de retrait PENDING/PROCESSING en cours ──
-    const pendingWithdrawal = await prisma.withdrawal.findFirst({
-      where: { sellerId, status: { in: ["PENDING", "PROCESSING"] } },
+    // ── 4. Cooldown supprimé — avec le délai 48h, le vendeur peut faire
+    // plusieurs demandes coup sur coup. Le rate limiter (10/h) et la limite
+    // quotidienne (étape 3) protègent contre l'abus.
+
+    // ── 5. Vérifier qu'il n'y a pas de retrait PROCESSING (soumis à Bictorys) ──
+    // Avec le délai 48h, plusieurs retraits PENDING sont autorisés (ils sont
+    // déduits du solde dans la transaction Serializable ci-dessous). Seul un
+    // retrait en cours d'exécution chez Bictorys bloque un nouveau retrait.
+    const processingWithdrawal = await prisma.withdrawal.findFirst({
+      where: { sellerId, status: "PROCESSING" },
     });
-    if (pendingWithdrawal) {
-      res.status(409).json({ error: "Un retrait est déjà en cours. Attends qu'il soit terminé." });
+    if (processingWithdrawal) {
+      res.status(409).json({ error: "Un retrait est en cours de traitement. Attends qu'il soit terminé." });
       return;
     }
 
@@ -371,91 +376,26 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
       { isolationLevel: "Serializable" }
     );
 
-    // ── 8. Appeler Bictorys Payout API ──
-    // C9: Passer le country dynamiquement au lieu de hardcoder "SN"
-    const result = await initiatePayout(
-      {
-        amount: data.amount,
-        phone: normalizedPhone,
-        operator: data.provider,
-        recipientName: data.recipientName,
-        merchantReference: reference,
-        country: payoutCountry,
-      },
-      idempotencyKey
-    );
+    // ── 8. Retrait créé en PENDING — sera exécuté après 48h par le cron ──
+    // Audit 034 — le payout Bictorys n'est plus appelé immédiatement. Le retrait
+    // reste PENDING pendant 48h, donnant à l'admin une fenêtre pour l'annuler.
+    // Le cron `processReadyWithdrawals` dans index.ts soumet à Bictorys les
+    // retraits PENDING âgés de 48h+.
 
-    // ── 9. Mettre à jour le retrait en base selon la réponse ──
-    if (result.success) {
-      await prisma.withdrawal.update({
-        where: { id: withdrawal.id },
-        data: {
-          status: "COMPLETED",
-          bictorysTransactionId: result.data?.id || null,
-          merchantFee: result.data?.merchantFee || 0,
-          processedAt: new Date(),
-        },
-      });
+    logger.log(`[PAYOUT] Retrait créé en PENDING (48h) — sellerId=${sellerId}, ref=${reference}, amount=${data.amount}`);
 
-      logger.log(`[PAYOUT] Retrait complété — sellerId=${sellerId}, ref=${reference}, amount=${data.amount}`);
-
-      // Phase 2 plan 02-02 — fire-and-forget PAYOUT_COMPLETED notification.
-      // Post-commit only; never inside any $transaction. Caught so a notif
-      // failure cannot 500 the payout response (the user's money already
-      // moved at this point — the response MUST go through).
-      firePayoutCompleted({
+    res.status(201).json({
+      success: true,
+      message: "Demande de retrait enregistrée ! Elle sera traitée sous 48h.",
+      withdrawal: {
         id: withdrawal.id,
-        sellerId,
         amount: data.amount,
-        phone: normalizedPhone,
+        fee: 0,
+        reference,
+        phone: maskPhone(normalizedPhone),
         provider: data.provider,
-      }).catch((err) => logger.error("[notif] firePayoutCompleted", err));
-
-      res.status(201).json({
-        success: true,
-        message: "Retrait effectué ! Tu vas recevoir l'argent sur ton mobile money.",
-        withdrawal: {
-          id: withdrawal.id,
-          amount: data.amount,
-          fee: result.data?.merchantFee || 0,
-          reference,
-          phone: maskPhone(normalizedPhone),
-          provider: data.provider,
-        },
-      });
-      return;
-    }
-
-    // ── 10. Échec Bictorys — marquer le retrait comme REJECTED pour libérer le solde ──
-    const userMessage = parseBictorysPayoutError(result.httpStatus, result.error);
-    const failureReason = result.error?.slice(0, 500) || "Erreur Bictorys inconnue";
-
-    await prisma.withdrawal.update({
-      where: { id: withdrawal.id },
-      data: {
-        status: "REJECTED",
-        failureReason,
       },
     });
-
-    logger.error(`[PAYOUT] Retrait échoué — sellerId=${sellerId}, ref=${reference}, httpStatus=${result.httpStatus}`, result.error);
-
-    // Phase 2 plan 02-02 — fire-and-forget PAYOUT_FAILED notification (NOTF-10).
-    // attempt=1 constant per T-02-20 accepted risk; v2 will track real attempts
-    // on the Withdrawal model.
-    firePayoutFailed(
-      {
-        id: withdrawal.id,
-        sellerId,
-        amount: data.amount,
-        phone: normalizedPhone,
-        provider: data.provider,
-      },
-      userMessage,
-      1,
-    ).catch((err) => logger.error("[notif] firePayoutFailed", err));
-
-    res.status(422).json({ error: userMessage });
   } catch (err) {
     if (err instanceof Error && err.message === "INSUFFICIENT_BALANCE") {
       res.status(400).json({ error: "Solde insuffisant" });
@@ -464,17 +404,6 @@ withdrawalsRouter.post("/", withdrawalLimiter, verifyCsrf, requireAuth, async (r
     if (err instanceof z.ZodError) {
       res.status(400).json({ error: formatZodError(err) });
       return;
-    }
-
-    // Nettoyage : si un withdrawal PENDING a été créé mais le payout a échoué avec exception,
-    // le marquer REJECTED pour ne pas bloquer les prochains essais
-    try {
-      await prisma.withdrawal.updateMany({
-        where: { sellerId, status: "PENDING" },
-        data: { status: "REJECTED", failureReason: "Erreur interne lors du traitement" },
-      });
-    } catch (cleanupErr) {
-      logger.error("Erreur cleanup withdrawal PENDING", cleanupErr);
     }
 
     logger.error("Erreur création retrait", err);

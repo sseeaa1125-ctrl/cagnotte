@@ -1,14 +1,14 @@
 {
-  "name": "Izy — Ta boutique dans ta bio",
-  "short_name": "Izy",
-  "description": "Le link-in-bio avec paiement mobile money pour les créateurs d'Afrique.",
-  "start_url": "/app",
+  "name": "Cagnottes.sn — Crée ta cagnotte, partage, collecte",
+  "short_name": "Cagnottes.sn",
+  "description": "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money. La façon la plus simple de lever des fonds au Sénégal.",
+  "start_url": "/",
   "display": "standalone",
-  "background_color": "#F9FAFB",
-  "theme_color": "#009b8d",
+  "background_color": "#FFFFFF",
+  "theme_color": "#172866",
   "orientation": "portrait-primary",
   "lang": "fr",
-  "categories": ["business", "shopping"],
+  "categories": ["finance", "social"],
   "icons": [
     {
       "src": "/icon-192x192.png",

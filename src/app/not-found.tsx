@@ -41,7 +41,7 @@ export default function NotFound() {
           </Link>
         </div>
 
-        <p className="mt-10 text-xs text-gray-400">
+        <p className="mt-10 text-xs text-gray-500">
           Besoin d&apos;aide ? Écris-nous à{" "}
           <a
             href="mailto:support@cagnotte.sn"

@@ -19,6 +19,8 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+# Audit 030 HI-03 — Prisma generated client lives in src/generated/, not dist/
+COPY --from=builder /app/src/generated ./src/generated
 COPY --from=builder /app/package.json ./
 
 EXPOSE 4000

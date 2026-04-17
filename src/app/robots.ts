@@ -7,13 +7,19 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: "*",
-        allow: "/",
+        allow: ["/", "/c/", "/cagnottes", "/a-propos", "/aide", "/tarifs"],
         disallow: [
-          "/tableau-de-bord/", // authed area (Phase 6)
-          "/dashboard/", // legacy authed area
-          "/api/", // all API routes
-          "/admin/", // v2 (currently empty)
-          "/c/", // Phase 4 — ALL cagnottes (public + private) disallowed in v1 (P05 mitigation)
+          "/tableau-de-bord/",
+          "/profil/",
+          "/retraits/",
+          "/participations/",
+          "/notifications/",
+          "/api/",
+          "/connexion",
+          "/inscription",
+          "/verification-email",
+          "/mot-de-passe-oublie",
+          "/mot-de-passe-reinitialiser",
         ],
       },
     ],

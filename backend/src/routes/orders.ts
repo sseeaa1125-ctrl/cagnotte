@@ -61,6 +61,9 @@ const createOrderSchema = z.object({
   isAnonymous: z.boolean().default(false),
   messageIsPrivate: z.boolean().default(false),
   cagnotteSlug: z.string().min(1).max(120).optional(),
+  // "Soutenir cagnotte.sn" — voluntary 3% contribution from donor
+  baseAmount: z.number().int().min(0).optional(),
+  voluntaryContribution: z.number().int().min(0).optional(),
 });
 
 
@@ -299,13 +302,16 @@ ordersRouter.post(
     let sellerAmount: number;
     if (donationBlock?.type === "FUNDRAISER") {
       const cfg = donationBlock.config as { subtype?: string };
-      // Defensive: schema enforces subtype is "festive" | "solidaire", but the
-      // DB column is Json so we narrow at the route boundary.
       const subtype: FundraiserSubtype =
         cfg.subtype === "festive" ? "festive" : "solidaire";
-      const result = computeCommission(totalExpected, subtype);
+      // Commission is computed on baseAmount (excluding voluntary contribution).
+      // The voluntary contribution goes 100% to the platform.
+      const voluntary = data.voluntaryContribution ?? 0;
+      const base = voluntary > 0 && data.baseAmount ? data.baseAmount : totalExpected;
+      const result = computeCommission(base, subtype);
       commissionRate = result.rate;
       commissionAmount = result.commission;
+      // sellerAmount = base - commission (seller never touches voluntary)
       sellerAmount = result.net;
     } else {
       // Legacy non-FUNDRAISER path — preserved verbatim.
@@ -320,31 +326,44 @@ ordersRouter.post(
     // Résoudre l'email client (fallback pour DONATION/PAYMENT sans email)
     const resolvedEmail = data.customerEmail || `anon-${Date.now()}@noemail.local`;
 
-    // Trouver ou créer le client
-    let customer = await prisma.customer.findUnique({
-      where: {
-        sellerId_email: {
-          sellerId: seller.id,
-          email: resolvedEmail,
-        },
-      },
-    });
-
-    if (!customer) {
-      customer = await prisma.customer.create({
-        data: {
-          sellerId: seller.id,
-          email: resolvedEmail,
-          name: data.customerName,
-          phone: cleanPhoneForStorage(data.customerPhone),
-        },
+    // Audit 030 CR-01 — circuit breaker fast-fail BEFORE creating Order row.
+    // Previously checked after $transaction, leaving dangling PENDING orders
+    // when Bictorys was down. Moved here so no DB row is created if the
+    // breaker is open.
+    if (isBictorysCircuitOpen()) {
+      res.status(503).json({
+        error: "Paiement temporairement indisponible. Réessaye dans 1 minute.",
       });
+      return;
     }
 
     // S17: Serializable transaction for booking slot check + order creation
     // Prevents two concurrent requests from double-booking the same slot
     const order = await prisma.$transaction(
       async (tx) => {
+        // Audit 030 HI-05 — Customer find-or-create moved inside the
+        // Serializable transaction to prevent duplicate Customer rows
+        // from concurrent orders with the same email.
+        let customer = await tx.customer.findUnique({
+          where: {
+            sellerId_email: {
+              sellerId: seller.id,
+              email: resolvedEmail,
+            },
+          },
+        });
+
+        if (!customer) {
+          customer = await tx.customer.create({
+            data: {
+              sellerId: seller.id,
+              email: resolvedEmail,
+              name: data.customerName,
+              phone: cleanPhoneForStorage(data.customerPhone),
+            },
+          });
+        }
+
         // S17: Re-check booking slot availability inside transaction
         if (data.orderType === "BOOKING" && data.bookingServiceId && data.bookingDate) {
           // BUG-4 FIX: Vérifier aussi les commandes PENDING récentes (< 30min)
@@ -394,6 +413,9 @@ ordersRouter.post(
             // Phase 2 plan 02-01 — cagnottes.sn donor flags (Phase 1 schema cols)
             isAnonymous: data.isAnonymous,
             messageIsPrivate: data.messageIsPrivate,
+            // "Soutenir cagnotte.sn" — voluntary contribution tracking
+            baseAmount: data.baseAmount ?? totalExpected,
+            voluntaryContribution: data.voluntaryContribution ?? 0,
           },
         });
 
@@ -414,16 +436,6 @@ ordersRouter.post(
       // S17: Serializable isolation prevents concurrent double-booking
       { isolationLevel: "Serializable" }
     );
-
-    // Phase 2 plan 02-01 — circuit breaker fast-fail. If the breaker is OPEN
-    // (5+ Bictorys failures in the last 30s and we're inside the 60s cooldown),
-    // skip the upstream call and return 503 immediately. Mitigates P07.
-    if (isBictorysCircuitOpen()) {
-      res.status(503).json({
-        error: "Paiement temporairement indisponible. Réessaye dans 1 minute.",
-      });
-      return;
-    }
 
     // Lancer le paiement Bictorys
     const provider = getPaymentProvider("bictorys");
@@ -1160,7 +1172,18 @@ function getCachedBictorysStatus(externalId: string): { status: string; amount: 
   return entry.result;
 }
 
+// Audit 030 HI-02 — cap cache size to prevent unbounded memory growth under load
+const BICTORYS_CACHE_MAX_SIZE = 10_000;
+
 function setCachedBictorysStatus(externalId: string, result: { status: string; amount: number } | null): void {
+  if (bictorysStatusCache.size >= BICTORYS_CACHE_MAX_SIZE) {
+    // Evict oldest 1000 entries (Map iteration order = insertion order)
+    const iter = bictorysStatusCache.keys();
+    for (let i = 0; i < 1000; i++) {
+      const key = iter.next().value;
+      if (key) bictorysStatusCache.delete(key);
+    }
+  }
   bictorysStatusCache.set(externalId, { result, expiresAt: Date.now() + BICTORYS_CACHE_TTL });
 }
 
@@ -1206,7 +1229,8 @@ ordersRouter.get("/:ref/status", statusPollLimiter, async (req, res) => {
         bookingLocation: true,
         product: { select: { title: true, coverUrl: true, fileName: true, fileUrl: true, systemeioCourseId: true, block: { select: { type: true } } } },
         bookingService: { select: { title: true, location: true } },
-        seller: { select: { displayName: true, slug: true, avatarUrl: true, supportPhone: true, metaPixelId: true, googleAdsId: true, googleAnalyticsId: true, tiktokPixelId: true } },
+        // Audit 032 S-01 — public endpoint: only expose display fields, not tracking IDs
+        seller: { select: { displayName: true, slug: true, avatarUrl: true } },
       },
     });
 
@@ -1298,6 +1322,23 @@ ordersRouter.get("/:ref/status", statusPollLimiter, async (req, res) => {
                   downloadUrl,
                   downloadExpiresAt,
                 },
+              });
+
+              // Audit 032 S-03 — create WebhookLog so a later webhook won't
+              // re-trigger notifications (prevents double donation_received).
+              await tx.webhookLog.upsert({
+                where: { externalId_eventType: {
+                  externalId: order!.paymentExternalId!,
+                  eventType: "succeeded_poll_fallback",
+                }},
+                create: {
+                  provider: "bictorys",
+                  eventType: "succeeded_poll_fallback",
+                  externalId: order!.paymentExternalId!,
+                  payload: { source: "polling", amount: order!.amount },
+                  status: "processed",
+                },
+                update: {},
               });
 
               await tx.customer.updateMany({

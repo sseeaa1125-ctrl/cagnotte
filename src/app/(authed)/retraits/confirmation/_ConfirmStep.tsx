@@ -67,11 +67,7 @@ export function ConfirmStep() {
       // so that the success page starts fresh. (Draft clearer runs on mount
       // too as a belt-and-suspenders defense.)
       clear();
-      const query = new URLSearchParams({
-        amount: String(draft.amount),
-        provider: draft.provider,
-      });
-      router.replace(`/retraits/succes?${query.toString()}`);
+      router.replace("/retraits?tab=historique");
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.status === 403) {
@@ -145,7 +141,7 @@ export function ConfirmStep() {
             <span className="text-sm text-muted-foreground">
               {WITHDRAWAL_LABELS.confirmFees}
             </span>
-            <span className="text-sm font-semibold text-[#00B67A]">
+            <span className="text-sm font-semibold text-success">
               {WITHDRAWAL_LABELS.confirmFeesFree}
             </span>
           </div>
@@ -172,7 +168,7 @@ export function ConfirmStep() {
             <span className="text-sm font-semibold text-primary">
               {WITHDRAWAL_LABELS.confirmNet}
             </span>
-            <span className="font-headings text-2xl font-black text-[#00B67A]">
+            <span className="font-headings text-2xl font-black text-success">
               {formatPrice(draft.amount)}
             </span>
           </div>

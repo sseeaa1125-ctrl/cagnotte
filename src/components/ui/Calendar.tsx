@@ -214,7 +214,7 @@ export function Calendar({
           <span
             className={cn(
               "truncate text-base font-medium",
-              value ? "text-primary" : "text-gray-400",
+              value ? "text-primary" : "text-gray-500",
             )}
           >
             {displayText}
@@ -222,7 +222,7 @@ export function Calendar({
           <CalendarIcon
             size={20}
             aria-hidden
-            className="flex-shrink-0 text-gray-400"
+            className="flex-shrink-0 text-gray-500"
           />
         </button>
 
@@ -230,7 +230,7 @@ export function Calendar({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="absolute right-11 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="absolute right-11 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-500 transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="Effacer la date"
           >
             <X size={16} />
@@ -272,7 +272,7 @@ export function Calendar({
               {WEEKDAYS_MON_FIRST.map((d, i) => (
                 <div
                   key={`${d}-${i}`}
-                  className="py-2 text-center text-xs font-bold text-gray-400"
+                  className="py-2 text-center text-xs font-bold text-gray-500"
                   aria-hidden
                 >
                   {d}

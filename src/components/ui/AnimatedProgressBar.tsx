@@ -52,6 +52,7 @@ export function AnimatedProgressBar({
           aria-valuenow={Math.round(target)}
           aria-valuemin={0}
           aria-valuemax={100}
+          aria-label="Progression de la cagnotte"
           className={cn(
             "relative h-full rounded-full bg-primary shadow-[0_0_10px_rgba(23,40,102,0.3)]",
             "transition-[width] duration-[1400ms] ease-[cubic-bezier(0.22,1,0.36,1)]",

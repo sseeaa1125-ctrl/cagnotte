@@ -14,7 +14,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
     <>
       <TopBannerHost />
       <PublicNavbar />
-      <main className="min-h-screen animate-page-enter">{children}</main>
+      <main id="main-content" className="min-h-screen animate-page-enter">{children}</main>
       <LayoutChrome />
       <CookieBanner />
     </>

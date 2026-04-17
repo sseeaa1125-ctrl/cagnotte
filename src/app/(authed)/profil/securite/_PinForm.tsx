@@ -177,7 +177,7 @@ export function PinForm({ hasPin }: PinFormProps) {
   if (mode === "display" && hasPin) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 rounded-2xl bg-accent p-4 text-sm font-medium text-[#00B67A]">
+        <div className="flex items-center gap-3 rounded-2xl bg-accent p-4 text-sm font-medium text-success">
           <ShieldCheck size={18} aria-hidden />
           <span>{SECURITY_LABELS.pinAlreadySet}</span>
         </div>

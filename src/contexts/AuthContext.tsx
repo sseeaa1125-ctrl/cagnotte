@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { api, ApiError, clearCsrfToken, storeCsrfToken } from "@/lib/api";
+import { invalidateCachePrefix } from "@/lib/useApi";
 
 interface SellerInfo {
   id: string;
@@ -93,6 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Audit 030 CR-07 — skip /api/auth/me for anonymous visitors on public
+    // pages. The izy-csrf cookie (JS-readable) is only set after login, so
+    // its absence is a reliable signal that no session exists. This avoids
+    // a wasted 401 round-trip on every public page load.
+    const hasCookie = document.cookie.split(";").some((c) => c.trim().startsWith("izy-csrf="));
+    if (!hasCookie) {
+      setLoading(false);
+      return;
+    }
     fetchSeller();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -105,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Ignore errors — cookie will expire anyway
     }
     clearCsrfToken();
+    // Audit 030 H-03 — flush stale-while-revalidate cache so the next
+    // login doesn't see the previous seller's data.
+    invalidateCachePrefix("/api/");
     setSeller(null);
     window.location.href = "/";
   }, []);

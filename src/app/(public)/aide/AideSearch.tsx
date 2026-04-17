@@ -49,7 +49,7 @@ export function AideSearch({ sections }: AideSearchProps) {
         <Search
           size={20}
           aria-hidden
-          className="pointer-events-none absolute left-4 text-gray-400"
+          className="pointer-events-none absolute left-4 text-gray-500"
         />
         <input
           id="aide-search"
@@ -77,7 +77,7 @@ export function AideSearch({ sections }: AideSearchProps) {
                     onClick={() => setQuery("")}
                     className="flex flex-col gap-1 px-5 py-3 hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
                   >
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500">
                       {hit.sectionLabel}
                     </span>
                     <span className="text-sm font-semibold text-primary">

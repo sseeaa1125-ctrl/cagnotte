@@ -3,9 +3,10 @@ import { ArrowRight } from "lucide-react";
 import { ABOUT_LABELS } from "@/lib/constants";
 
 export const metadata = {
-  title: "À propos",
+  title: "À propos — cagnotte.sn, la plateforme de cagnottes au Sénégal",
   description:
     "Cagnotte.sn est la plateforme sénégalaise dédiée à la collecte de fonds en ligne via Wave, Orange Money et Free Money.",
+  alternates: { canonical: "https://cagnotte.sn/a-propos" },
 };
 
 export default function AproposPage() {

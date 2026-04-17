@@ -37,6 +37,7 @@ export const metadata: Metadata = {
     siteName: "cagnotte.sn",
     locale: "fr_FR",
     type: "website",
+    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "cagnotte.sn — La cagnotte qui fait du bien" }],
   },
   twitter: {
     card: "summary_large_image",
@@ -58,6 +59,13 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body suppressHydrationWarning className={`${inter.variable} ${poppins.variable} font-sans antialiased bg-background`}>
+        {/* Audit 032 C-01 — WCAG 2.4.1 skip-to-content link */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-white"
+        >
+          Aller au contenu principal
+        </a>
         <ToastProvider>
           <AuthProvider>{children}</AuthProvider>
         </ToastProvider>

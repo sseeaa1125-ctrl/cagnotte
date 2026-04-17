@@ -109,7 +109,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
           className="flex items-center font-headings text-2xl font-black tracking-tighter text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
         >
           {MISC.brandMark}
-          <span className="ml-1 text-lg font-medium text-gray-400">
+          <span className="ml-1 text-lg font-medium text-gray-500">
             {MISC.brandSuffix}
           </span>
         </Link>
@@ -264,7 +264,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
               className="flex items-center font-headings text-2xl font-black tracking-tighter text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
             >
               {MISC.brandMark}
-              <span className="ml-1 text-base font-medium text-gray-400">
+              <span className="ml-1 text-base font-medium text-gray-500">
                 {MISC.brandSuffix}
               </span>
             </Link>
@@ -314,7 +314,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
             ) : null}
 
             {/* Navigation section */}
-            <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+            <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-gray-500">
               Navigation
             </p>
             <ul className="mb-6 flex flex-col gap-1">
@@ -361,7 +361,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
             {/* Account section — only when logged in */}
             {!loading && seller ? (
               <>
-                <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-gray-500">
                   Mon compte
                 </p>
                 <ul className="flex flex-col gap-1">
@@ -433,7 +433,7 @@ export function PublicNavbar({ className }: PublicNavbarProps) {
                 <Link
                   href="/inscription"
                   onClick={() => setMobileOpen(false)}
-                  className="group relative flex min-h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-[#F4D3DE] px-4 py-3 text-sm font-black text-primary shadow-sm transition-all hover:bg-[#efc7d5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  className="group relative flex min-h-12 w-full items-center justify-center overflow-hidden rounded-xl bg-pink-dark px-4 py-3 text-sm font-black text-primary shadow-sm transition-all hover:bg-pink-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                 >
                   <span
                     aria-hidden

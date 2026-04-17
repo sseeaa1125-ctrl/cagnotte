@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { detectVideo, VIDEO_PROVIDER_LABELS } from "@/lib/videoProviders";
@@ -153,13 +154,13 @@ export function CagnotteMediaViewer({
       {/* Main viewer pane */}
       <div className="relative h-56 bg-gray-100 sm:h-64 md:h-80 lg:h-96">
         {active.kind === "image" ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={active.src}
             alt={active.alt}
             width={1200}
             height={630}
-            fetchPriority={safeIndex === 0 ? "high" : "low"}
+            sizes="(max-width: 768px) 100vw, 66vw"
+            priority={safeIndex === 0}
             className="h-full w-full object-cover"
           />
         ) : active.embedUrl ? (
@@ -219,12 +220,12 @@ export function CagnotteMediaViewer({
                     )}
                   >
                     {item.thumb ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={item.thumb}
                         alt=""
-                        loading="lazy"
-                        decoding="async"
+                        width={80}
+                        height={80}
+                        sizes="80px"
                         className="h-full w-full object-cover"
                       />
                     ) : (

@@ -68,7 +68,7 @@ export function SubtypeBadge({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-primary",
         isFestive
-          ? "bg-[#F4D3DE]"
+          ? "bg-pink-dark"
           : "bg-[#FEF4E3] ring-1 ring-inset ring-[#f5ead5]",
       )}
     >

@@ -48,7 +48,7 @@ export default async function AuthedLayout({
           (h-16 + iOS safe-area) so the last content block never hides
           under it. Desktop (md+) uses the normal py-10 rhythm since
           BottomNav is md:hidden. */}
-      <main className="container mx-auto animate-page-enter px-4 pt-6 pb-24 md:pt-10 md:pb-10">
+      <main id="main-content" className="container mx-auto animate-page-enter px-4 pt-6 pb-24 md:pt-10 md:pb-10">
         {children}
       </main>
     </div>

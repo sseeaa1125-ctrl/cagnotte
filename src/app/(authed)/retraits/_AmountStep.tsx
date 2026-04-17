@@ -153,7 +153,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
               <button
                 type="button"
                 onClick={handleMax}
-                className="inline-flex min-h-10 items-center rounded-full bg-pink px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-[#F4D3DE] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                className="inline-flex min-h-10 items-center rounded-full bg-pink px-4 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-pink-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 {WITHDRAW_LABELS.maxChip}
               </button>
@@ -274,7 +274,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
                 <span className="text-sm text-gray-500">
                   {WITHDRAW_LABELS.summaryFees}
                 </span>
-                <span className="text-sm font-semibold text-[#00B67A]">
+                <span className="text-sm font-semibold text-success">
                   {WITHDRAW_LABELS.summaryFeesFree}
                 </span>
               </div>
@@ -282,7 +282,7 @@ export function AmountStep({ balance, initial }: AmountStepProps) {
                 <span className="text-sm font-semibold text-primary">
                   {WITHDRAW_LABELS.summaryNet}
                 </span>
-                <span className="font-headings text-xl font-black text-[#00B67A]">
+                <span className="font-headings text-xl font-black text-success">
                   {formatPrice(displayAmount)}
                 </span>
               </div>
@@ -380,7 +380,7 @@ function OperatorTile({
         </div>
       </div>
       {instant ? (
-        <span className="inline-flex rounded-full bg-[#E6F3EE] px-3 py-1 text-xs font-bold text-[#00B67A]">
+        <span className="inline-flex rounded-full bg-success-bg px-3 py-1 text-xs font-bold text-success">
           {WITHDRAW_LABELS.instantBadge}
         </span>
       ) : null}
