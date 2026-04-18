@@ -103,12 +103,12 @@ function maskDonation(
 
 const listQuerySchema = z.object({
   cursor: z.string().min(1).max(40).optional(),
-  page: z.coerce.number().int().min(1).default(1).optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   // Phase 10 — sort mode. "recent" (default) preserves cursor pagination.
   // "popular" returns the top N blocks ranked by paid-order count; cursor
   // is ignored (single-page response). Used by the home featured list.
-  sort: z.enum(["recent", "popular"]).default("recent").optional(),
+  sort: z.enum(["recent", "popular"]).optional().default("recent"),
   // Phase 12 — server-side filters. `subtype` narrows to festive/solidaire;
   // `q` is a case-insensitive substring match on the block title. Both are
   // optional and stack multiplicatively. The frontend /cagnottes page wires
@@ -130,9 +130,13 @@ cagnottesRouter.get("/", async (req, res) => {
     // the query so we apply subtype/q consistently. NOTE: Prisma needs
     // separate entries in AND for each JSON `path` since multiple `path`
     // filters on the same `config` key cannot be merged into one object.
+    // NOTE: status filter is applied in JS post-fetch (not SQL) because
+    // Prisma JSON `path` filters return NULL for rows missing the field,
+    // and both `equals: "active"` and `NOT equals: "closed"` silently
+    // exclude those rows. Legacy blocks without a status field are treated
+    // as active.
     const sharedAnd: Array<Record<string, unknown>> = [
       { config: { path: ["visibility"], equals: "public" } },
-      { config: { path: ["status"], equals: "active" } },
     ];
     if (query.subtype) {
       sharedAnd.push({
@@ -190,7 +194,13 @@ cagnottesRouter.get("/", async (req, res) => {
         },
       });
 
-      const poolIds = pool.map((r) => r.id);
+      // JS post-filter: exclude closed cagnottes (see sharedAnd comment)
+      const activePool = pool.filter((r) => {
+        const s = (r.config as FundraiserConfig)?.status;
+        return !s || s === "active";
+      });
+
+      const poolIds = activePool.map((r) => r.id);
       const poolTotals = poolIds.length === 0
         ? []
         : await prisma.order.groupBy({
@@ -208,7 +218,7 @@ cagnottesRouter.get("/", async (req, res) => {
         });
       }
 
-      const sortedPool = pool
+      const sortedPool = activePool
         .slice()
         .sort((a, b) => {
           const sa = poolMap.get(a.id)?.count ?? 0;
@@ -289,8 +299,14 @@ cagnottesRouter.get("/", async (req, res) => {
       prisma.block.count({ where: whereClause }),
     ]);
 
-    const hasMore = rows.length > query.limit;
-    const page = hasMore ? rows.slice(0, query.limit) : rows;
+    // JS post-filter: exclude closed cagnottes (see sharedAnd comment)
+    const activeRows = rows.filter((r) => {
+      const s = (r.config as FundraiserConfig)?.status;
+      return !s || s === "active";
+    });
+
+    const hasMore = activeRows.length > query.limit;
+    const page = hasMore ? activeRows.slice(0, query.limit) : activeRows;
     const nextCursor = hasMore ? page[page.length - 1].id : null;
     const totalPages = Math.ceil(totalCount / query.limit);
 

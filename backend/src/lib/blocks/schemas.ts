@@ -154,7 +154,7 @@ export const fundraiserBlockConfigSchema = z.object({
   // a Prisma migration. "closed" cagnottes remain readable by everyone with
   // the link; only donations are blocked (orders.ts) and the public page
   // swaps the Participer CTA for a grey "Cagnotte clôturée" badge.
-  status: z.enum(["active", "closed"]).default("active").optional(),
+  status: z.enum(["active", "closed"]).optional().default("active"),
   // Phase 10 — gallery of cover-secondary images + multi-provider video
   // links (YouTube, Vimeo, Wistia, Loom). Max 10 items; empty array is
   // equivalent to no gallery. Stored in JSON.
