@@ -347,6 +347,28 @@ details[open] > summary {
   }
 }
 
+/* SortSelect — desktop dropdown spring-in */
+@keyframes sort-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* SortSelect — mobile bottom sheet slide-up (from full off-screen bottom) */
+@keyframes sort-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Audit 031 PERF-06 — previewPulse + float-1/2/3 removed (dead code) */
 .animate-float-1 { animation: float-1 5s ease-in-out infinite; }
 .animate-float-2 { animation: float-2 6s ease-in-out infinite 0.5s; }

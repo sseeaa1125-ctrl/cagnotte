@@ -21,6 +21,17 @@ export const FUNDRAISER_COMMISSION_BP = {
   festive: 800,   // 8% — mariage, anniversaire, cadeau commun
 } as const;
 
+// Bictorys processing fees — supported by the platform (deducted from
+// gross commission, never charged to donors or sellers).
+//   - 1.5% on each incoming transaction (donation)
+//   - 1% on each outgoing payout (seller withdrawal) — stored per-row on
+//     Withdrawal.merchantFee when the payout clears.
+// Real net margin on commission:
+//   festive   = 8% − 1.5% − 1% = 5.5%
+//   solidaire = 6% − 1.5% − 1% = 3.5%
+export const BICTORYS_TRANSACTION_FEE_RATE = 0.015;
+export const BICTORYS_WITHDRAWAL_FEE_RATE = 0.01;
+
 export type FundraiserSubtype = keyof typeof FUNDRAISER_COMMISSION_BP;
 
 export interface CommissionResult {

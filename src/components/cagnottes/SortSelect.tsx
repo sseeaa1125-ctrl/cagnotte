@@ -11,8 +11,9 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { CagnotteSortMode } from "@/lib/cagnotteSort";
 
-export type SortMode = "recent" | "oldest" | "raised_desc" | "raised_asc";
+export type SortMode = CagnotteSortMode;
 
 interface SortOption {
   value: SortMode;
@@ -51,18 +52,9 @@ const SORT_OPTIONS: SortOption[] = [
 interface SortSelectProps {
   value: SortMode;
   onChange: (value: SortMode) => void;
-  /**
-   * Render the trigger button at full width on mobile (grows edge-to-edge).
-   * Desktop keeps the compact pill regardless.
-   */
-  fullWidthOnMobile?: boolean;
 }
 
-export function SortSelect({
-  value,
-  onChange,
-  fullWidthOnMobile = true,
-}: SortSelectProps) {
+export function SortSelect({ value, onChange }: SortSelectProps) {
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLDivElement>(null);
   const firstOptionRef = React.useRef<HTMLButtonElement>(null);
@@ -110,7 +102,7 @@ export function SortSelect({
 
   return (
     <>
-      <div ref={triggerRef} className={cn("relative", fullWidthOnMobile && "w-full sm:w-auto")}>
+      <div ref={triggerRef} className="relative">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
@@ -120,7 +112,6 @@ export function SortSelect({
           className={cn(
             "group inline-flex h-10 items-center gap-1.5 rounded-full border bg-white px-3 text-sm font-semibold text-primary shadow-sm transition-all sm:h-11 sm:gap-2 sm:border-2 sm:px-4",
             "hover:shadow-md focus:outline-none focus:ring-2 focus:ring-pink-100",
-            fullWidthOnMobile && "w-full justify-center sm:w-auto",
             open
               ? "border-primary ring-[3px] ring-pink-100"
               : "border-primary/30 hover:border-primary/60",
@@ -166,7 +157,7 @@ export function SortSelect({
           <ul
             role="listbox"
             aria-label="Trier les cagnottes"
-            className="absolute right-0 z-20 mt-2 hidden min-w-[300px] origin-top-right animate-[fadeSlide_160ms_ease-out] overflow-hidden rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_12px_32px_rgba(23,40,102,0.12)] sm:block"
+            className="absolute right-0 z-20 mt-2 hidden min-w-[300px] origin-top-right animate-[sort-dropdown-in_160ms_ease-out] overflow-hidden rounded-2xl border border-gray-100 bg-white p-1.5 shadow-[0_12px_32px_rgba(23,40,102,0.12)] sm:block"
           >
             {SORT_OPTIONS.map((option, idx) => (
               <SortOptionRow
@@ -193,7 +184,7 @@ export function SortSelect({
           {/* Sheet */}
           <div
             className={cn(
-              "fixed inset-x-0 bottom-0 z-50 animate-[slideUp_240ms_cubic-bezier(0.2,0.8,0.2,1)]",
+              "fixed inset-x-0 bottom-0 z-50 animate-[sort-sheet-up_240ms_cubic-bezier(0.2,0.8,0.2,1)]",
               "rounded-t-[28px] bg-white shadow-[0_-12px_40px_rgba(23,40,102,0.18)]",
               "pb-[max(env(safe-area-inset-bottom),16px)]",
             )}
@@ -236,35 +227,6 @@ export function SortSelect({
         </div>
       ) : null}
 
-      {/* Animation keyframes (scoped to this tree) */}
-      <style jsx>{`
-        @keyframes fadeSlide {
-          from {
-            opacity: 0;
-            transform: translateY(-4px) scale(0.98);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
-          }
-        }
-        @keyframes slideUp {
-          from {
-            transform: translateY(100%);
-          }
-          to {
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </>
   );
 }

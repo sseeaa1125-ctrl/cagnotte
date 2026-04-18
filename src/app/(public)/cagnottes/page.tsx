@@ -1,5 +1,6 @@
 import { LoadMoreCagnottes } from "./LoadMore";
 import { ALL_CAGNOTTES_LABELS } from "@/lib/constants";
+import { parseCagnotteSort, type CagnotteSortMode } from "@/lib/cagnotteSort";
 
 const BACKEND_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -27,12 +28,11 @@ interface ListResponse {
 }
 
 type SubtypeFilter = "all" | "festive" | "solidaire";
-type SortMode = "recent" | "oldest" | "raised_desc" | "raised_asc";
 
 interface InitialFetchOpts {
   subtype: SubtypeFilter;
   q: string;
-  sort: SortMode;
+  sort: CagnotteSortMode;
 }
 
 async function getInitial(opts: InitialFetchOpts): Promise<ListResponse> {
@@ -89,14 +89,6 @@ function parseSubtype(raw: string | string[] | undefined): SubtypeFilter {
   return "all";
 }
 
-function parseSort(raw: string | string[] | undefined): SortMode {
-  const value = Array.isArray(raw) ? raw[0] : raw;
-  if (value === "oldest" || value === "raised_desc" || value === "raised_asc") {
-    return value;
-  }
-  return "recent";
-}
-
 function parseQuery(raw: string | string[] | undefined): string {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (typeof value !== "string") return "";
@@ -111,7 +103,7 @@ export default async function ToutesLesCagnottesPage({
   const params = await searchParams;
   const initialSubtype = parseSubtype(params.subtype);
   const initialQuery = parseQuery(params.q);
-  const initialSort = parseSort(params.sort);
+  const initialSort = parseCagnotteSort(params.sort);
   const initial = await getInitial({
     subtype: initialSubtype,
     q: initialQuery,
@@ -133,6 +125,7 @@ export default async function ToutesLesCagnottesPage({
         initialTotalPages={initial.totalPages ?? 1}
         initialSubtype={initialSubtype}
         initialQuery={initialQuery}
+        initialSort={initialSort}
       />
     </div>
   );

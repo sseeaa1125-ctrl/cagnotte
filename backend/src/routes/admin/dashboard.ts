@@ -2,19 +2,12 @@ import { Router } from "express";
 import { requireAdmin } from "../../middleware/requireAdmin.js";
 import { prisma } from "../../lib/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
+import { BICTORYS_TRANSACTION_FEE_RATE } from "../../lib/commission.js";
 import * as logger from "../../lib/logger.js";
 
 export const adminDashboardRouter = Router();
 
 adminDashboardRouter.use(requireAdmin);
-
-// Bictorys fees (supported by the platform, not by sellers or donors):
-//   - 1.5% on each incoming transaction (donations/payments)
-//   - 1% on each outgoing payout (seller withdrawal) — tracked as Withdrawal.merchantFee
-// These fees reduce our real net margin on commissions:
-//   Festive:   8% gross − 1.5% − 1% = 5.5% net
-//   Solidaire: 6% gross − 1.5% − 1% = 3.5% net
-const BICTORYS_TRANSACTION_FEE_RATE = 0.015;
 
 // ── Helper: parse optional date range from query ──
 function parseDateRange(query: Record<string, unknown>): { gte?: Date; lte?: Date } | null {

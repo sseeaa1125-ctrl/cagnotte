@@ -41,6 +41,7 @@ interface LoadMoreCagnottesProps {
   initialTotalPages: number;
   initialSubtype: SubtypeFilter;
   initialQuery: string;
+  initialSort: SortMode;
 }
 
 function toCardProps(c: ApiCagnotte) {
@@ -79,6 +80,7 @@ export function LoadMoreCagnottes({
   initialTotalPages,
   initialSubtype,
   initialQuery,
+  initialSort,
 }: LoadMoreCagnottesProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -91,13 +93,6 @@ export function LoadMoreCagnottes({
   const [searching, setSearching] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [subtype, setSubtype] = React.useState<SubtypeFilter>(initialSubtype);
-  const initialSortParam = searchParams.get("sort");
-  const initialSort: SortMode =
-    initialSortParam === "oldest" ||
-    initialSortParam === "raised_desc" ||
-    initialSortParam === "raised_asc"
-      ? initialSortParam
-      : "recent";
   const [sort, setSort] = React.useState<SortMode>(initialSort);
   const [queryInput, setQueryInput] = React.useState<string>(initialQuery);
   const [activeQuery, setActiveQuery] = React.useState<string>(initialQuery);
@@ -344,7 +339,7 @@ export function LoadMoreCagnottes({
             align="center-mobile"
           />
         </div>
-        <SortSelect value={sort} onChange={setSort} fullWidthOnMobile={false} />
+        <SortSelect value={sort} onChange={setSort} />
       </div>
 
       {searching && cagnottes.length === 0 ? (

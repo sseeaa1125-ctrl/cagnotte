@@ -3,6 +3,9 @@ import { ImageResponse } from "next/og";
 export const alt = "cagnotte.sn — La cagnotte qui change des vies";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+// OG image is static marketing content — cache at the edge for 1h to
+// avoid regenerating the PNG on every WhatsApp/Twitter preview fetch.
+export const revalidate = 3600;
 
 // Brand palette
 const NAVY = "#172866";

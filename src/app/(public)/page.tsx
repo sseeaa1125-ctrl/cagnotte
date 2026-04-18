@@ -50,24 +50,17 @@ export default async function HomePage() {
 // them dynamically costs nothing since there are no fetches.
 export const dynamic = "force-dynamic";
 
+// NOTE: we intentionally keep `metadata` minimal here — the root layout
+// (src/app/layout.tsx) provides the full openGraph/twitter config, and
+// Next.js auto-injects the `og:image` from src/app/opengraph-image.tsx
+// when no explicit `openGraph.images` override shadows it. Overriding
+// `openGraph` at this level would drop the auto-detected image and leave
+// WhatsApp/Twitter previews without a thumbnail.
 export const metadata: Metadata = {
   title: {
-    absolute: "cagnotte.sn — La cagnotte qui fait du bien",
+    absolute: "cagnotte.sn — La cagnotte qui change des vies",
   },
   description: seoDescription,
-  openGraph: {
-    title: "cagnotte.sn — La cagnotte qui fait du bien",
-    description: seoDescription,
-    url: BASE_URL,
-    type: "website",
-    siteName: "cagnotte.sn",
-    locale: "fr_FR",
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "cagnotte.sn — La cagnotte qui fait du bien",
-    description: seoDescription,
-  },
   alternates: {
     canonical: BASE_URL,
   },
