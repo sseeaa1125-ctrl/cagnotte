@@ -89,54 +89,64 @@ export function setAdminAuthCookies(
   refreshToken: string,
 ): void {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   res.cookie(ADMIN_COOKIE_NAME, accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     maxAge: ACCESS_COOKIE_MAX_AGE,
+    domain: cookieDomain,
   });
   res.cookie(ADMIN_REFRESH_COOKIE_NAME, refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     maxAge: REFRESH_COOKIE_MAX_AGE,
     path: "/api/admin/auth",
+    domain: cookieDomain,
   });
 }
 
 export function clearAdminAuthCookies(res: Response): void {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   res.clearCookie(ADMIN_COOKIE_NAME, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
+    domain: cookieDomain,
   });
   res.clearCookie(ADMIN_REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     path: "/api/admin/auth",
+    domain: cookieDomain,
   });
 }
 
 export function setAdminCsrfCookie(res: Response): string {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   const csrfToken = crypto.randomBytes(32).toString("hex");
   res.cookie(ADMIN_CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false, // Must be readable by JS
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     maxAge: COOKIE_MAX_AGE,
+    domain: cookieDomain,
   });
   return csrfToken;
 }
 
 export function clearAdminCsrfCookie(res: Response): void {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   res.clearCookie(ADMIN_CSRF_COOKIE_NAME, {
     httpOnly: false,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
+    domain: cookieDomain,
   });
 }
 
