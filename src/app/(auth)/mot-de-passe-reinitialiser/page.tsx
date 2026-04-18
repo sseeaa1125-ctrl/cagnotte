@@ -35,6 +35,36 @@ function ResetPasswordForm() {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const inputsRef = React.useRef<Array<HTMLInputElement | null>>([]);
+  const [resendCooldown, setResendCooldown] = React.useState(30);
+  const [resending, setResending] = React.useState(false);
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  async function handleResend() {
+    if (resendCooldown > 0 || resending) return;
+    setResending(true);
+    setError(null);
+    try {
+      await api("/api/auth/forgot-password", {
+        method: "POST",
+        body: { email: email.trim() },
+      });
+      setResendCooldown(30);
+      toast.toast("Code renvoyé — vérifie ton email.", "success");
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Impossible de renvoyer le code.");
+      }
+    } finally {
+      setResending(false);
+    }
+  }
 
   React.useEffect(() => {
     if (!email) {
@@ -258,14 +288,31 @@ function ResetPasswordForm() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <div className="mt-6 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendCooldown > 0 || resending}
+            className={cn(
+              "text-sm",
+              resendCooldown > 0 || resending
+                ? "cursor-not-allowed text-muted-foreground"
+                : "text-primary hover:underline",
+            )}
+          >
+            {resending
+              ? "Envoi…"
+              : resendCooldown > 0
+                ? `Renvoyer le code (${resendCooldown}s)`
+                : "Renvoyer le code"}
+          </button>
           <Link
             href="/connexion"
-            className="text-primary hover:underline"
+            className="text-sm text-primary hover:underline"
           >
             {RESET_PASSWORD_LABELS.backToLoginCta}
           </Link>
-        </p>
+        </div>
       </div>
     </div>
   );

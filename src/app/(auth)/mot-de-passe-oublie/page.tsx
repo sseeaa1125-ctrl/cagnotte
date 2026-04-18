@@ -30,14 +30,16 @@ export default function MotDePasseOubliePage() {
         method: "POST",
         body: { email: email.trim() },
       });
-      setSubmitted(true);
+      // Redirect directly to code entry page
+      router.push(
+        `/mot-de-passe-reinitialiser?email=${encodeURIComponent(email.trim())}`,
+      );
     } catch (err) {
       const msg =
         err instanceof ApiError
           ? err.message
           : FORGOT_PASSWORD_LABELS.errorGeneric;
       setError(msg);
-    } finally {
       setSubmitting(false);
     }
   }
