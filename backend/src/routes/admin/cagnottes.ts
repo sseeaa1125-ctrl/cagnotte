@@ -148,7 +148,7 @@ cagnottesAdminRouter.get("/", async (req, res) => {
 // ── GET /:id — Block detail with seller + last 20 paid orders ──
 cagnottesAdminRouter.get("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const block = await prisma.block.findUnique({
       where: { id },
@@ -245,7 +245,7 @@ cagnottesAdminRouter.get("/:id", async (req, res) => {
 // ── PATCH /:id/toggle-active — Toggle isActive ──
 cagnottesAdminRouter.patch("/:id/toggle-active", requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const block = await prisma.block.findUnique({
       where: { id },
@@ -280,7 +280,7 @@ cagnottesAdminRouter.patch("/:id/toggle-active", requireRole("ADMIN", "SUPER_ADM
 // ── PATCH /:id/toggle-visibility — Toggle config.visibility (public ↔ private) ──
 cagnottesAdminRouter.patch("/:id/toggle-visibility", requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const block = await prisma.block.findUnique({
       where: { id },

@@ -107,7 +107,7 @@ sellersAdminRouter.get("/", async (req, res) => {
 // ── GET /:id — Full seller detail with counts ──
 sellersAdminRouter.get("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const [seller, orderCount, withdrawalCount, blockCount] = await Promise.all([
       prisma.seller.findUnique({
@@ -170,7 +170,7 @@ const blockWithdrawalSchema = z.object({
 
 sellersAdminRouter.patch("/:id/block-withdrawal", requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const parsed = blockWithdrawalSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
@@ -224,7 +224,7 @@ const flagSchema = z.object({
 
 sellersAdminRouter.patch("/:id/flag", requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const parsed = flagSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
@@ -273,7 +273,7 @@ const commissionSchema = z.object({
 
 sellersAdminRouter.patch("/:id/commission", requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const parsed = commissionSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
@@ -311,7 +311,7 @@ sellersAdminRouter.patch("/:id/commission", requireRole("ADMIN", "SUPER_ADMIN"),
 // ── DELETE /:id — Soft delete ──
 sellersAdminRouter.delete("/:id", requireRole("SUPER_ADMIN"), async (req, res) => {
   try {
-    const { id } = req.params;
+    const id = req.params.id as string;
 
     const seller = await prisma.seller.findUnique({
       where: { id },
