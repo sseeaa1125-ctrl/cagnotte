@@ -40,34 +40,42 @@ const COOKIE_MAX_AGE = REFRESH_COOKIE_MAX_AGE; // Used by CSRF cookie
  */
 export function setAuthCookies(res: Response, accessToken: string, refreshToken: string): void {
   const isProd = process.env.NODE_ENV === "production";
+  // In production, set domain to .cagnotte.sn so the cookie is shared
+  // across www.cagnotte.sn (frontend) and api.cagnotte.sn (backend).
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   res.cookie(COOKIE_NAME, accessToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     maxAge: ACCESS_COOKIE_MAX_AGE,
+    domain: cookieDomain,
   });
   res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     maxAge: REFRESH_COOKIE_MAX_AGE,
-    path: "/api/auth", // Only sent to auth endpoints
+    path: "/api/auth",
+    domain: cookieDomain,
   });
 }
 
 
 export function clearAuthCookies(res: Response): void {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   res.clearCookie(COOKIE_NAME, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
+    domain: cookieDomain,
   });
   res.clearCookie(REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     path: "/api/auth",
+    domain: cookieDomain,
   });
 }
 
@@ -164,12 +172,14 @@ const CSRF_HEADER_NAME = "x-csrf-token";
  */
 export function setCsrfCookie(res: Response): string {
   const isProd = process.env.NODE_ENV === "production";
+  const cookieDomain = isProd ? (process.env.COOKIE_DOMAIN || undefined) : undefined;
   const csrfToken = crypto.randomBytes(32).toString("hex");
   res.cookie(CSRF_COOKIE_NAME, csrfToken, {
     httpOnly: false, // Must be readable by JS
     secure: isProd,
-    sameSite: isProd ? "none" : "lax",
+    sameSite: "lax",
     maxAge: COOKIE_MAX_AGE,
+    domain: cookieDomain,
   });
   return csrfToken;
 }
