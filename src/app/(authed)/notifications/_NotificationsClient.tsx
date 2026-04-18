@@ -280,8 +280,8 @@ export function NotificationsClient({
                       <div className="text-sm text-muted-foreground">
                         {renderNotificationContent({
                           type: n.type,
-                          title: n.title,
-                          body: n.body,
+                          title: n.title ?? undefined,
+                          body: n.body ?? undefined,
                           data: n.data,
                         })}
                       </div>
