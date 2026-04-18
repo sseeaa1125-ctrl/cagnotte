@@ -624,26 +624,37 @@ webhooksRouter.post("/bictorys", async (req, res) => {
         logger.error("Erreur email confirmation client", emailErr);
       }
 
-      // Email notification au vendeur
+      // Email notification au vendeur (créateur de cagnotte)
       try {
+        const isFundraiser = order.orderType === "FUNDRAISER" || order.orderType === "DONATION";
+        const sellerSubject = isFundraiser
+          ? `🎉 Nouvelle contribution — ${formatPrice(order.amount)}`
+          : `💰 Nouvelle vente — ${formatPrice(order.amount)}`;
+        const sellerHeading = isFundraiser ? "Nouvelle contribution !" : "Nouvelle vente !";
+        const donorLabel = isFundraiser ? "Donateur" : "Client";
+        const sellerDashboardUrl = isFundraiser
+          ? `${FRONTEND_URL}/tableau-de-bord`
+          : `${FRONTEND_URL}/dashboard/orders`;
+        const sellerCtaLabel = isFundraiser ? "Voir ma cagnotte" : "Voir dans ton dashboard";
+
         let bumpsHtml = "";
         if (order.bumpSelections && order.bumpSelections.length > 0) {
           bumpsHtml = `<p><strong>Extras :</strong></p><ul>${order.bumpSelections.map((b) => `<li>${escapeHtml(b.title)} — ${formatPrice(b.price)}</li>`).join("")}</ul>`;
         }
         queueStandardEmail({
           to: order.seller.email,
-          subject: `💰 Nouvelle vente — ${formatPrice(order.amount)}`,
-          html: `<h2>Nouvelle vente !</h2>
+          subject: sellerSubject,
+          html: `<h2>${sellerHeading}</h2>
             <div style="margin:16px 0;padding:16px;background-color:#F0FDFA;border-radius:12px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">Client</td><td style="padding:4px 0;font-size:14px;color:#111827;text-align:right;">${escapeHtml(order.customerEmail.endsWith("@noemail.local") ? (order.customerName || order.customerPhone || "Anonyme") : order.customerEmail)}</td></tr>
+                <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">${donorLabel}</td><td style="padding:4px 0;font-size:14px;color:#111827;text-align:right;">${escapeHtml(order.customerEmail.endsWith("@noemail.local") ? (order.customerName || order.customerPhone || "Anonyme") : order.customerEmail)}</td></tr>
                 <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">Montant</td><td style="padding:4px 0;font-size:14px;color:#111827;text-align:right;font-weight:600;">${formatPrice(order.amount)}</td></tr>
                 <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">Ta part</td><td style="padding:4px 0;font-size:14px;color:#0D9488;text-align:right;font-weight:700;">${formatPrice(order.sellerAmount)}</td></tr>
               </table>
             </div>
             ${bumpsHtml}
             ${meetingUrl ? `<div style="margin:16px 0;padding:12px 16px;background-color:#E8F0FE;border-radius:12px;border-left:3px solid #1a73e8;"><p style="margin:0;font-size:13px;color:#374151;">🎥 <a href="${meetingUrl}" style="color:#1a73e8;font-weight:600;text-decoration:none;">Lien Google Meet</a> créé automatiquement pour cette réservation.</p></div>` : ""}
-            <p><a href="${FRONTEND_URL}/dashboard/orders" style="display:inline-block;padding:12px 24px;background-color:#0D9488;color:#FFFFFF;text-decoration:none;border-radius:12px;font-weight:600;font-size:14px;">Voir dans ton dashboard</a></p>`,
+            <p><a href="${sellerDashboardUrl}" style="display:inline-block;padding:12px 24px;background-color:#172866;color:#FFFFFF;text-decoration:none;border-radius:12px;font-weight:600;font-size:14px;">${sellerCtaLabel}</a></p>`,
         });
       } catch (emailErr) {
         logger.error("Erreur email notification vendeur", emailErr);
