@@ -5,6 +5,7 @@ import { Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CampaignCard } from "@/components/cagnottes/CampaignCard";
 import { FilterChipBar } from "@/components/cagnottes/FilterChipBar";
+import { SortSelect, type SortMode } from "@/components/cagnottes/SortSelect";
 import { Button, EmptyState, Pagination } from "@/components/ui";
 import { api, ApiError } from "@/lib/api";
 import { ALL_CAGNOTTES_LABELS } from "@/lib/constants";
@@ -60,6 +61,7 @@ function buildApiUrl(opts: {
   limit?: number;
   subtype: SubtypeFilter;
   q: string;
+  sort?: SortMode;
 }): string {
   const params = new URLSearchParams();
   params.set("limit", String(opts.limit ?? 20));
@@ -67,6 +69,7 @@ function buildApiUrl(opts: {
   if (opts.subtype !== "all") params.set("subtype", opts.subtype);
   const trimmedQ = opts.q.trim();
   if (trimmedQ) params.set("q", trimmedQ);
+  if (opts.sort && opts.sort !== "recent") params.set("sort", opts.sort);
   return `/api/cagnottes?${params.toString()}`;
 }
 
@@ -88,6 +91,14 @@ export function LoadMoreCagnottes({
   const [searching, setSearching] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [subtype, setSubtype] = React.useState<SubtypeFilter>(initialSubtype);
+  const initialSortParam = searchParams.get("sort");
+  const initialSort: SortMode =
+    initialSortParam === "oldest" ||
+    initialSortParam === "raised_desc" ||
+    initialSortParam === "raised_asc"
+      ? initialSortParam
+      : "recent";
+  const [sort, setSort] = React.useState<SortMode>(initialSort);
   const [queryInput, setQueryInput] = React.useState<string>(initialQuery);
   const [activeQuery, setActiveQuery] = React.useState<string>(initialQuery);
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -104,8 +115,14 @@ export function LoadMoreCagnottes({
     const urlSubtype = searchParams.get("subtype");
     const nextSubtype: SubtypeFilter =
       urlSubtype === "festive" || urlSubtype === "solidaire" ? urlSubtype : "all";
+    const urlSort = searchParams.get("sort");
+    const nextSort: SortMode =
+      urlSort === "oldest" || urlSort === "raised_desc" || urlSort === "raised_asc"
+        ? urlSort
+        : "recent";
     const urlQ = (searchParams.get("q") ?? "").trim();
     setSubtype((current) => (current !== nextSubtype ? nextSubtype : current));
+    setSort((current) => (current !== nextSort ? nextSort : current));
     setActiveQuery((current) => (current !== urlQ ? urlQ : current));
     setQueryInput((current) => (current !== urlQ ? urlQ : current));
   }, [searchParams]);
@@ -125,6 +142,21 @@ export function LoadMoreCagnottes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subtype]);
 
+  // Sync URL when sort changes
+  React.useEffect(() => {
+    const current = searchParams.get("sort") ?? "recent";
+    if (current === sort) return;
+    const params = new URLSearchParams(searchParams.toString());
+    if (sort === "recent") {
+      params.delete("sort");
+    } else {
+      params.set("sort", sort);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/cagnottes?${qs}` : "/cagnottes", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sort]);
+
   // Debounce search
   React.useEffect(() => {
     if (queryInput === activeQuery) return;
@@ -141,22 +173,28 @@ export function LoadMoreCagnottes({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queryInput]);
 
-  // Refetch when activeQuery or subtype changes (reset to page 1)
+  // Refetch when activeQuery, subtype or sort changes (reset to page 1)
   const lastFetchedRef = React.useRef({
     subtype: initialSubtype,
     query: initialQuery,
+    sort: initialSort,
   });
   React.useEffect(() => {
     const lastFetch = lastFetchedRef.current;
-    if (lastFetch.subtype === subtype && lastFetch.query === activeQuery) return;
-    lastFetchedRef.current = { subtype, query: activeQuery };
+    if (
+      lastFetch.subtype === subtype &&
+      lastFetch.query === activeQuery &&
+      lastFetch.sort === sort
+    )
+      return;
+    lastFetchedRef.current = { subtype, query: activeQuery, sort };
     let cancelled = false;
     async function refetch() {
       setSearching(true);
       setError(null);
       try {
         const data = await api<ListResponse>(
-          buildApiUrl({ subtype, q: activeQuery, page: 1 }),
+          buildApiUrl({ subtype, q: activeQuery, page: 1, sort }),
         );
         if (cancelled) return;
         setCagnottes(data.cagnottes ?? []);
@@ -174,7 +212,7 @@ export function LoadMoreCagnottes({
     }
     refetch();
     return () => { cancelled = true; };
-  }, [activeQuery, subtype]);
+  }, [activeQuery, subtype, sort]);
 
   // Page change handler
   async function goToPage(newPage: number) {
@@ -183,7 +221,7 @@ export function LoadMoreCagnottes({
     setError(null);
     try {
       const data = await api<ListResponse>(
-        buildApiUrl({ page: newPage, subtype, q: activeQuery }),
+        buildApiUrl({ page: newPage, subtype, q: activeQuery, sort }),
       );
       setCagnottes(data.cagnottes ?? []);
       setPage(newPage);
@@ -205,12 +243,13 @@ export function LoadMoreCagnottes({
     { value: "solidaire", label: ALL_CAGNOTTES_LABELS.filterSolidaire },
   ];
 
-  const hasActiveFilter = subtype !== "all" || activeQuery.length > 0;
+  const hasActiveFilter =
+    subtype !== "all" || activeQuery.length > 0 || sort !== "recent";
 
   return (
     <div className="space-y-6">
-      {/* Search bar */}
-      <div className="max-w-2xl">
+      {/* Search bar — centered */}
+      <div className="mx-auto w-full max-w-2xl">
         <div className="group relative">
           <div
             className={cn(
@@ -230,7 +269,7 @@ export function LoadMoreCagnottes({
               <Search
                 size={18}
                 strokeWidth={2.25}
-                className="transition-transform duration-200 group-focus-within:scale-110"
+                className="animate-search-icon-focused transition-transform"
               />
             )}
           </div>
@@ -268,8 +307,8 @@ export function LoadMoreCagnottes({
               aria-label="Effacer la recherche"
               className={cn(
                 "absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full",
-                "bg-gray-100 text-gray-500 transition-all duration-200",
-                "hover:bg-primary hover:text-white",
+                "animate-pop-in bg-gray-100 text-gray-500 transition-all duration-200",
+                "hover:scale-110 hover:bg-primary hover:text-white active:scale-95",
                 "focus:outline-none focus:ring-2 focus:ring-primary/30",
               )}
             >
@@ -293,21 +332,23 @@ export function LoadMoreCagnottes({
         </div>
       </div>
 
-      <FilterChipBar
-        filters={filters}
-        value={subtype}
-        onChange={(v) => setSubtype(v as SubtypeFilter)}
-      />
-
-      {/* Result count */}
-      {totalCount > 0 && !searching ? (
-        <p className="text-sm text-muted-foreground">
-          {totalCount} {totalCount > 1 ? "cagnottes" : "cagnotte"}
-        </p>
-      ) : null}
+      {/* Toolbar — chips + compact sort pill on a single row.
+          No overflow-x-auto on the wrapper (it would clip the desktop
+          dropdown); scroll is handled inside the FilterChipBar itself. */}
+      <div className="mx-auto flex w-full max-w-7xl items-center gap-2 sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1 sm:flex sm:justify-start">
+          <FilterChipBar
+            filters={filters}
+            value={subtype}
+            onChange={(v) => setSubtype(v as SubtypeFilter)}
+            align="center-mobile"
+          />
+        </div>
+        <SortSelect value={sort} onChange={setSort} fullWidthOnMobile={false} />
+      </div>
 
       {searching && cagnottes.length === 0 ? (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true">
+        <div className="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy="true">
           {Array.from({ length: 6 }).map((_, i) => (
             <div
               key={`search-skeleton-${i}`}
@@ -338,6 +379,7 @@ export function LoadMoreCagnottes({
                 variant="outline"
                 onClick={() => {
                   setSubtype("all");
+                  setSort("recent");
                   setQueryInput("");
                 }}
               >
@@ -350,7 +392,7 @@ export function LoadMoreCagnottes({
         <>
           <div
             className={cn(
-              "grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+              "mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
               loading && "pointer-events-none opacity-60",
             )}
           >

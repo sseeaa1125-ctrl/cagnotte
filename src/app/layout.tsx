@@ -31,17 +31,17 @@ export const metadata: Metadata = {
     "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money. La façon la plus simple de lever des fonds au Sénégal.",
   metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn"),
   openGraph: {
-    title: "cagnotte.sn",
+    title: "cagnotte.sn — La cagnotte qui change des vies",
     description:
-      "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money.",
+      "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money. La plateforme de cagnottes du Sénégal.",
     siteName: "cagnotte.sn",
     locale: "fr_FR",
     type: "website",
-    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "cagnotte.sn — La cagnotte qui fait du bien" }],
+    // Image auto-générée par src/app/opengraph-image.tsx (1200×630)
   },
   twitter: {
     card: "summary_large_image",
-    title: "cagnotte.sn",
+    title: "cagnotte.sn — La cagnotte qui change des vies",
     description:
       "Crée une cagnotte en ligne et collecte des contributions via Wave, Orange Money ou Free Money.",
   },

@@ -12,14 +12,23 @@ export interface TabsProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  /**
+   * Alignment of the tab list.
+   * - "start" (default): left-aligned on all breakpoints
+   * - "center": centered on all breakpoints
+   * - "center-mobile": centered on mobile, left-aligned on sm+
+   */
+  align?: "start" | "center" | "center-mobile";
 }
 
-export function Tabs({ tabs, value, onChange, className }: TabsProps) {
+export function Tabs({ tabs, value, onChange, className, align = "start" }: TabsProps) {
   return (
     <div
       role="tablist"
       className={cn(
         "flex gap-2 overflow-x-auto scrollbar-hide",
+        align === "center" && "justify-center",
+        align === "center-mobile" && "justify-center sm:justify-start",
         className,
       )}
     >

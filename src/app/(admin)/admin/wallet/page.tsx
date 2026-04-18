@@ -20,16 +20,19 @@ import { formatPrice } from "@/lib/format";
 interface WalletData {
   totalCollected: number;
   orderCount: number;
-  platformRevenue: number;
+  platformRevenue: number;           // commission brute (8% / 6%)
+  platformNetRevenue: number;        // après frais Bictorys transaction (1.5%)
+  bictorysTransactionFees: number;   // 1.5% sur les donations (période)
   totalVoluntary: number;
   totalSellerAmount: number;
   totalPayouts: number;
   payoutCount: number;
-  totalFees: number;
+  totalFees: number;                 // frais de retrait (= totalWithdrawalFees)
+  totalWithdrawalFees: number;
   sellerRetained: number;
   pendingPayouts: number;
   pendingPayoutCount: number;
-  platformBalance: number;
+  platformBalance: number;           // solde réel (net de tous frais)
 }
 
 export default function AdminWalletPage() {
@@ -158,15 +161,26 @@ export default function AdminWalletPage() {
                     {formatPrice(data.totalVoluntary)}
                   </span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Commission brute
+                  </span>
+                  <span className="font-headings text-sm font-bold text-primary">
+                    {formatPrice(data.platformRevenue)}
+                  </span>
+                </div>
                 <div className="border-t border-border pt-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-primary">
-                      Revenu plateforme
+                      Revenu net plateforme
                     </span>
                     <span className="font-headings text-base font-black text-green-600">
-                      {formatPrice(data.platformRevenue)}
+                      {formatPrice(data.platformNetRevenue)}
                     </span>
                   </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    (après frais Bictorys 1.5% sur transactions)
+                  </p>
                 </div>
               </div>
             </div>
@@ -197,10 +211,19 @@ export default function AdminWalletPage() {
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
                     <CreditCard size={14} />
-                    Frais Bictorys
+                    Frais Bictorys transaction (1.5%)
                   </span>
                   <span className="font-headings text-sm font-bold text-primary">
-                    {formatPrice(data.totalFees)}
+                    {formatPrice(data.bictorysTransactionFees)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <CreditCard size={14} />
+                    Frais Bictorys retrait (1%)
+                  </span>
+                  <span className="font-headings text-sm font-bold text-primary">
+                    {formatPrice(data.totalWithdrawalFees)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

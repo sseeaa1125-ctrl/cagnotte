@@ -626,7 +626,7 @@ webhooksRouter.post("/bictorys", async (req, res) => {
 
       // Email notification au vendeur (créateur de cagnotte)
       try {
-        const isFundraiser = order.orderType === "FUNDRAISER" || order.orderType === "DONATION";
+        const isFundraiser = order.orderType === "DONATION";
         const sellerSubject = isFundraiser
           ? `🎉 Nouvelle contribution — ${formatPrice(order.amount)}`
           : `💰 Nouvelle vente — ${formatPrice(order.amount)}`;

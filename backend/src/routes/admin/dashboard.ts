@@ -8,6 +8,14 @@ export const adminDashboardRouter = Router();
 
 adminDashboardRouter.use(requireAdmin);
 
+// Bictorys fees (supported by the platform, not by sellers or donors):
+//   - 1.5% on each incoming transaction (donations/payments)
+//   - 1% on each outgoing payout (seller withdrawal) — tracked as Withdrawal.merchantFee
+// These fees reduce our real net margin on commissions:
+//   Festive:   8% gross − 1.5% − 1% = 5.5% net
+//   Solidaire: 6% gross − 1.5% − 1% = 3.5% net
+const BICTORYS_TRANSACTION_FEE_RATE = 0.015;
+
 // ── Helper: parse optional date range from query ──
 function parseDateRange(query: Record<string, unknown>): { gte?: Date; lte?: Date } | null {
   const range: { gte?: Date; lte?: Date } = {};
@@ -51,13 +59,21 @@ adminDashboardRouter.get("/kpis", async (req, res) => {
 
     const totalRevenue = orderStats._sum.amount ?? 0;
     const totalSellerAmount = orderStats._sum.sellerAmount ?? 0;
-    // Revenu plateforme = tout ce qui n'est PAS reversé aux vendeurs
+    // Commission brute = tout ce qui n'est PAS reversé aux vendeurs
     const totalCommission = totalRevenue - totalSellerAmount;
     const totalVoluntary = orderStats._sum.voluntaryContribution ?? 0;
+    // Frais Bictorys (à notre charge) : 1.5% sur chaque transaction entrante
+    const bictorysTransactionFees = Math.floor(totalRevenue * BICTORYS_TRANSACTION_FEE_RATE);
+    // Commission nette = commission brute - frais Bictorys transaction
+    // (les frais de retrait 1% sont tracés séparément dans /wallet car ils
+    // ne sont pas liés 1-pour-1 aux commandes de cette période)
+    const netCommission = totalCommission - bictorysTransactionFees;
 
     res.json({
       totalRevenue,
-      totalCommission,
+      totalCommission,       // brut
+      netCommission,         // après frais Bictorys transaction (1.5%)
+      bictorysTransactionFees,
       totalVoluntary,
       totalSellerAmount,
       sellerCount,
@@ -283,12 +299,16 @@ adminDashboardRouter.get("/wallet", async (req, res) => {
     const totalCollected = orderStats._sum.amount ?? 0;
     const totalSellerAmount = orderStats._sum.sellerAmount ?? 0;
     const totalVoluntary = orderStats._sum.voluntaryContribution ?? 0;
-    // Platform revenue = everything not given to sellers
+    // Platform gross revenue = everything not given to sellers (= total commission)
     const platformRevenue = totalCollected - totalSellerAmount;
+    // Bictorys 1.5% transaction fees on incoming donations (platform-supported)
+    const bictorysTransactionFees = Math.floor(totalCollected * BICTORYS_TRANSACTION_FEE_RATE);
+    // Platform net revenue (period) = gross commission - Bictorys transaction fees
+    const platformNetRevenue = platformRevenue - bictorysTransactionFees;
 
     // Period payouts
     const totalPayouts = withdrawalStats._sum.amount ?? 0;
-    const totalFees = withdrawalStats._sum.merchantFee ?? 0;
+    const totalWithdrawalFees = withdrawalStats._sum.merchantFee ?? 0;
 
     // All-time balances (use all-time data when filtered, period data otherwise)
     const atCollected = dateRange
@@ -300,35 +320,40 @@ adminDashboardRouter.get("/wallet", async (req, res) => {
     const atPayouts = dateRange
       ? (allTimePayouts?._sum.amount ?? 0)
       : totalPayouts;
-    const atFees = dateRange
+    const atWithdrawalFees = dateRange
       ? (allTimePayouts?._sum.merchantFee ?? 0)
-      : totalFees;
+      : totalWithdrawalFees;
     const atPending = pendingPayouts._sum.amount ?? 0;
+    const atBictorysTransactionFees = Math.floor(atCollected * BICTORYS_TRANSACTION_FEE_RATE);
 
     // Seller retained = what sellers earned but haven't withdrawn yet
     const sellerRetained = Math.max(atSellerAmount - atPayouts - atPending, 0);
-    // Platform balance = platform revenue all-time minus Bictorys fees
-    const atPlatformRevenue = atCollected - atSellerAmount;
-    const platformBalance = atPlatformRevenue - atFees;
+    // Platform balance (all-time) = gross commission - Bictorys transaction fees - Bictorys withdrawal fees
+    const atPlatformGrossRevenue = atCollected - atSellerAmount;
+    const platformBalance =
+      atPlatformGrossRevenue - atBictorysTransactionFees - atWithdrawalFees;
 
     res.json({
       // Period: revenue breakdown
       totalCollected,
       orderCount: orderStats._count,
-      platformRevenue,
+      platformRevenue,           // commission brute (inchangé pour compat)
+      platformNetRevenue,        // commission nette après frais Bictorys transaction
+      bictorysTransactionFees,   // 1.5% sur les donations (période)
       totalVoluntary,
       totalSellerAmount,
 
       // Period: payouts
       totalPayouts,
       payoutCount: withdrawalStats._count,
-      totalFees,
+      totalFees: totalWithdrawalFees,       // alias rétro-compat
+      totalWithdrawalFees,                  // 1% frais de retrait Bictorys
 
       // All-time balances
       sellerRetained,
       pendingPayouts: atPending,
       pendingPayoutCount: pendingPayouts._count,
-      platformBalance,
+      platformBalance,           // solde réel = commission - frais transaction - frais retrait
     });
   } catch (err) {
     logger.error("Erreur admin /dashboard/wallet", err);

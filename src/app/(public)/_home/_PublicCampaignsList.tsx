@@ -71,30 +71,21 @@ export async function HomePublicCampaignsList() {
 
   return (
     <section className="mx-4 my-4 max-w-[1400px] px-0 py-10 sm:px-2 sm:py-14 md:mx-12 md:px-8 md:py-16 xl:mx-auto">
-      <div className="mb-6 flex flex-col items-start justify-between gap-3 px-2 sm:mb-10 sm:px-0 md:flex-row md:items-end md:gap-4">
-        <div>
-          <h2 className="mb-2 font-headings text-[26px] font-black leading-[1.1] text-primary sm:mb-3 sm:text-3xl md:text-4xl">
-            {HOME_FEATURED_LABELS.h2}
-          </h2>
-          <p className="text-[15px] font-medium text-gray-600 sm:text-base md:text-lg">
-            {HOME_FEATURED_LABELS.subtitle}
-          </p>
-        </div>
-        <Link
-          href="/cagnottes"
-          className="hidden min-h-12 items-center gap-2 font-bold text-primary hover:underline md:inline-flex"
-        >
-          {HOME_FEATURED_LABELS.viewAll}
-          <ArrowRight size={20} aria-hidden />
-        </Link>
+      <div className="mb-8 text-center sm:mb-12">
+        <h2 className="mb-2 font-headings text-[26px] font-black leading-[1.1] text-primary sm:mb-3 sm:text-3xl md:text-4xl">
+          {HOME_FEATURED_LABELS.h2}
+        </h2>
+        <p className="mx-auto max-w-2xl text-[15px] font-medium text-gray-600 sm:text-base md:text-lg">
+          {HOME_FEATURED_LABELS.subtitle}
+        </p>
       </div>
 
       {cagnottes.length === 0 ? (
-        <div className="rounded-3xl border border-border bg-white p-8 text-center text-sm text-muted-foreground">
+        <div className="mx-auto max-w-md rounded-3xl border border-border bg-white p-8 text-center text-sm text-muted-foreground">
           {HOME_FEATURED_LABELS.empty}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-8">
+        <div className="mx-auto grid max-w-7xl grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-8">
           {cagnottes.map((c) => {
             const slug = c.slug as string;
             const raised = c.totalRaised ?? 0;
@@ -169,13 +160,21 @@ export async function HomePublicCampaignsList() {
         </div>
       )}
 
-      <Link
-        href="/cagnottes"
-        className="mx-2 mt-6 flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-gray-50 py-4 font-bold text-primary hover:bg-gray-100 sm:mx-0 md:hidden"
-      >
-        {HOME_FEATURED_LABELS.viewAll}
-        <ArrowRight size={20} aria-hidden />
-      </Link>
+      {cagnottes.length > 0 ? (
+        <div className="mt-10 flex justify-center sm:mt-12">
+          <Link
+            href="/cagnottes"
+            className="group inline-flex min-h-14 items-center gap-2 rounded-2xl border-2 border-primary/15 bg-white px-8 py-4 font-bold text-primary shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
+            {HOME_FEATURED_LABELS.viewAll}
+            <ArrowRight
+              size={20}
+              aria-hidden
+              className="transition-transform group-hover:translate-x-1"
+            />
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

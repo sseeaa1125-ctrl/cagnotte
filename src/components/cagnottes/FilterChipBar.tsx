@@ -7,6 +7,7 @@ export interface FilterChipBarProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  align?: "start" | "center" | "center-mobile";
 }
 
 export function FilterChipBar({
@@ -14,6 +15,7 @@ export function FilterChipBar({
   value,
   onChange,
   className,
+  align = "start",
 }: FilterChipBarProps) {
   const tabs: TabItem[] = filters.map((f) => ({
     value: f.value,
@@ -23,7 +25,7 @@ export function FilterChipBar({
 
   return (
     <div className={cn("w-full", className)}>
-      <Tabs tabs={tabs} value={value} onChange={onChange} />
+      <Tabs tabs={tabs} value={value} onChange={onChange} align={align} />
     </div>
   );
 }

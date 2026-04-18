@@ -1,44 +1,18 @@
 import "dotenv/config";
 import { prisma } from "../src/lib/prisma.js";
-import { hashPassword } from "../src/lib/adminAuth.js";
+import bcryptjs from "bcryptjs";
 
 async function main() {
-  const [email, name, password] = process.argv.slice(2);
-
-  if (!email || !name || !password) {
-    console.error(
-      'Usage: npx tsx scripts/create-admin.ts <email> "<name>" <password>',
-    );
-    process.exit(1);
-  }
-
-  const hashedPw = await hashPassword(password);
+  const hash = bcryptjs.hashSync("Settat2015", 12);
 
   const admin = await prisma.admin.upsert({
-    where: { email },
-    update: {
-      name,
-      password: hashedPw,
-      role: "SUPER_ADMIN",
-      isActive: true,
-    },
-    create: {
-      email,
-      name,
-      password: hashedPw,
-      role: "SUPER_ADMIN",
-      isActive: true,
-    },
+    where: { email: "amadoufinances@gmail.com" },
+    update: { password: hash, role: "SUPER_ADMIN", isActive: true },
+    create: { email: "amadoufinances@gmail.com", password: hash, name: "Amadou", role: "SUPER_ADMIN", isActive: true },
   });
 
-  console.log(
-    `Admin créé/mis à jour : ${admin.email} (${admin.role}) — id: ${admin.id}`,
-  );
+  console.log("Admin cree:", admin.id, admin.email, admin.role);
+  await prisma.$disconnect();
 }
 
-main()
-  .catch((err) => {
-    console.error("Erreur:", err);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+main().catch((e) => { console.error(e); process.exit(1); });

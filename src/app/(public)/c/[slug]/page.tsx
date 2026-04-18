@@ -228,7 +228,7 @@ export default async function CagnottePage({
           return (
             <li
               key={p.id}
-              className="flex items-center gap-4 rounded-2xl border border-gray-100 p-4 transition-colors hover:border-gray-200"
+              className="flex gap-4 rounded-2xl border border-gray-100 p-4 transition-colors hover:border-gray-200"
             >
               <div
                 aria-hidden
@@ -257,6 +257,13 @@ export default async function CagnottePage({
                     {formatRelative(p.createdAt)}
                   </span>
                 </p>
+                {p.message ? (
+                  <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-gray-700">
+                    <span aria-hidden className="mr-1">&ldquo;</span>
+                    {p.message}
+                    <span aria-hidden className="ml-0.5">&rdquo;</span>
+                  </p>
+                ) : null}
               </div>
             </li>
           );
@@ -385,44 +392,79 @@ export default async function CagnottePage({
             <div className="hidden lg:block">{participantsSection}</div>
           </div>
 
-          {/* ─── Right: sticky action card ─────────────────────────────── */}
+          {/* ─── Right: sticky action card + share card below ──────────── */}
           <aside className="w-full lg:w-1/3">
-            <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.08)] sm:p-6 lg:sticky lg:top-24">
-              {/* Live amount + animated progress bar + caption */}
-              <ProgressPoll
-                slug={slug}
-                initialTotalRaised={totalRaised}
-                initialDonorCount={donorCount}
-                goalAmount={goalAmount}
-                hideAmount={cagnotte.hideAmount}
-                hideDonors={cagnotte.hideDonors}
-              />
+            <div className="lg:sticky lg:top-24 flex flex-col gap-4">
+              {/* Card 1 — Participation (focus on CTA) */}
+              <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-[0_8px_30px_rgb(0,0,0,0.08)] sm:p-6">
+                {/* Live amount + animated progress bar + caption */}
+                <ProgressPoll
+                  slug={slug}
+                  initialTotalRaised={totalRaised}
+                  initialDonorCount={donorCount}
+                  goalAmount={goalAmount}
+                  hideAmount={cagnotte.hideAmount}
+                  hideDonors={cagnotte.hideDonors}
+                />
 
-              {/* Je participe CTA — pink Banani variant with shine sweep */}
-              {isClosed ? (
-                <div
-                  role="status"
-                  className="mb-4 flex min-h-14 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm font-semibold text-gray-600"
-                >
-                  Cagnotte clôturée
+                {/* Je participe CTA — pink Banani variant with shine sweep */}
+                {isClosed ? (
+                  <div
+                    role="status"
+                    className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm font-semibold text-gray-600"
+                  >
+                    Cagnotte clôturée
+                  </div>
+                ) : (
+                  <Link
+                    href={`/c/${slug}/participer`}
+                    className="group relative flex min-h-14 w-full items-center justify-center overflow-hidden rounded-2xl bg-pink-dark py-4 font-headings text-lg font-black text-primary shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pink-cta-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
+                  >
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-y-0 -left-[50%] w-[50%] animate-button-shine-sweep bg-gradient-to-r from-transparent via-white/55 to-transparent"
+                    />
+                    <span className="relative">Je participe</span>
+                  </Link>
+                )}
+
+                {/* Trust items */}
+                <div className="mt-5 space-y-4 border-t border-gray-100 pt-5">
+                  <div className="flex items-start gap-3">
+                    <ShieldCheck
+                      size={20}
+                      aria-hidden
+                      className="mt-0.5 shrink-0 text-green-500"
+                    />
+                    <div>
+                      <p className="mb-0.5 text-sm font-bold text-primary">
+                        Paiement 100 % sécurisé
+                      </p>
+                      <p className="text-xs font-medium text-gray-500">
+                        Tes données sont cryptées et protégées
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Wallet
+                      size={20}
+                      aria-hidden
+                      className="mt-0.5 shrink-0 text-blue-500"
+                    />
+                    <div>
+                      <p className="mb-0.5 text-sm font-bold text-primary">
+                        Fonds versés en 48 h
+                      </p>
+                      <p className="text-xs font-medium text-gray-500">
+                        Versement sur Wave ou Orange Money — jours ouvrés.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <Link
-                  href={`/c/${slug}/participer`}
-                  className="group relative mb-4 flex min-h-14 w-full items-center justify-center overflow-hidden rounded-2xl bg-pink-dark py-4 font-headings text-lg font-black text-primary shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-pink-cta-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:translate-y-0 active:scale-[0.98]"
-                >
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-y-0 -left-[50%] w-[50%] animate-button-shine-sweep bg-gradient-to-r from-transparent via-white/55 to-transparent"
-                  />
-                  <span className="relative">Je participe</span>
-                </Link>
-              )}
+              </div>
 
-              {/* Partager — moved into the sticky aside per UX request,
-                  directly under "Je participe". Title + helper + ShareSheet
-                  inline. */}
-              <div className="mb-5 rounded-2xl bg-pink p-5 text-center">
+              {/* Card 2 — Share (separate card, below) */}
+              <div className="rounded-2xl bg-pink p-5 text-center shadow-[0_8px_30px_rgb(0,0,0,0.06)] sm:p-6">
                 <h3 className="mb-2 font-headings text-base font-black text-primary sm:text-lg">
                   Partager, c&apos;est aussi soutenir
                 </h3>
@@ -435,40 +477,6 @@ export default async function CagnottePage({
                   title={cagnotte.title}
                   description={stripHtml(cagnotte.description ?? "") || undefined}
                 />
-              </div>
-
-              {/* Trust items */}
-              <div className="space-y-4 border-t border-gray-100 pt-5">
-                <div className="flex items-start gap-3">
-                  <ShieldCheck
-                    size={20}
-                    aria-hidden
-                    className="mt-0.5 shrink-0 text-green-500"
-                  />
-                  <div>
-                    <p className="mb-0.5 text-sm font-bold text-primary">
-                      Paiement 100 % sécurisé
-                    </p>
-                    <p className="text-xs font-medium text-gray-500">
-                      Tes données sont cryptées et protégées
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Wallet
-                    size={20}
-                    aria-hidden
-                    className="mt-0.5 shrink-0 text-blue-500"
-                  />
-                  <div>
-                    <p className="mb-0.5 text-sm font-bold text-primary">
-                      Fonds versés en 48 h
-                    </p>
-                    <p className="text-xs font-medium text-gray-500">
-                      Versement sur Wave ou Orange Money — jours ouvrés.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </aside>

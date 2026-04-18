@@ -19,7 +19,9 @@ import { formatPrice, formatRelativeTime } from "@/lib/format";
 // ── Types ──
 interface KpiData {
   totalRevenue: number;
-  totalCommission: number;
+  totalCommission: number;          // commission brute (8% / 6%)
+  netCommission: number;            // après frais Bictorys transaction (1.5%)
+  bictorysTransactionFees: number;  // 1.5% sur les donations
   totalVoluntary: number;
   totalSellerAmount: number;
   sellerCount: number;
@@ -154,8 +156,13 @@ export default function AdminDashboardPage() {
           />
           <KpiCard
             icon={<DollarSign size={18} />}
-            label="Commission plateforme"
+            label="Commission brute"
             value={formatPrice(kpis?.totalCommission ?? 0)}
+          />
+          <KpiCard
+            icon={<DollarSign size={18} />}
+            label="Commission nette"
+            value={formatPrice(kpis?.netCommission ?? 0)}
           />
           <KpiCard
             icon={<Gift size={18} />}

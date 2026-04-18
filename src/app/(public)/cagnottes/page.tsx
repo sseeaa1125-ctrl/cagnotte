@@ -27,10 +27,12 @@ interface ListResponse {
 }
 
 type SubtypeFilter = "all" | "festive" | "solidaire";
+type SortMode = "recent" | "oldest" | "raised_desc" | "raised_asc";
 
 interface InitialFetchOpts {
   subtype: SubtypeFilter;
   q: string;
+  sort: SortMode;
 }
 
 async function getInitial(opts: InitialFetchOpts): Promise<ListResponse> {
@@ -38,6 +40,7 @@ async function getInitial(opts: InitialFetchOpts): Promise<ListResponse> {
   params.set("limit", "20");
   if (opts.subtype !== "all") params.set("subtype", opts.subtype);
   if (opts.q) params.set("q", opts.q);
+  if (opts.sort !== "recent") params.set("sort", opts.sort);
   try {
     // `cache: 'no-store'` keeps the listing live — a new donation is
     // visible on the first reload rather than up to 60s later. Matches
@@ -86,6 +89,14 @@ function parseSubtype(raw: string | string[] | undefined): SubtypeFilter {
   return "all";
 }
 
+function parseSort(raw: string | string[] | undefined): SortMode {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === "oldest" || value === "raised_desc" || value === "raised_asc") {
+    return value;
+  }
+  return "recent";
+}
+
 function parseQuery(raw: string | string[] | undefined): string {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (typeof value !== "string") return "";
@@ -95,19 +106,24 @@ function parseQuery(raw: string | string[] | undefined): string {
 export default async function ToutesLesCagnottesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ subtype?: string; q?: string }>;
+  searchParams: Promise<{ subtype?: string; q?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const initialSubtype = parseSubtype(params.subtype);
   const initialQuery = parseQuery(params.q);
-  const initial = await getInitial({ subtype: initialSubtype, q: initialQuery });
+  const initialSort = parseSort(params.sort);
+  const initial = await getInitial({
+    subtype: initialSubtype,
+    q: initialQuery,
+    sort: initialSort,
+  });
   return (
     <div className="container mx-auto px-4 py-8 md:py-12">
-      <header className="mb-8 max-w-2xl">
+      <header className="mb-8 text-center">
         <h1 className="font-headings text-3xl font-bold text-primary md:text-4xl">
           {ALL_CAGNOTTES_LABELS.pageTitle}
         </h1>
-        <p className="mt-2 text-base text-muted-foreground">
+        <p className="mx-auto mt-2 max-w-2xl text-base text-muted-foreground">
           {ALL_CAGNOTTES_LABELS.pageSubtitle}
         </p>
       </header>
