@@ -212,11 +212,15 @@ blocksRouter.get("/:id/progress", async (req, res) => {
         orderType: "DONATION",
         paymentStatus: "PAID",
       },
-      _sum: { amount: true },
+      _sum: { amount: true, voluntaryContribution: true },
       _count: true,
     });
 
-    const realCollected = stats._sum.amount || 0;
+    // Voluntary contribution goes 100% to the platform — subtract from the
+    // creator-facing "Montant récolté" so the figure reflects the actual
+    // cagnotte contribution, not the gross charged to the donor.
+    const realCollected =
+      (stats._sum.amount || 0) - (stats._sum.voluntaryContribution || 0);
     const realDonorCount = stats._count || 0;
 
     const collected = isOwner || !hideAmount ? realCollected : null;
@@ -270,6 +274,7 @@ blocksRouter.get("/:id/donations", async (req, res) => {
       select: {
         id: true,
         amount: true,
+        voluntaryContribution: true,
         customerName: true,
         donorMessage: true,
         isAnonymous: true,
@@ -280,10 +285,13 @@ blocksRouter.get("/:id/donations", async (req, res) => {
 
     // Audit 030 HI-01 — respect isAnonymous / messageIsPrivate flags
     // Audit 032 S-02 — respect hideAmount flag
+    // Voluntary contribution is platform-bound; show cagnotte-only amount.
     res.json({
       donations: donations.map((d) => ({
         id: d.id,
-        amount: hideAmount ? null : d.amount,
+        amount: hideAmount
+          ? null
+          : d.amount - (d.voluntaryContribution ?? 0),
         name: d.isAnonymous ? "Anonyme" : (d.customerName || "Anonyme"),
         message: d.messageIsPrivate ? null : (d.donorMessage || null),
         createdAt: d.createdAt,

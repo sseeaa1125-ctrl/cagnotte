@@ -79,6 +79,7 @@ function maskDonation(
   o: {
     id: string;
     amount: number;
+    voluntaryContribution: number;
     donorMessage: string | null;
     isAnonymous: boolean;
     messageIsPrivate: boolean;
@@ -87,10 +88,14 @@ function maskDonation(
   },
   cfg: FundraiserConfig,
 ) {
+  // The voluntary contribution ("Soutenir cagnotte.sn") is a tip to the
+  // platform, not a contribution to the cagnotte. Surface the cagnotte-only
+  // amount to creators and the public.
+  const cagnotteAmount = o.amount - (o.voluntaryContribution ?? 0);
   return {
     id: o.id,
     name: o.isAnonymous ? "Anonyme" : (o.customerName || "Anonyme"),
-    amount: cfg.hideAmount ? null : o.amount,
+    amount: cfg.hideAmount ? null : cagnotteAmount,
     message: o.messageIsPrivate ? null : o.donorMessage,
     createdAt: o.createdAt.toISOString(),
     // customerEmail is NEVER returned (T-02-03)
@@ -208,14 +213,14 @@ cagnottesRouter.get("/", async (req, res) => {
         : await prisma.order.groupBy({
             by: ["blockId"],
             where: { blockId: { in: poolIds }, paymentStatus: "PAID" },
-            _sum: { amount: true },
+            _sum: { amount: true, voluntaryContribution: true },
             _count: { _all: true },
           });
       const poolMap = new Map<string, { sum: number; count: number }>();
       for (const t of poolTotals) {
         if (!t.blockId) continue;
         poolMap.set(t.blockId, {
-          sum: t._sum.amount || 0,
+          sum: (t._sum.amount || 0) - (t._sum.voluntaryContribution || 0),
           count: t._count._all,
         });
       }
@@ -309,13 +314,16 @@ cagnottesRouter.get("/", async (req, res) => {
         : await prisma.order.groupBy({
             by: ["blockId"],
             where: { blockId: { in: ids }, paymentStatus: "PAID" },
-            _sum: { amount: true },
+            _sum: { amount: true, voluntaryContribution: true },
             _count: { _all: true },
           });
       const sumMap = new Map<string, { sum: number; count: number }>();
       for (const t of sums) {
         if (!t.blockId) continue;
-        sumMap.set(t.blockId, { sum: t._sum.amount || 0, count: t._count._all });
+        sumMap.set(t.blockId, {
+          sum: (t._sum.amount || 0) - (t._sum.voluntaryContribution || 0),
+          count: t._count._all,
+        });
       }
       const sorted = activeAll.slice().sort((a, b) => {
         const sa = sumMap.get(a.id)?.sum ?? 0;
@@ -393,14 +401,14 @@ cagnottesRouter.get("/", async (req, res) => {
       : await prisma.order.groupBy({
           by: ["blockId"],
           where: { blockId: { in: blockIds }, paymentStatus: "PAID" },
-          _sum: { amount: true },
+          _sum: { amount: true, voluntaryContribution: true },
           _count: { _all: true },
         });
     const totalsMap = new Map<string, { sum: number; count: number }>();
     for (const t of totals) {
       if (!t.blockId) continue;
       totalsMap.set(t.blockId, {
-        sum: t._sum.amount || 0,
+        sum: (t._sum.amount || 0) - (t._sum.voluntaryContribution || 0),
         count: t._count._all,
       });
     }
@@ -504,10 +512,11 @@ cagnottesRouter.get("/:slug", async (req, res) => {
     // Stats — single aggregate query.
     const agg = await prisma.order.aggregate({
       where: { blockId: block.id, paymentStatus: "PAID" },
-      _sum: { amount: true },
+      _sum: { amount: true, voluntaryContribution: true },
       _count: { _all: true },
     });
-    const totalRaised = agg._sum.amount || 0;
+    const totalRaised =
+      (agg._sum.amount || 0) - (agg._sum.voluntaryContribution || 0);
     const donorCount = agg._count._all;
 
     // Top 3 most-recent paid donations as a preview wall (Banani screen 21).
@@ -518,6 +527,7 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       select: {
         id: true,
         amount: true,
+        voluntaryContribution: true,
         donorMessage: true,
         isAnonymous: true,
         messageIsPrivate: true,
@@ -652,6 +662,7 @@ cagnottesRouter.get("/:slug/participants", async (req, res) => {
       select: {
         id: true,
         amount: true,
+        voluntaryContribution: true,
         donorMessage: true,
         isAnonymous: true,
         messageIsPrivate: true,

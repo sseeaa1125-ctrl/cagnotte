@@ -191,9 +191,9 @@ export const CREATOR_DETAIL_LABELS = {
   statusClosed: "Clôturée",
   subtypeFestive: "Cagnotte Festive",
   subtypeSolidaire: "Cagnotte Solidaire",
-  kpiCollected: "Montant récolté",
+  kpiCollected: "Montant brut récolté",
   kpiParticipants: "Participations",
-  kpiAvailableFunds: "Fonds disponibles",
+  kpiAvailableFunds: "Fonds net disponibles",
   withdrawCta: "Retirer les fonds",
   withdrawHelper:
     "Transfère ce montant sur ton compte Mobile Money en quelques clics.",

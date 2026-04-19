@@ -483,36 +483,6 @@ export function ParticiperForm({
           </aside>
         </div>
       </div>
-
-      {/* Audit 033 S-02 — fixed bottom CTA bar on mobile. Hidden on lg+
-          where the sticky aside is already visible. Safe-area padding
-          for iPhone home indicator. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-100 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-4px_20px_rgb(0,0,0,0.06)] backdrop-blur lg:hidden">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground">Total</p>
-            <p className="font-headings text-lg font-black tabular-nums text-primary">
-              {formatPrice(totalAmount)}
-            </p>
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className={cn(
-              PAY_BTN_BASE,
-              "min-h-12 shrink-0 px-5 py-3 text-sm",
-              "disabled:cursor-not-allowed disabled:opacity-70",
-            )}
-          >
-            <span aria-hidden className={SHINE_SPAN} />
-            <span className="relative flex items-center gap-2 whitespace-nowrap">
-              Participer
-              <Lock size={14} aria-hidden />
-            </span>
-          </button>
-        </div>
-      </div>
-
     </form>
   );
 }

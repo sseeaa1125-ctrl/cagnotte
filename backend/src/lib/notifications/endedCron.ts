@@ -29,14 +29,19 @@ async function computeBlockTotals(
   blockId: string,
 ): Promise<{ totalRaised: number; donorCount: number }> {
   // `paymentStatus: "PAID"` + `blockId` is our invariant for completed
-  // donations. `_sum.amount` gives totalRaised; distinct customerEmail gives
-  // the donor count. findMany + in-memory aggregate is fine at the expected
-  // cardinality (typical cagnotte has <1000 paid orders).
+  // donations. distinct customerEmail gives the donor count. findMany +
+  // in-memory aggregate is fine at the expected cardinality (typical
+  // cagnotte has <1000 paid orders). Voluntary contribution ("Soutenir
+  // cagnotte.sn") is a tip to the platform — subtract it so the ended
+  // notification matches the creator-facing totalRaised elsewhere.
   const paidOrders = await prisma.order.findMany({
     where: { blockId, paymentStatus: "PAID" },
-    select: { amount: true, customerEmail: true },
+    select: { amount: true, voluntaryContribution: true, customerEmail: true },
   });
-  const totalRaised = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+  const totalRaised = paidOrders.reduce(
+    (sum, o) => sum + (o.amount || 0) - (o.voluntaryContribution || 0),
+    0,
+  );
   const uniqueDonors = new Set<string>();
   for (const o of paidOrders) {
     if (o.customerEmail) uniqueDonors.add(o.customerEmail.toLowerCase());

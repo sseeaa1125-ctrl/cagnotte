@@ -44,6 +44,10 @@ import {
 export interface OrderForDispatch {
   id: string;
   amount: number;
+  // The voluntary "Soutenir cagnotte.sn" tip goes 100% to the platform.
+  // We subtract it before surfacing the amount to creators so the figure
+  // they see equals the donor's actual contribution to the cagnotte.
+  voluntaryContribution: number;
   customerName: string | null;
   isAnonymous: boolean;
   donorMessage: string | null;
@@ -90,9 +94,10 @@ export async function fireDonationReceived(
   order: OrderForDispatch,
   block: BlockForDispatch,
 ): Promise<CreateNotificationResult> {
+  const cagnotteAmount = order.amount - (order.voluntaryContribution ?? 0);
   const tpl = donationReceivedTemplate({
     donorPublicName: donorPublicName(order),
-    amount: order.amount,
+    amount: cagnotteAmount,
     cagnotteTitle: block.title,
   });
   return createNotification({
@@ -108,7 +113,7 @@ export async function fireDonationReceived(
       // Per resolved Q1 — creator feed needs the real name behind a "Anonyme" flag
       donorDisplayName: order.customerName || null,
       wasAnonymous: !!order.isAnonymous,
-      amount: order.amount,
+      amount: cagnotteAmount,
       cagnotteTitle: block.title,
     },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },

@@ -194,9 +194,10 @@ export default function PaiementPage() {
   }, []);
 
   // Polling du statut de commande quand la waiting card est affichée.
-  // Même cadence que la merci page (3s × 40 = 2min max). On redirige vers
-  // /merci dès qu'on détecte PAID — les états FAILED/EXPIRED remontent aussi
-  // sur /merci, qui sait mieux présenter les erreurs.
+  // Même cadence que la merci page (3s × 40 = 2min max). Le poll continue
+  // même si l'onglet est caché (user a scanné le QR puis est passé sur
+  // mobile pour payer) — critique pour que le desktop revienne sur /merci
+  // quand il redevient visible.
   React.useEffect(() => {
     if (!waitingData) return;
     if (waitingStatus !== "polling") return;
@@ -204,28 +205,16 @@ export default function PaiementPage() {
 
     let cancelled = false;
     const id = window.setTimeout(async () => {
-      if (
-        typeof document !== "undefined" &&
-        document.visibilityState !== "visible"
-      ) {
-        return; // pause pendant l'onglet inactif
-      }
       try {
         const data = await api<{
           status: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
         }>(`/api/orders/${waitingData.reference}/status`);
         if (cancelled) return;
         if (data.status === "PAID") {
+          // La redirection est gérée par un effet séparé keyé sur
+          // `waitingStatus === "paid"` pour éviter le souci de cleanup
+          // qui annulait le setTimeout imbriqué avant que la nav se fasse.
           setWaitingStatus("paid");
-          // Petite tempo pour laisser l'utilisateur voir le check mark avant
-          // la redirection.
-          window.setTimeout(() => {
-            if (!cancelled) {
-              router.push(
-                `/c/${slug}/merci?ref=${encodeURIComponent(waitingData.reference)}`,
-              );
-            }
-          }, 900);
         } else if (data.status === "FAILED" || data.status === "EXPIRED") {
           router.push(
             `/c/${slug}/merci?ref=${encodeURIComponent(waitingData.reference)}`,
@@ -243,6 +232,19 @@ export default function PaiementPage() {
       window.clearTimeout(id);
     };
   }, [waitingData, waitingStatus, waitingAttempts, router, slug]);
+
+  // Redirection vers /merci quand le paiement est confirmé. Placé dans un
+  // effet séparé car la tempo de 900ms doit survivre au cleanup déclenché
+  // par `setWaitingStatus("paid")` qui re-run l'effet de polling.
+  React.useEffect(() => {
+    if (waitingStatus !== "paid") return;
+    if (!waitingData) return;
+    const ref = waitingData.reference;
+    const id = window.setTimeout(() => {
+      router.push(`/c/${slug}/merci?ref=${encodeURIComponent(ref)}`);
+    }, 900);
+    return () => window.clearTimeout(id);
+  }, [waitingStatus, waitingData, router, slug]);
 
   // Timeout: si le polling atteint WAIT_MAX_POLLS sans résolution, on
   // bascule quand même sur la merci page (qui a son propre polling plus

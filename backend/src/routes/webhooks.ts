@@ -415,13 +415,16 @@ webhooksRouter.post("/bictorys", async (req, res) => {
           // 4. Aggregate prevTotal — paid orders on this block EXCLUDING this order.
           // Used post-tx by detectCrossed() to fire MILESTONE_REACHED at most once
           // per (block, threshold) via Notification.dedupeKey.
+          // Voluntary contribution goes 100% to the platform — subtract it so
+          // the milestone threshold matches what the creator/public sees.
           let prevTotal = 0;
           if (ord.blockId) {
             const agg = await tx.order.aggregate({
               where: { blockId: ord.blockId, paymentStatus: "PAID", id: { not: ord.id } },
-              _sum: { amount: true },
+              _sum: { amount: true, voluntaryContribution: true },
             });
-            prevTotal = agg._sum.amount || 0;
+            prevTotal =
+              (agg._sum.amount || 0) - (agg._sum.voluntaryContribution || 0);
           }
 
           // 5. Mutate order → PAID
@@ -467,6 +470,7 @@ webhooksRouter.post("/bictorys", async (req, res) => {
           const ordForDispatch: OrderForDispatch = {
             id: ord.id,
             amount: ord.amount,
+            voluntaryContribution: ord.voluntaryContribution ?? 0,
             customerName: ord.customerName,
             isAnonymous: ord.isAnonymous,
             donorMessage: ord.donorMessage,
@@ -484,7 +488,8 @@ webhooksRouter.post("/bictorys", async (req, res) => {
           return {
             alreadyProcessed: false,
             prevTotal,
-            newTotal: prevTotal + ord.amount,
+            newTotal:
+              prevTotal + (ord.amount - (ord.voluntaryContribution ?? 0)),
             blk: blkForDispatch,
             ord: ordForDispatch,
           };
