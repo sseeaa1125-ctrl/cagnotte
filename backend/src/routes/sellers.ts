@@ -448,9 +448,12 @@ sellersRouter.get("/dashboard/stats", requireAuth, async (req, res) => {
     todayStart.setHours(0, 0, 0, 0);
 
     const [totalRevenue, communityRevenue, todayRevenue, todayCommunityRevenue, totalOrders, totalCommunityOrders, recentOrders, recentCommunityPayments, blocksCount] = await Promise.all([
+      // KPI "Total brut collecté" — contributions to the cagnottes BEFORE
+      // commission. Excludes the voluntary "Soutenir cagnotte.sn" tip
+      // (which is platform-bound, not a contribution to the cagnotte).
       prisma.order.aggregate({
         where: { ...paidOrdersWhere, paidAt: { gte: since } },
-        _sum: { sellerAmount: true },
+        _sum: { amount: true, voluntaryContribution: true },
         _count: true,
       }),
       // C8: Inclure revenus communautés dans les stats dashboard
@@ -459,10 +462,10 @@ sellersRouter.get("/dashboard/stats", requireAuth, async (req, res) => {
         _sum: { sellerAmount: true },
         _count: true,
       }),
-      // Today's revenue (orders)
+      // Today's revenue (orders) — same brut-cagnotte semantic as totalRevenue.
       prisma.order.aggregate({
         where: { ...paidOrdersWhere, paidAt: { gte: todayStart } },
-        _sum: { sellerAmount: true },
+        _sum: { amount: true, voluntaryContribution: true },
       }),
       // Today's revenue (community payments)
       prisma.communityPayment.aggregate({
@@ -526,9 +529,19 @@ sellersRouter.get("/dashboard/stats", requireAuth, async (req, res) => {
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .slice(0, 5);
 
+    // Brut-cagnotte = amount - voluntaryContribution. Community payments
+    // don't carry voluntaryContribution so sellerAmount stays the right
+    // proxy there.
+    const totalRevenueBrut =
+      (totalRevenue._sum.amount || 0) -
+      (totalRevenue._sum.voluntaryContribution || 0);
+    const todayRevenueBrut =
+      (todayRevenue._sum.amount || 0) -
+      (todayRevenue._sum.voluntaryContribution || 0);
+
     res.json({
-      revenue: (totalRevenue._sum.sellerAmount || 0) + (communityRevenue._sum.sellerAmount || 0),
-      revenueToday: (todayRevenue._sum.sellerAmount || 0) + (todayCommunityRevenue._sum.sellerAmount || 0),
+      revenue: totalRevenueBrut + (communityRevenue._sum.sellerAmount || 0),
+      revenueToday: todayRevenueBrut + (todayCommunityRevenue._sum.sellerAmount || 0),
       salesCount: (totalRevenue._count || 0) + (communityRevenue._count || 0),
       totalOrders: totalOrders + totalCommunityOrders,
       recentOrders: mergedRecent,

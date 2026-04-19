@@ -656,7 +656,7 @@ export const RESET_PASSWORD_LABELS = {
 export const DASHBOARD_LABELS = {
   title: "Tableau de bord",
   welcomeBack: "Bon retour, {name}",
-  kpiTotalRaised: "Total collecté",
+  kpiTotalRaised: "Total brut collecté",
   kpiDonorCount: "Participations",
   kpiCampaignCount: "Mes cagnottes",
   recentCagnottes: "Mes cagnottes récentes",
@@ -1112,7 +1112,7 @@ export const WITHDRAWAL_LABELS = {
 export const STATS_LABELS = {
   h1: "Statistiques",
   subtitle: "Un résumé de l'activité de ta cagnotte.",
-  kpiRaised: "Total collecté",
+  kpiRaised: "Total brut collecté",
   kpiDonors: "Contributeurs",
   kpiAverage: "Don moyen",
   topMessages: "Messages marquants",
