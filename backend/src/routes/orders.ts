@@ -219,15 +219,33 @@ ordersRouter.post(
     // on `donationBlock?.type === "FUNDRAISER"` and read `config.subtype`.
     let donationBlock: Awaited<ReturnType<typeof prisma.block.findFirst>> = null;
     if (data.orderType === "DONATION") {
+      // Résolution du block prioritaire : blockId explicite > cagnotteSlug >
+      // fallback "premier block actif du seller". Le fallback reste pour la
+      // rétro-compat des intégrations legacy (anciens liens) mais est fragile
+      // quand le seller a 2+ cagnottes actives — d'où la priorité au slug.
+      // Voir bug 2026-04-20 : dons sur cagnotte A atterrissaient sur cagnotte
+      // B parce que findFirst sans filtre slug retourne un block arbitraire.
+      const slugFilter =
+        !data.blockId && data.cagnotteSlug ? { slug: data.cagnotteSlug } : {};
       donationBlock = await prisma.block.findFirst({
         where: {
           sellerId: seller.id,
           type: { in: ["DONATION", "FUNDRAISER"] },
           isActive: true,
           ...(data.blockId ? { id: data.blockId } : {}),
+          ...slugFilter,
         },
       });
       if (!donationBlock) {
+        // Message plus précis quand un slug explicite a été fourni — aide le
+        // donor à comprendre pourquoi son POST échoue (cagnotte supprimée /
+        // désactivée / mauvais seller).
+        if (data.cagnotteSlug && !data.blockId) {
+          res.status(400).json({
+            error: `Cagnotte "${data.cagnotteSlug}" introuvable pour ce vendeur`,
+          });
+          return;
+        }
         res.status(400).json({ error: "Aucun bloc donation/cagnotte actif pour ce vendeur" });
         return;
       }
