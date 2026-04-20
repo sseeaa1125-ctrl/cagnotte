@@ -190,6 +190,17 @@ export default async function CagnottePage({
 
   const isPrivate = cagnotte.visibility === "private";
   const isClosed = cagnotte.status === "closed";
+  // Expiration check — aligné avec le guard backend (orders.ts POST /api/orders) :
+  // la date de fin est comptée comme la fin du JOUR endDate (23:59:59.999).
+  // Tant qu'elle n'est pas dépassée, les dons restent acceptés.
+  const isExpired = (() => {
+    if (!cagnotte.endDate) return false;
+    const end = new Date(cagnotte.endDate);
+    if (Number.isNaN(end.getTime())) return false;
+    end.setHours(23, 59, 59, 999);
+    return new Date() > end;
+  })();
+  const isUnavailable = isClosed || isExpired;
   const subtype = (cagnotte.subtype ?? "festive") as "festive" | "solidaire";
   const goalAmount = cagnotte.goalAmount ?? 0;
   const totalRaised = cagnotte.totalRaised ?? 0;
@@ -408,12 +419,22 @@ export default async function CagnottePage({
                 />
 
                 {/* Je participe CTA — pink Banani variant with shine sweep */}
-                {isClosed ? (
-                  <div
-                    role="status"
-                    className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-gray-100 text-sm font-semibold text-gray-600"
-                  >
-                    Cagnotte clôturée
+                {isUnavailable ? (
+                  <div className="space-y-2">
+                    <div
+                      role="status"
+                      className="flex min-h-14 w-full items-center justify-center rounded-2xl bg-gray-100 px-4 text-center text-sm font-semibold text-gray-600"
+                    >
+                      {isClosed
+                        ? "Cagnotte clôturée — les dons ne sont plus acceptés"
+                        : "Cagnotte terminée — la date de fin est dépassée"}
+                    </div>
+                    {isExpired && !isClosed ? (
+                      <p className="text-center text-xs text-gray-500">
+                        Si c'est votre cagnotte, prolongez la date de fin depuis
+                        votre tableau de bord pour la réactiver.
+                      </p>
+                    ) : null}
                   </div>
                 ) : (
                   <Link

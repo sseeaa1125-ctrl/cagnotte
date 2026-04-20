@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ParticiperForm } from "./ParticiperForm";
 import type { FundraiserSubtype } from "@/lib/commission";
 
@@ -27,6 +27,8 @@ interface CagnotteDetail {
   coverUrl: string | null;
   subtype: FundraiserSubtype | null;
   visibility: "public" | "private";
+  status?: "active" | "closed" | null;
+  endDate?: string | null;
   goalAmount: number | null;
   totalRaised: number | null;
   donorCount: number | null;
@@ -62,6 +64,23 @@ export default async function ParticiperPage({
   const { slug } = await params;
   const cagnotte = await getCagnotte(slug);
   if (!cagnotte) notFound();
+
+  // Si la cagnotte est clôturée ou expirée, on renvoie vers la page publique
+  // qui affiche le bandeau "Cagnotte terminée". Évite qu'un donor avec un
+  // lien direct remplisse tout le formulaire pour se prendre un 400 sur
+  // /paiement — guard aligné avec le backend POST /api/orders.
+  if (cagnotte.status === "closed") {
+    redirect(`/c/${slug}`);
+  }
+  if (cagnotte.endDate) {
+    const end = new Date(cagnotte.endDate);
+    if (!Number.isNaN(end.getTime())) {
+      end.setHours(23, 59, 59, 999);
+      if (new Date() > end) {
+        redirect(`/c/${slug}`);
+      }
+    }
+  }
 
   const subtype = (cagnotte.subtype ?? "festive") as FundraiserSubtype;
 
