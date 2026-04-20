@@ -106,7 +106,9 @@ export class BictorysProvider implements PaymentProvider {
    */
   async checkTransactionStatus(transactionId: string): Promise<{
     status: "succeeded" | "failed" | "cancelled" | "pending" | "processing" | "authorized" | "reversed";
-    amount: number;
+    // Bictorys peut renvoyer null (changement de format avril 2026). Le caller
+    // doit skip l'anti-fraude au lieu de marquer FAILED — voir orders.ts poll fallback.
+    amount: number | null;
     paymentReference: string;
   } | null> {
     if (!BICTORYS_API_URL || !BICTORYS_API_KEY) return null;
@@ -129,12 +131,12 @@ export class BictorysProvider implements PaymentProvider {
       }
       const data = await res.json() as {
         status: string;
-        amount: number;
+        amount: number | null;
         paymentReference: string;
       };
       return {
         status: data.status as "succeeded" | "failed" | "cancelled" | "pending" | "processing" | "authorized" | "reversed",
-        amount: data.amount,
+        amount: data.amount ?? null,
         paymentReference: data.paymentReference,
       };
     } catch (err) {

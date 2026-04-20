@@ -1159,10 +1159,10 @@ ordersRouter.put("/:id/cancel-booking", verifyCsrf, requireAuth, async (req, res
 });
 
 // ── Bictorys status poll cache (30s) — évite de harceler l'API Bictorys sur chaque poll client ──
-const bictorysStatusCache = new Map<string, { result: { status: string; amount: number } | null; expiresAt: number }>();
+const bictorysStatusCache = new Map<string, { result: { status: string; amount: number | null } | null; expiresAt: number }>();
 const BICTORYS_CACHE_TTL = 30_000; // 30s
 
-function getCachedBictorysStatus(externalId: string): { status: string; amount: number } | null | undefined {
+function getCachedBictorysStatus(externalId: string): { status: string; amount: number | null } | null | undefined {
   const entry = bictorysStatusCache.get(externalId);
   if (!entry) return undefined; // pas en cache
   if (entry.expiresAt <= Date.now()) {
@@ -1175,7 +1175,7 @@ function getCachedBictorysStatus(externalId: string): { status: string; amount: 
 // Audit 030 HI-02 — cap cache size to prevent unbounded memory growth under load
 const BICTORYS_CACHE_MAX_SIZE = 10_000;
 
-function setCachedBictorysStatus(externalId: string, result: { status: string; amount: number } | null): void {
+function setCachedBictorysStatus(externalId: string, result: { status: string; amount: number | null } | null): void {
   if (bictorysStatusCache.size >= BICTORYS_CACHE_MAX_SIZE) {
     // Evict oldest 1000 entries (Map iteration order = insertion order)
     const iter = bictorysStatusCache.keys();
@@ -1293,8 +1293,13 @@ ordersRouter.get("/:ref/status", statusPollLimiter, async (req, res) => {
         }
 
         if (txStatus && (txStatus.status === "succeeded" || txStatus.status === "authorized")) {
-          // Verify amount matches
-          if (txStatus.amount === order.amount) {
+          // Verify amount matches. Null-safe: Bictorys peut renvoyer amount=null
+          // (changement API avril 2026). Dans ce cas on trust le status=succeeded
+          // et on skip l'anti-fraude plutôt que laisser l'ordre en PENDING pour toujours.
+          if (txStatus.amount == null) {
+            logger.warn(`[Fallback] Bictorys amount absent ref=${order.reference} type=${typeof txStatus.amount} — skip anti-fraude`);
+          }
+          if (txStatus.amount == null || txStatus.amount === order.amount) {
             logger.log(`[Fallback] Bictorys confirms PAID for ref=${order.reference}, processing...`);
 
             // Generate download URL if digital product (must have fileUrl)

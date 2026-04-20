@@ -25,7 +25,7 @@ export const webhooksRouter = Router();
 async function handleCommunityPaymentWebhook(
   paymentReference: string,
   status: string,
-  amount: number,
+  amount: number | null,
   transactionId: string
 ): Promise<void> {
   const payment = await prisma.communityPayment.findUnique({
@@ -47,7 +47,11 @@ async function handleCommunityPaymentWebhook(
   }
 
   // A2: Vérifier montant — marquer FAILED au lieu d'ignorer silencieusement
-  if (amount !== payment.amount) {
+  // Null-safe: Bictorys peut envoyer amount=null (nouveau format webhook). Dans
+  // ce cas on skip l'anti-fraude plutôt que FAILED à tort (paiement déjà débité).
+  if (amount == null) {
+    logger.warn(`Webhook Bictorys: montant absent communauté ref=${paymentReference} type=${typeof amount} — skip anti-fraude`);
+  } else if (amount !== payment.amount) {
     logger.warn(`Webhook Bictorys: montant mismatch communauté ref=${paymentReference} expected=${payment.amount} got=${amount}`);
     await prisma.communityPayment.update({
       where: { id: payment.id },
@@ -205,8 +209,10 @@ interface BictorysWebhookPayload {
   id: string;
   merchantId?: string;
   type?: string;
-  amount: number;
-  currency: string;
+  // Bictorys peut envoyer null depuis le changement de format webhook (avril 2026).
+  // Voir audit-012-bictorys-webhook-null-amount — le handler skip l'anti-fraude si null.
+  amount: number | null;
+  currency: string | null;
   paymentReference: string;
   status: "succeeded" | "failed" | "cancelled" | "authorized" | "pending" | "processing" | "reversed";
   pspName?: string;
@@ -328,7 +334,15 @@ webhooksRouter.post("/bictorys", async (req, res) => {
     }
 
     // 4. Vérifier montant et devise (anti-fraude)
-    if (amount !== order.amount || currency !== order.currency) {
+    // Bictorys peut envoyer amount/currency à null (format webhook modifié) — dans
+    // ce cas on skip l'anti-fraude plutôt que marquer FAILED à tort. Le paiement
+    // est déjà débité côté Wave/Orange Money/Free Money, et la référence
+    // paymentReference suffit à identifier la commande.
+    if (amount == null || currency == null) {
+      logger.warn(
+        `Webhook Bictorys: montant/devise absent ref=${paymentReference} amount=${amount} (${typeof amount}) currency=${currency} (${typeof currency}) — skip anti-fraude`
+      );
+    } else if (amount !== order.amount || currency !== order.currency) {
       logger.warn(
         `Webhook Bictorys: montant mismatch ref=${paymentReference} expected=${order.amount} got=${amount}`
       );
