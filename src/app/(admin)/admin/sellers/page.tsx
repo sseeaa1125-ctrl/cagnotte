@@ -8,14 +8,20 @@ import {
   Users,
   ChevronRight,
 } from "lucide-react";
-import { adminApi } from "@/lib/adminApi";
+import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { Textarea } from "@/components/ui/Textarea";
+import { useToast } from "@/contexts/ToastContext";
+import { useAdminSelection } from "@/hooks/useAdminSelection";
 
 // ── Types ──
 interface SellerRow {
@@ -88,6 +94,7 @@ const FLAG_OPTIONS = [
 ];
 
 export default function AdminSellersPage() {
+  const { toast } = useToast();
   const [data, setData] = React.useState<SellersResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -100,6 +107,12 @@ export default function AdminSellersPage() {
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [page, setPage] = React.useState(1);
+
+  // Bulk flag/unflag
+  const selection = useAdminSelection(`${page}|${search}|${kycStatus}|${plan}|${isFlagged}|${dateFrom}|${dateTo}`);
+  const [bulkAction, setBulkAction] = React.useState<"FLAG" | "UNFLAG" | null>(null);
+  const [bulkReason, setBulkReason] = React.useState("");
+  const [bulkError, setBulkError] = React.useState<string | null>(null);
 
   // Fetch data
   const fetchSellers = React.useCallback(async () => {
@@ -135,6 +148,44 @@ export default function AdminSellersPage() {
   React.useEffect(() => {
     setPage(1);
   }, [kycStatus, plan, isFlagged, dateFrom, dateTo]);
+
+  async function handleBulkFlag() {
+    if (selection.selectedCount === 0 || bulkAction === null) return;
+    const flagged = bulkAction === "FLAG";
+    if (flagged && !bulkReason.trim()) {
+      setBulkError("Raison obligatoire pour signaler.");
+      throw new Error("Raison obligatoire");
+    }
+    setBulkError(null);
+    try {
+      const res = await adminApi<{
+        ok: boolean;
+        updated: number;
+        succeededIds: string[];
+        failedIds: string[];
+      }>(`/api/admin/sellers/bulk/flag`, {
+        method: "POST",
+        body: {
+          sellerIds: selection.selectedIds,
+          flagged,
+          reason: flagged ? bulkReason.trim() : undefined,
+        },
+      });
+      toast(
+        `${res.updated} vendeur(s) ${flagged ? "signalé(s)" : "dé-signalé(s)"}${
+          res.failedIds.length ? `, ${res.failedIds.length} ignoré(s)` : ""
+        }.`,
+        "success",
+      );
+      setBulkAction(null);
+      setBulkReason("");
+      selection.clear();
+      fetchSellers();
+    } catch (err) {
+      setBulkError(err instanceof AdminApiError ? err.message : "Erreur");
+      throw err;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -202,6 +253,26 @@ export default function AdminSellersPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="w-10 px-4 py-3">
+                  {(() => {
+                    const ids = (data?.sellers ?? [])
+                      .filter((s) => !s.deletedAt)
+                      .map((s) => s.id);
+                    const allSelected = ids.length > 0 && ids.every((id) => selection.isSelected(id));
+                    const someSelected = ids.some((id) => selection.isSelected(id));
+                    return (
+                      <input
+                        type="checkbox"
+                        aria-label="Tout sélectionner"
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                        disabled={ids.length === 0}
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={() => selection.toggleAll(ids)}
+                      />
+                    );
+                  })()}
+                </th>
                 <th className="px-4 py-3 font-semibold text-primary">Nom</th>
                 <th className="hidden px-4 py-3 font-semibold text-primary sm:table-cell">Email</th>
                 <th className="hidden px-4 py-3 font-semibold text-primary lg:table-cell">Plan</th>
@@ -215,7 +286,7 @@ export default function AdminSellersPage() {
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
-                      <td colSpan={7} className="px-4 py-4">
+                      <td colSpan={8} className="px-4 py-4">
                         <div className="h-4 w-full animate-pulse rounded bg-muted" />
                       </td>
                     </tr>
@@ -227,6 +298,17 @@ export default function AdminSellersPage() {
                         seller.deletedAt ? "opacity-50" : ""
                       }`}
                     >
+                      {/* Checkbox */}
+                      <td className="w-10 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Sélectionner ${seller.displayName}`}
+                          className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                          disabled={!!seller.deletedAt}
+                          checked={selection.isSelected(seller.id)}
+                          onChange={() => !seller.deletedAt && selection.toggleOne(seller.id)}
+                        />
+                      </td>
                       {/* Avatar + Name */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
@@ -318,6 +400,64 @@ export default function AdminSellersPage() {
           onChange={setPage}
         />
       ) : null}
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        count={selection.selectedCount}
+        onClear={selection.clear}
+      >
+        <Button
+          variant="danger"
+          iconLeft={<Flag size={14} />}
+          onClick={() => { setBulkAction("FLAG"); setBulkReason(""); setBulkError(null); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs"
+        >
+          Signaler
+        </Button>
+        <Button
+          variant="outline"
+          iconLeft={<Flag size={14} />}
+          onClick={() => { setBulkAction("UNFLAG"); setBulkError(null); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs"
+        >
+          Dé-signaler
+        </Button>
+      </BulkActionBar>
+
+      {/* Bulk confirm dialog */}
+      <ConfirmDialog
+        open={bulkAction !== null}
+        onClose={() => { setBulkAction(null); setBulkError(null); }}
+        title={
+          bulkAction === "FLAG"
+            ? "Signaler les vendeurs sélectionnés"
+            : "Dé-signaler les vendeurs sélectionnés"
+        }
+        message={
+          <div className="space-y-3">
+            <p>
+              Vous êtes sur le point de{" "}
+              <span className="font-bold">
+                {bulkAction === "FLAG" ? "signaler" : "dé-signaler"}{" "}
+                {selection.selectedCount} vendeur{selection.selectedCount > 1 ? "s" : ""}
+              </span>.
+            </p>
+            {bulkAction === "FLAG" && (
+              <Textarea
+                label="Raison du signalement (obligatoire)"
+                placeholder="Ex: Activité suspecte, contenu inapproprié..."
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                maxLength={500}
+              />
+            )}
+          </div>
+        }
+        confirmLabel={bulkAction === "FLAG" ? "Signaler" : "Dé-signaler"}
+        tone={bulkAction === "FLAG" ? "danger" : "primary"}
+        onConfirm={handleBulkFlag}
+        errorMessage={bulkError}
+      />
     </div>
   );
 }

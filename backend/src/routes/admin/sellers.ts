@@ -263,6 +263,64 @@ sellersAdminRouter.patch("/:id/flag", requireRole("ADMIN", "SUPER_ADMIN"), async
   }
 });
 
+// ── POST /bulk/flag — Bulk flag/unflag sellers ──
+// Flag reason stockée uniquement sur flag=true. Unflag remet flagReason + flaggedAt à null.
+const bulkFlagSchema = z.object({
+  sellerIds: z.array(z.string().min(1)).min(1).max(100),
+  flagged: z.boolean(),
+  reason: z.string().trim().max(500).optional(),
+});
+
+sellersAdminRouter.post(
+  "/bulk/flag",
+  requireRole("ADMIN", "SUPER_ADMIN"),
+  async (req, res) => {
+    const parsed = bulkFlagSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
+      return;
+    }
+    const { sellerIds, flagged, reason } = parsed.data;
+
+    // Filter existing sellers (ignore IDs that don't exist)
+    const existing = await prisma.seller.findMany({
+      where: { id: { in: sellerIds }, deletedAt: null },
+      select: { id: true },
+    });
+    const existingIds = existing.map((s) => s.id);
+
+    const { count: updatedCount } = await prisma.seller.updateMany({
+      where: { id: { in: existingIds } },
+      data: {
+        isFlagged: flagged,
+        flaggedAt: flagged ? new Date() : null,
+        flagReason: flagged ? (reason ?? null) : null,
+      },
+    });
+
+    await logAdminAction(
+      req.admin!.id,
+      flagged ? "SELLER_BULK_FLAGGED" : "SELLER_BULK_UNFLAGGED",
+      `sellers:${existingIds.length}`,
+      {
+        reason,
+        requestedIds: sellerIds,
+        appliedIds: existingIds,
+        count: updatedCount,
+      },
+      req.ip,
+    );
+
+    const failedIds = sellerIds.filter((id) => !existingIds.includes(id));
+    res.json({
+      ok: true,
+      updated: updatedCount,
+      succeededIds: existingIds,
+      failedIds,
+    });
+  },
+);
+
 // ── PATCH /:id/commission — Set custom commission rate ──
 const commissionSchema = z.object({
   customCommissionRate: z.union([
