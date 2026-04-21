@@ -5,6 +5,7 @@ import { Flag, Check, X } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
@@ -135,16 +136,32 @@ export default function AdminReportsPage() {
     await handleAction(dismissTarget.id, "DISMISSED");
   }
 
+  const exportQuery = React.useMemo(() => {
+    const p = new URLSearchParams();
+    if (search) p.set("search", search);
+    if (status) p.set("status", status);
+    if (dateFrom) p.set("dateFrom", dateFrom);
+    if (dateTo) p.set("dateTo", dateTo);
+    return p.toString();
+  }, [search, status, dateFrom, dateTo]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-headings text-2xl font-black text-primary">
-          Signalements
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {data ? `${data.totalCount} signalement${data.totalCount > 1 ? "s" : ""}` : "Chargement..."}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-headings text-2xl font-black text-primary">
+            Signalements
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data ? `${data.totalCount} signalement${data.totalCount > 1 ? "s" : ""}` : "Chargement..."}
+          </p>
+        </div>
+        <AdminExportButton
+          path={`/api/admin/reports/export.csv${exportQuery ? "?" + exportQuery : ""}`}
+          filename={`reports-${new Date().toISOString().slice(0, 10)}.csv`}
+          disabled={!data || data.totalCount === 0}
+        />
       </div>
 
       {/* Search */}

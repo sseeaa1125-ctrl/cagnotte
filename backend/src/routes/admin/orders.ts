@@ -2,7 +2,47 @@ import { Router } from "express";
 import { requireAdmin } from "../../middleware/requireAdmin.js";
 import { prisma } from "../../lib/prisma.js";
 import { Prisma, OrderType, PaymentStatus } from "../../generated/prisma/client.js";
+import { toCsv, sendCsv } from "../../lib/csv.js";
 import * as logger from "../../lib/logger.js";
+
+// Helper partagé — extrait les filtres de la requête en objet Prisma where.
+// Utilisé par GET / (paginated) et GET /export.csv (full dump).
+function buildOrdersWhere(req: {
+  query: Record<string, unknown>;
+}): Prisma.OrderWhereInput {
+  const where: Prisma.OrderWhereInput = {};
+  const search = (req.query.search as string)?.trim();
+  if (search) {
+    where.OR = [
+      { reference: { contains: search, mode: "insensitive" } },
+      { customerEmail: { contains: search, mode: "insensitive" } },
+      { customerName: { contains: search, mode: "insensitive" } },
+    ];
+  }
+  const orderType = req.query.orderType as string;
+  if (orderType && ["SALE", "BOOKING", "PAYMENT", "DONATION"].includes(orderType)) {
+    where.orderType = orderType as OrderType;
+  }
+  const paymentStatus = req.query.paymentStatus as string;
+  if (
+    paymentStatus &&
+    ["PENDING", "PAID", "FAILED", "EXPIRED", "REFUNDED"].includes(paymentStatus)
+  ) {
+    where.paymentStatus = paymentStatus as PaymentStatus;
+  }
+  const dateFrom = req.query.dateFrom as string;
+  const dateTo = req.query.dateTo as string;
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) {
+      (where.createdAt as Prisma.DateTimeFilter).gte = new Date(dateFrom + "T00:00:00Z");
+    }
+    if (dateTo) {
+      (where.createdAt as Prisma.DateTimeFilter).lte = new Date(dateTo + "T23:59:59Z");
+    }
+  }
+  return where;
+}
 
 export const ordersAdminRouter = Router();
 
@@ -16,45 +56,7 @@ ordersAdminRouter.get("/", async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.OrderWhereInput = {};
-
-    // Search by reference, customerEmail, or customerName
-    const search = (req.query.search as string)?.trim();
-    if (search) {
-      where.OR = [
-        { reference: { contains: search, mode: "insensitive" } },
-        { customerEmail: { contains: search, mode: "insensitive" } },
-        { customerName: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    // Order type filter
-    const orderType = req.query.orderType as string;
-    if (orderType && ["SALE", "BOOKING", "PAYMENT", "DONATION"].includes(orderType)) {
-      where.orderType = orderType as OrderType;
-    }
-
-    // Payment status filter
-    const paymentStatus = req.query.paymentStatus as string;
-    if (
-      paymentStatus &&
-      ["PENDING", "PAID", "FAILED", "EXPIRED", "REFUNDED"].includes(paymentStatus)
-    ) {
-      where.paymentStatus = paymentStatus as PaymentStatus;
-    }
-
-    // Date range filter
-    const dateFrom = req.query.dateFrom as string;
-    const dateTo = req.query.dateTo as string;
-    if (dateFrom || dateTo) {
-      where.createdAt = {};
-      if (dateFrom) {
-        (where.createdAt as Prisma.DateTimeFilter).gte = new Date(dateFrom + "T00:00:00Z");
-      }
-      if (dateTo) {
-        (where.createdAt as Prisma.DateTimeFilter).lte = new Date(dateTo + "T23:59:59Z");
-      }
-    }
+    const where = buildOrdersWhere(req);
 
     // Run paginated query + aggregates in parallel
     const [orders, totalCount, aggregates] = await Promise.all([
@@ -114,6 +116,92 @@ ordersAdminRouter.get("/", async (req, res) => {
     });
   } catch (err) {
     logger.error("admin:orders:list", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// ── GET /export.csv — Full CSV dump matching current filters ──
+// IMPORTANT : déclaré AVANT `/:id` pour que "export.csv" ne soit pas matché
+// comme param. Cap 50k pour éviter un load mémoire catastrophique sur Neon.
+ordersAdminRouter.get("/export.csv", async (req, res) => {
+  try {
+    const where = buildOrdersWhere(req);
+
+    const orders = await prisma.order.findMany({
+      where,
+      select: {
+        reference: true,
+        orderType: true,
+        amount: true,
+        voluntaryContribution: true,
+        commissionAmount: true,
+        sellerAmount: true,
+        currency: true,
+        paymentStatus: true,
+        paymentOperator: true,
+        customerName: true,
+        customerEmail: true,
+        customerPhone: true,
+        isAnonymous: true,
+        paidAt: true,
+        createdAt: true,
+        seller: { select: { slug: true, displayName: true, email: true } },
+        block: { select: { slug: true, title: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50_000,
+    });
+
+    const headers = [
+      "reference",
+      "orderType",
+      "paymentStatus",
+      "amount",
+      "voluntaryContribution",
+      "commissionAmount",
+      "sellerAmount",
+      "currency",
+      "paymentOperator",
+      "customerName",
+      "customerEmail",
+      "customerPhone",
+      "isAnonymous",
+      "sellerSlug",
+      "sellerName",
+      "sellerEmail",
+      "blockSlug",
+      "blockTitle",
+      "paidAt",
+      "createdAt",
+    ];
+
+    const rows = orders.map((o) => [
+      o.reference,
+      o.orderType,
+      o.paymentStatus,
+      o.amount,
+      o.voluntaryContribution ?? 0,
+      o.commissionAmount,
+      o.sellerAmount,
+      o.currency,
+      o.paymentOperator ?? "",
+      o.isAnonymous ? "Anonyme" : (o.customerName ?? ""),
+      o.customerEmail,
+      o.customerPhone,
+      o.isAnonymous,
+      o.seller?.slug ?? "",
+      o.seller?.displayName ?? "",
+      o.seller?.email ?? "",
+      o.block?.slug ?? "",
+      o.block?.title ?? "",
+      o.paidAt,
+      o.createdAt,
+    ]);
+
+    const filename = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    sendCsv(res, filename, toCsv(headers, rows));
+  } catch (err) {
+    logger.error("admin:orders:export", err);
     res.status(500).json({ error: "Erreur interne" });
   }
 });

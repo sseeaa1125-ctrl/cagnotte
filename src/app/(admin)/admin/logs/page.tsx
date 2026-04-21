@@ -4,6 +4,7 @@ import * as React from "react";
 import { ScrollText } from "lucide-react";
 import { adminApi } from "@/lib/adminApi";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
@@ -103,16 +104,33 @@ export default function AdminLogsPage() {
     ...(data?.actions.map((a) => ({ value: a, label: a })) ?? []),
   ];
 
+  const exportQuery = React.useMemo(() => {
+    const p = new URLSearchParams();
+    if (search) p.set("search", search);
+    if (adminId) p.set("adminId", adminId);
+    if (action) p.set("action", action);
+    if (dateFrom) p.set("dateFrom", dateFrom);
+    if (dateTo) p.set("dateTo", dateTo);
+    return p.toString();
+  }, [search, adminId, action, dateFrom, dateTo]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-headings text-2xl font-black text-primary">
-          Journal d&apos;activite
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {data ? `${data.totalCount} entree${data.totalCount > 1 ? "s" : ""}` : "Chargement..."}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-headings text-2xl font-black text-primary">
+            Journal d&apos;activite
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data ? `${data.totalCount} entree${data.totalCount > 1 ? "s" : ""}` : "Chargement..."}
+          </p>
+        </div>
+        <AdminExportButton
+          path={`/api/admin/logs/export.csv${exportQuery ? "?" + exportQuery : ""}`}
+          filename={`admin-logs-${new Date().toISOString().slice(0, 10)}.csv`}
+          disabled={!data || data.totalCount === 0}
+        />
       </div>
 
       {/* Search */}

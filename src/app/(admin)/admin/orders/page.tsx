@@ -12,6 +12,7 @@ import {
 import { adminApi } from "@/lib/adminApi";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { AdminExportButton } from "@/components/admin/AdminExportButton";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
@@ -157,18 +158,36 @@ export default function AdminOrdersPage() {
     setPage(1);
   }, [orderType, paymentStatus, dateFrom, dateTo]);
 
+  // Export query — mirror les mêmes filtres que la liste (sans page/limit)
+  const exportQuery = React.useMemo(() => {
+    const p = new URLSearchParams();
+    if (search) p.set("search", search);
+    if (orderType) p.set("orderType", orderType);
+    if (paymentStatus) p.set("paymentStatus", paymentStatus);
+    if (dateFrom) p.set("dateFrom", dateFrom);
+    if (dateTo) p.set("dateTo", dateTo);
+    return p.toString();
+  }, [search, orderType, paymentStatus, dateFrom, dateTo]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="font-headings text-2xl font-black text-primary">
-          Commandes & Revenus
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {data
-            ? `${data.totalCount} commande${data.totalCount > 1 ? "s" : ""}`
-            : "Chargement..."}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-headings text-2xl font-black text-primary">
+            Commandes & Revenus
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {data
+              ? `${data.totalCount} commande${data.totalCount > 1 ? "s" : ""}`
+              : "Chargement..."}
+          </p>
+        </div>
+        <AdminExportButton
+          path={`/api/admin/orders/export.csv${exportQuery ? "?" + exportQuery : ""}`}
+          filename={`orders-${new Date().toISOString().slice(0, 10)}.csv`}
+          disabled={!data || data.totalCount === 0}
+        />
       </div>
 
       {/* KPI summary */}

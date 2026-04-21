@@ -3,7 +3,38 @@ import { z } from "zod";
 import { prisma } from "../../lib/prisma.js";
 import { requireAdmin, requireRole } from "../../middleware/requireAdmin.js";
 import { logAdminAction } from "../../lib/adminLog.js";
+import { toCsv, sendCsv } from "../../lib/csv.js";
 import * as logger from "../../lib/logger.js";
+
+function buildReportsWhere(req: Request): Record<string, unknown> {
+  const where: Record<string, unknown> = {};
+  const status = req.query.status as string | undefined;
+  const search = (req.query.search as string | undefined)?.trim();
+  const dateFrom = req.query.dateFrom as string | undefined;
+  const dateTo = req.query.dateTo as string | undefined;
+
+  if (status && ["PENDING", "REVIEWED", "DISMISSED"].includes(status)) {
+    where.status = status;
+  }
+  if (search) {
+    where.OR = [
+      { storeSlug: { contains: search, mode: "insensitive" } },
+      { reason: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { seller: { displayName: { contains: search, mode: "insensitive" } } },
+    ];
+  }
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) {
+      (where.createdAt as Record<string, unknown>).gte = new Date(dateFrom + "T00:00:00Z");
+    }
+    if (dateTo) {
+      (where.createdAt as Record<string, unknown>).lte = new Date(dateTo + "T23:59:59Z");
+    }
+  }
+  return where;
+}
 
 export const reportsRouter = Router();
 
@@ -78,6 +109,49 @@ reportsRouter.get("/", async (req: Request, res: Response) => {
     res.json({ reports, totalCount, totalPages, currentPage: page });
   } catch (err) {
     logger.error("admin:reports:list", err);
+    res.status(500).json({ error: "Erreur interne" });
+  }
+});
+
+// ── GET /export.csv — Full CSV dump matching current filters ──
+reportsRouter.get("/export.csv", async (req: Request, res: Response) => {
+  try {
+    const where = buildReportsWhere(req);
+    const reports = await prisma.report.findMany({
+      where,
+      include: {
+        seller: { select: { displayName: true, slug: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50_000,
+    });
+
+    const headers = [
+      "createdAt",
+      "status",
+      "storeSlug",
+      "reason",
+      "reporterEmail",
+      "sellerSlug",
+      "sellerName",
+      "sellerEmail",
+    ];
+
+    const rows = reports.map((r) => [
+      r.createdAt,
+      r.status,
+      r.storeSlug,
+      r.reason,
+      r.email ?? "",
+      r.seller?.slug ?? "",
+      r.seller?.displayName ?? "",
+      r.seller?.email ?? "",
+    ]);
+
+    const filename = `reports-${new Date().toISOString().slice(0, 10)}.csv`;
+    sendCsv(res, filename, toCsv(headers, rows));
+  } catch (err) {
+    logger.error("admin:reports:export", err);
     res.status(500).json({ error: "Erreur interne" });
   }
 });
