@@ -288,6 +288,89 @@ withdrawalsAdminRouter.post("/:id/cancel", requireRole("ADMIN", "SUPER_ADMIN"), 
   }
 });
 
+// ── POST /bulk/cancel — Bulk cancel PENDING withdrawals ──
+// L'action bulk se limite à cancel : l'exécution (appel Bictorys réel,
+// argent) reste en per-item pour que chaque décision passe par une revue.
+// Cancel est "safe" — rejet DB + notification seller, pas de side-effect
+// externe irréversible.
+const bulkCancelSchema = z.object({
+  withdrawalIds: z.array(z.string().min(1)).min(1).max(100),
+  reason: z.string().trim().min(1, "Raison requise").max(500),
+});
+
+withdrawalsAdminRouter.post(
+  "/bulk/cancel",
+  requireRole("ADMIN", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const parsed = bulkCancelSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Données invalides", details: parsed.error.flatten() });
+      return;
+    }
+
+    const { withdrawalIds, reason } = parsed.data;
+
+    // Snapshot pre-update des PENDING sans bictorysTransactionId (pas
+    // encore soumis au provider — seuls ceux-là sont annulables).
+    const cancellable = await prisma.withdrawal.findMany({
+      where: {
+        id: { in: withdrawalIds },
+        status: "PENDING",
+        bictorysTransactionId: null,
+      },
+      select: {
+        id: true,
+        sellerId: true,
+        amount: true,
+        phone: true,
+        provider: true,
+      },
+    });
+    const cancellableIds = cancellable.map((w) => w.id);
+
+    const { count: updatedCount } = await prisma.withdrawal.updateMany({
+      where: {
+        id: { in: cancellableIds },
+        status: "PENDING",
+        bictorysTransactionId: null,
+      },
+      data: {
+        status: "REJECTED",
+        failureReason: `Annulé par admin (bulk): ${reason}`,
+        processedAt: new Date(),
+      },
+    });
+
+    // Notifications en best-effort (fire-and-forget)
+    for (const w of cancellable) {
+      firePayoutCancelled(w, reason).catch((err) =>
+        logger.error("admin:withdrawals:bulk-cancel notif", err),
+      );
+    }
+
+    await logAdminAction(
+      req.admin!.id,
+      "WITHDRAWAL_BULK_CANCELLED",
+      `withdrawals:${cancellableIds.length}`,
+      {
+        reason,
+        requestedIds: withdrawalIds,
+        appliedIds: cancellableIds,
+        count: updatedCount,
+      },
+      req.ip,
+    );
+
+    const failedIds = withdrawalIds.filter((id) => !cancellableIds.includes(id));
+    res.json({
+      ok: true,
+      updated: updatedCount,
+      succeededIds: cancellableIds,
+      failedIds,
+    });
+  },
+);
+
 // ── POST /:id/execute — Admin instant withdrawal execution (skip 48h delay) ──
 withdrawalsAdminRouter.post("/:id/execute", requireRole("ADMIN", "SUPER_ADMIN"), async (req: Request, res: Response) => {
   try {

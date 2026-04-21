@@ -6,6 +6,7 @@ import { Wallet, RefreshCw, XCircle, Zap } from "lucide-react";
 import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Textarea } from "@/components/ui/Textarea";
 import { useToast } from "@/contexts/ToastContext";
+import { useAdminSelection } from "@/hooks/useAdminSelection";
 
 // ── Types ──
 interface WithdrawalSeller {
@@ -96,6 +98,13 @@ export default function AdminWithdrawalsPage() {
   // Execute dialog state
   const [executeTarget, setExecuteTarget] = React.useState<WithdrawalRow | null>(null);
   const [executeError, setExecuteError] = React.useState<string | null>(null);
+
+  // Bulk cancel — seul bulk autorisé ici. Exécuter en masse déclenche un
+  // paiement Bictorys réel par item, garde-fou volontaire : pas de bulk.
+  const selection = useAdminSelection(`${status}|${page}|${search}|${dateFrom}|${dateTo}`);
+  const [bulkOpen, setBulkOpen] = React.useState(false);
+  const [bulkReason, setBulkReason] = React.useState("");
+  const [bulkError, setBulkError] = React.useState<string | null>(null);
 
   const fetchWithdrawals = React.useCallback(async () => {
     setLoading(true);
@@ -184,6 +193,45 @@ export default function AdminWithdrawalsPage() {
     }
   }
 
+  async function handleBulkCancel() {
+    if (selection.selectedCount === 0) return;
+    if (!bulkReason.trim()) {
+      setBulkError("Raison obligatoire.");
+      throw new Error("Raison obligatoire");
+    }
+    setBulkError(null);
+    try {
+      const res = await adminApi<{
+        ok: boolean;
+        updated: number;
+        succeededIds: string[];
+        failedIds: string[];
+      }>(`/api/admin/withdrawals/bulk/cancel`, {
+        method: "POST",
+        body: {
+          withdrawalIds: selection.selectedIds,
+          reason: bulkReason.trim(),
+        },
+      });
+      if (res.failedIds.length > 0) {
+        toast(
+          `${res.updated} annulé(s), ${res.failedIds.length} ignoré(s) (déjà traité ou soumis à Bictorys).`,
+          "info",
+        );
+      } else {
+        toast(`${res.updated} retrait(s) annulé(s).`, "success");
+      }
+      setBulkOpen(false);
+      setBulkReason("");
+      selection.clear();
+      fetchWithdrawals();
+    } catch (err) {
+      const msg = err instanceof AdminApiError ? err.message : "Erreur";
+      setBulkError(msg);
+      throw err;
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -238,6 +286,27 @@ export default function AdminWithdrawalsPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="w-10 px-4 py-3">
+                  {(() => {
+                    const cancellables = (data?.withdrawals ?? []).filter(
+                      (w) => w.status === "PENDING" && !w.bictorysTransactionId,
+                    );
+                    const ids = cancellables.map((w) => w.id);
+                    const allSelected = ids.length > 0 && ids.every((id) => selection.isSelected(id));
+                    const someSelected = ids.some((id) => selection.isSelected(id));
+                    return (
+                      <input
+                        type="checkbox"
+                        aria-label="Tout sélectionner (PENDING non soumis)"
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                        disabled={ids.length === 0}
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={() => selection.toggleAll(ids)}
+                      />
+                    );
+                  })()}
+                </th>
                 <th className="px-4 py-3 font-semibold text-primary">Vendeur</th>
                 <th className="px-4 py-3 font-semibold text-primary">Montant</th>
                 <th className="hidden px-4 py-3 font-semibold text-primary sm:table-cell">Operateur</th>
@@ -251,7 +320,7 @@ export default function AdminWithdrawalsPage() {
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
-                      <td colSpan={7} className="px-4 py-4">
+                      <td colSpan={8} className="px-4 py-4">
                         <div className="h-4 w-full animate-pulse rounded bg-muted" />
                       </td>
                     </tr>
@@ -267,6 +336,21 @@ export default function AdminWithdrawalsPage() {
                         key={w.id}
                         className="border-b border-border transition-colors hover:bg-muted/30"
                       >
+                        <td className="w-10 px-4 py-3">
+                          <input
+                            type="checkbox"
+                            aria-label={`Sélectionner retrait ${w.reference}`}
+                            className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                            disabled={!canCancel}
+                            checked={selection.isSelected(w.id)}
+                            onChange={() => canCancel && selection.toggleOne(w.id)}
+                            title={
+                              canCancel
+                                ? "Sélectionner pour annulation groupée"
+                                : "Non annulable (soumis au provider ou déjà traité)"
+                            }
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <div className="min-w-0">
                             <Link
@@ -367,6 +451,52 @@ export default function AdminWithdrawalsPage() {
           onChange={setPage}
         />
       ) : null}
+
+      {/* Bulk action bar — cancel uniquement (pas d'exécution groupée par sécurité) */}
+      <BulkActionBar
+        count={selection.selectedCount}
+        onClear={selection.clear}
+      >
+        <Button
+          variant="danger"
+          iconLeft={<XCircle size={14} />}
+          onClick={() => { setBulkOpen(true); setBulkError(null); setBulkReason(""); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs"
+        >
+          Rejeter la sélection
+        </Button>
+      </BulkActionBar>
+
+      {/* Bulk cancel dialog */}
+      <ConfirmDialog
+        open={bulkOpen}
+        onClose={() => { setBulkOpen(false); setBulkError(null); }}
+        title="Rejeter les retraits sélectionnés"
+        message={
+          <div className="space-y-3">
+            <p>
+              Vous êtes sur le point de rejeter{" "}
+              <span className="font-bold">
+                {selection.selectedCount} retrait{selection.selectedCount > 1 ? "s" : ""}
+              </span>. Chaque vendeur sera notifié et son solde rétabli.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Les retraits déjà soumis au provider ou traités seront ignorés.
+            </p>
+            <Textarea
+              label="Raison de l'annulation (obligatoire)"
+              placeholder="Ex: Documents non conformes, activité suspecte..."
+              value={bulkReason}
+              onChange={(e) => setBulkReason(e.target.value)}
+              maxLength={500}
+            />
+          </div>
+        }
+        confirmLabel="Rejeter la sélection"
+        tone="danger"
+        onConfirm={handleBulkCancel}
+        errorMessage={bulkError}
+      />
 
       {/* Cancel confirmation dialog */}
       <ConfirmDialog
