@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { UserCog, Plus, ShieldAlert } from "lucide-react";
-import { adminApi } from "@/lib/adminApi";
+import { UserCog, Plus, ShieldAlert, Power } from "lucide-react";
+import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
@@ -12,6 +13,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useToast } from "@/contexts/ToastContext";
+import { useAdminSelection } from "@/hooks/useAdminSelection";
 
 // ── Types ──
 interface AdminRow {
@@ -69,13 +71,20 @@ export default function AdminUsersPage() {
   // Toggle active confirmation
   const [toggleTarget, setToggleTarget] = React.useState<AdminRow | null>(null);
 
-  // Check current admin role from the /me endpoint (cached by layout)
+  // Check current admin role + id from the /me endpoint (cached by layout)
   const [currentRole, setCurrentRole] = React.useState<string | null>(null);
+  const [currentId, setCurrentId] = React.useState<string | null>(null);
   React.useEffect(() => {
-    adminApi<{ admin: { role: string } }>("/api/admin/auth/me")
-      .then((res) => setCurrentRole(res.admin.role))
-      .catch(() => setCurrentRole(null));
+    adminApi<{ admin: { id: string; role: string } }>("/api/admin/auth/me")
+      .then((res) => { setCurrentRole(res.admin.role); setCurrentId(res.admin.id); })
+      .catch(() => { setCurrentRole(null); setCurrentId(null); });
   }, []);
+
+  // Bulk activate/deactivate. Self-target protégé côté backend + côté UI
+  // (checkbox désactivée sur la ligne de l'admin courant).
+  const selection = useAdminSelection(search);
+  const [bulkAction, setBulkAction] = React.useState<"ACTIVATE" | "DEACTIVATE" | null>(null);
+  const [bulkError, setBulkError] = React.useState<string | null>(null);
 
   const fetchAdmins = React.useCallback(async () => {
     setLoading(true);
@@ -190,6 +199,39 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleBulkActive() {
+    if (selection.selectedCount === 0 || bulkAction === null) return;
+    const isActive = bulkAction === "ACTIVATE";
+    setBulkError(null);
+    try {
+      const res = await adminApi<{
+        ok: boolean;
+        updated: number;
+        succeededIds: string[];
+        failedIds: string[];
+      }>(`/api/admin/users/bulk/set-active`, {
+        method: "POST",
+        body: {
+          adminIds: selection.selectedIds,
+          isActive,
+        },
+      });
+      toast(
+        `${res.updated} admin(s) ${isActive ? "activé(s)" : "désactivé(s)"}${
+          res.failedIds.length ? `, ${res.failedIds.length} ignoré(s)` : ""
+        }.`,
+        "success",
+      );
+      setBulkAction(null);
+      selection.clear();
+      fetchAdmins();
+    } catch (err) {
+      // Le backend renvoie des messages explicites (self-target, dernier super admin)
+      setBulkError(err instanceof AdminApiError ? err.message : "Erreur");
+      throw err;
+    }
+  }
+
   const filtered = admins.filter(
     (a) =>
       !search ||
@@ -241,6 +283,25 @@ export default function AdminUsersPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="w-10 px-4 py-3">
+                  {(() => {
+                    // Exclut l'admin courant — pas de self-target possible
+                    const ids = filtered.filter((a) => a.id !== currentId).map((a) => a.id);
+                    const allSelected = ids.length > 0 && ids.every((id) => selection.isSelected(id));
+                    const someSelected = ids.some((id) => selection.isSelected(id));
+                    return (
+                      <input
+                        type="checkbox"
+                        aria-label="Tout sélectionner (sauf vous)"
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                        disabled={ids.length === 0}
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={() => selection.toggleAll(ids)}
+                      />
+                    );
+                  })()}
+                </th>
                 <th className="px-4 py-3 font-semibold text-primary">Nom</th>
                 <th className="hidden px-4 py-3 font-semibold text-primary sm:table-cell">Email</th>
                 <th className="px-4 py-3 font-semibold text-primary">Role</th>
@@ -253,13 +314,14 @@ export default function AdminUsersPage() {
               {loading
                 ? Array.from({ length: 3 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
-                      <td colSpan={6} className="px-4 py-4">
+                      <td colSpan={7} className="px-4 py-4">
                         <div className="h-4 w-full animate-pulse rounded bg-muted" />
                       </td>
                     </tr>
                   ))
                 : filtered.map((admin) => {
                     const roleBadge = ROLE_BADGE[admin.role] ?? ROLE_BADGE.ADMIN;
+                    const isSelf = admin.id === currentId;
                     return (
                       <tr
                         key={admin.id}
@@ -267,8 +329,24 @@ export default function AdminUsersPage() {
                           !admin.isActive ? "opacity-50" : ""
                         }`}
                       >
+                        <td className="w-10 px-4 py-3">
+                          <input
+                            type="checkbox"
+                            aria-label={`Sélectionner ${admin.name}`}
+                            className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                            disabled={isSelf}
+                            checked={selection.isSelected(admin.id)}
+                            onChange={() => !isSelf && selection.toggleOne(admin.id)}
+                            title={isSelf ? "Vous ne pouvez pas vous sélectionner vous-même" : undefined}
+                          />
+                        </td>
                         <td className="px-4 py-3 font-medium text-primary">
                           {admin.name}
+                          {isSelf && (
+                            <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                              vous
+                            </span>
+                          )}
                         </td>
                         <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">
                           {admin.email}
@@ -343,6 +421,61 @@ export default function AdminUsersPage() {
         confirmLabel={toggleTarget?.isActive ? "Desactiver" : "Activer"}
         tone={toggleTarget?.isActive ? "danger" : "primary"}
         onConfirm={doToggleActive}
+      />
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        count={selection.selectedCount}
+        onClear={selection.clear}
+      >
+        <Button
+          variant="primary"
+          iconLeft={<Power size={14} />}
+          onClick={() => { setBulkAction("ACTIVATE"); setBulkError(null); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs bg-green-600 hover:bg-green-700"
+        >
+          Activer
+        </Button>
+        <Button
+          variant="danger"
+          iconLeft={<Power size={14} />}
+          onClick={() => { setBulkAction("DEACTIVATE"); setBulkError(null); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs"
+        >
+          Désactiver
+        </Button>
+      </BulkActionBar>
+
+      {/* Bulk confirm dialog */}
+      <ConfirmDialog
+        open={bulkAction !== null}
+        onClose={() => { setBulkAction(null); setBulkError(null); }}
+        title={
+          bulkAction === "ACTIVATE"
+            ? "Activer les comptes sélectionnés"
+            : "Désactiver les comptes sélectionnés"
+        }
+        message={
+          <div className="space-y-3">
+            <p>
+              Vous êtes sur le point de{" "}
+              <span className="font-bold">
+                {bulkAction === "ACTIVATE" ? "activer" : "désactiver"}{" "}
+                {selection.selectedCount} compte{selection.selectedCount > 1 ? "s" : ""}
+              </span>.
+            </p>
+            {bulkAction === "DEACTIVATE" && (
+              <p className="text-sm text-muted-foreground">
+                Les admins désactivés ne pourront plus se connecter. L&apos;opération
+                sera refusée si elle laisse moins d&apos;1 SUPER_ADMIN actif.
+              </p>
+            )}
+          </div>
+        }
+        confirmLabel={bulkAction === "ACTIVATE" ? "Activer" : "Désactiver"}
+        tone={bulkAction === "ACTIVATE" ? "primary" : "danger"}
+        onConfirm={handleBulkActive}
+        errorMessage={bulkError}
       />
 
       {/* Create Modal */}

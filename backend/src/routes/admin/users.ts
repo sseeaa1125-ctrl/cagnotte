@@ -163,3 +163,90 @@ usersRouter.patch("/:id", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Erreur interne" });
   }
 });
+
+// ── POST /bulk/set-active — Bulk activate/deactivate admins ──
+// Garde-fous critiques :
+//  1. Self-target refusé (un admin ne peut pas se désactiver lui-même)
+//  2. Sur deactivate : refuser si l'opération laisse < 1 SUPER_ADMIN actif
+//     (sinon plus personne ne peut administrer la plateforme)
+const bulkActiveSchema = z.object({
+  adminIds: z.array(z.string().min(1)).min(1).max(100),
+  isActive: z.boolean(),
+});
+
+usersRouter.post("/bulk/set-active", async (req: Request, res: Response) => {
+  const parsed = bulkActiveSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
+    return;
+  }
+
+  const { adminIds, isActive } = parsed.data;
+
+  // Guard #1 — self-target : refus explicite (pas silencieux), sinon un
+  // admin pourrait accidentellement se désactiver en bulk-sélectionnant.
+  if (!isActive && adminIds.includes(req.admin!.id)) {
+    res.status(400).json({
+      error: "Vous ne pouvez pas désactiver votre propre compte dans la sélection.",
+    });
+    return;
+  }
+
+  // Guard #2 — SUPER_ADMIN watchdog. Si on désactive, vérifier qu'il
+  // restera au moins 1 SUPER_ADMIN actif après l'opération.
+  if (!isActive) {
+    const targets = await prisma.admin.findMany({
+      where: { id: { in: adminIds } },
+      select: { id: true, role: true, isActive: true },
+    });
+    const activeSuperAdminsCount = await prisma.admin.count({
+      where: { role: "SUPER_ADMIN", isActive: true },
+    });
+    const willDeactivateSuperAdmins = targets.filter(
+      (a) => a.role === "SUPER_ADMIN" && a.isActive,
+    ).length;
+    if (activeSuperAdminsCount - willDeactivateSuperAdmins < 1) {
+      res.status(400).json({
+        error: "Opération refusée : au moins 1 SUPER_ADMIN actif doit rester.",
+      });
+      return;
+    }
+  }
+
+  const existing = await prisma.admin.findMany({
+    where: { id: { in: adminIds } },
+    select: { id: true },
+  });
+  const existingIds = existing.map((a) => a.id);
+
+  const { count: updatedCount } = await prisma.admin.updateMany({
+    where: { id: { in: existingIds } },
+    data: { isActive },
+  });
+
+  // Éviction du cache d'auth pour tous les désactivés (sinon ils peuvent
+  // continuer à utiliser leur session jusqu'au TTL 30s)
+  if (!isActive) {
+    for (const id of existingIds) evictAdminCache(id);
+  }
+
+  await logAdminAction(
+    req.admin!.id,
+    isActive ? "ADMIN_BULK_ACTIVATED" : "ADMIN_BULK_DEACTIVATED",
+    `admins:${existingIds.length}`,
+    {
+      requestedIds: adminIds,
+      appliedIds: existingIds,
+      count: updatedCount,
+    },
+    req.ip,
+  );
+
+  const failedIds = adminIds.filter((id) => !existingIds.includes(id));
+  res.json({
+    ok: true,
+    updated: updatedCount,
+    succeededIds: existingIds,
+    failedIds,
+  });
+});
