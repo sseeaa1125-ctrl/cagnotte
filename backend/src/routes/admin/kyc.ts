@@ -150,3 +150,88 @@ kycRouter.post("/:sellerId/review", requireRole("ADMIN", "SUPER_ADMIN"), async (
 
   res.json({ ok: true, kycStatus: status });
 });
+
+// ── POST /bulk/review — Bulk approve/reject KYC ──
+// Best-effort : mutate tous les IDs PENDING d'un coup via updateMany, puis
+// fire les notifications hors tx. Le retour distingue succeeded vs failed
+// (failed = déjà traité / inconnu) pour que l'UI puisse garder les items
+// en échec sélectionnés pour retry.
+const bulkReviewBodySchema = z.object({
+  sellerIds: z.array(z.string().min(1)).min(1).max(100),
+  status: z.enum(["APPROVED", "REJECTED"]),
+  // Raison obligatoire pour REJECTED — alignement avec l'UX de la modal.
+  // En APPROVED elle est ignorée.
+  reason: z.string().trim().max(500).optional(),
+});
+
+kycRouter.post(
+  "/bulk/review",
+  requireRole("ADMIN", "SUPER_ADMIN"),
+  async (req: Request, res: Response) => {
+    const parsed = bulkReviewBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Données invalides", details: parsed.error.flatten() });
+      return;
+    }
+
+    const { sellerIds, status, reason } = parsed.data;
+
+    if (status === "REJECTED" && (!reason || reason.length === 0)) {
+      res.status(400).json({ error: "Une raison est requise pour rejeter." });
+      return;
+    }
+
+    // Snapshot PRE-update : on récupère les PENDING + les slugs pour l'audit
+    // log et les notifications. Les items non-PENDING ne seront pas mutés
+    // par le updateMany ci-dessous.
+    const pendingBefore = await prisma.seller.findMany({
+      where: { id: { in: sellerIds }, kycStatus: "PENDING" },
+      select: { id: true, slug: true },
+    });
+    const pendingIds = pendingBefore.map((s) => s.id);
+
+    // Atomic bulk update — seuls les PENDING sont mutés.
+    const { count: updatedCount } = await prisma.seller.updateMany({
+      where: { id: { in: pendingIds }, kycStatus: "PENDING" },
+      data: { kycStatus: status, kycReviewedAt: new Date() },
+    });
+
+    // Fire notifications en best-effort — une erreur n'interrompt pas le
+    // batch. Le dedupeKey Notification.@unique protège contre le double-fire
+    // si le seller était déjà notifié (edge case : race avec review individuelle).
+    const notifyPromises = pendingBefore.map(async (seller) => {
+      try {
+        if (status === "APPROVED") {
+          await fireKycApproved({ id: seller.id });
+        } else {
+          await fireKycRejected({ id: seller.id }, reason || "Documents non conformes");
+        }
+      } catch (_err) {
+        // Silence — la mutation DB a réussi, la notif peut être rejouée.
+      }
+    });
+    await Promise.allSettled(notifyPromises);
+
+    // Audit log — 1 entrée résumant le bulk (vs 1 par item, voir audit-036).
+    await logAdminAction(
+      req.admin!.id,
+      status === "APPROVED" ? "KYC_BULK_APPROVED" : "KYC_BULK_REJECTED",
+      `sellers:${pendingIds.length}`,
+      {
+        reason,
+        requestedIds: sellerIds,
+        appliedIds: pendingIds,
+        count: updatedCount,
+      },
+      req.ip,
+    );
+
+    const failedIds = sellerIds.filter((id) => !pendingIds.includes(id));
+    res.json({
+      ok: true,
+      updated: updatedCount,
+      succeededIds: pendingIds,
+      failedIds,
+    });
+  },
+);

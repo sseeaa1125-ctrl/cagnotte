@@ -11,7 +11,9 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { adminApi } from "@/lib/adminApi";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { useToast } from "@/contexts/ToastContext";
+import { useAdminSelection } from "@/hooks/useAdminSelection";
 
 interface KycSeller {
   id: string;
@@ -57,6 +59,14 @@ export default function AdminKycPage() {
   const [rejectSeller, setRejectSeller] = React.useState<KycSeller | null>(null);
   const [rejectReason, setRejectReason] = React.useState("");
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
+
+  // Sélection multiple + bulk actions. La sélection se reset à chaque
+  // changement de filtres / page pour éviter les fantômes cross-page.
+  const selection = useAdminSelection(`${status}|${page}|${search}|${dateFrom}|${dateTo}`);
+  const [bulkAction, setBulkAction] = React.useState<"APPROVED" | "REJECTED" | null>(null);
+  const [bulkReason, setBulkReason] = React.useState("");
+  const [bulkLoading, setBulkLoading] = React.useState(false);
+  const [bulkError, setBulkError] = React.useState<string | null>(null);
 
   const fetchSellers = React.useCallback(async () => {
     setLoading(true);
@@ -116,6 +126,50 @@ export default function AdminKycPage() {
       toast("Erreur lors du rejet", "error");
     } finally {
       setActionLoading(null);
+    }
+  };
+
+  const handleBulkConfirm = async () => {
+    if (!bulkAction || selection.selectedCount === 0) return;
+    if (bulkAction === "REJECTED" && !bulkReason.trim()) {
+      setBulkError("Raison obligatoire pour un rejet groupé.");
+      return;
+    }
+    setBulkLoading(true);
+    setBulkError(null);
+    try {
+      const result = await adminApi<{
+        ok: boolean;
+        updated: number;
+        succeededIds: string[];
+        failedIds: string[];
+      }>(`/api/admin/kyc/bulk/review`, {
+        method: "POST",
+        body: {
+          sellerIds: selection.selectedIds,
+          status: bulkAction,
+          reason: bulkAction === "REJECTED" ? bulkReason.trim() : undefined,
+        },
+      });
+      if (result.failedIds.length > 0) {
+        toast(
+          `${result.updated} traité(s), ${result.failedIds.length} déjà traité(s) ignoré(s).`,
+          "info",
+        );
+      } else {
+        toast(
+          `${result.updated} dossier(s) ${bulkAction === "APPROVED" ? "approuvé(s)" : "rejeté(s)"}.`,
+          "success",
+        );
+      }
+      setBulkAction(null);
+      setBulkReason("");
+      selection.clear();
+      await fetchSellers();
+    } catch {
+      setBulkError("Erreur lors du traitement groupé.");
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -212,6 +266,28 @@ export default function AdminKycPage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
+                  {status === "PENDING" && (
+                    <th className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label="Tout sélectionner"
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                        checked={
+                          sellers.length > 0 &&
+                          sellers.every((s) => selection.isSelected(s.id))
+                        }
+                        ref={(el) => {
+                          if (!el) return;
+                          const some = sellers.some((s) => selection.isSelected(s.id));
+                          const all =
+                            sellers.length > 0 &&
+                            sellers.every((s) => selection.isSelected(s.id));
+                          el.indeterminate = some && !all;
+                        }}
+                        onChange={() => selection.toggleAll(sellers.map((s) => s.id))}
+                      />
+                    </th>
+                  )}
                   <th className="px-4 py-3 font-medium text-muted-foreground">Nom</th>
                   <th className="px-4 py-3 font-medium text-muted-foreground">Email</th>
                   <th className="hidden px-4 py-3 font-medium text-muted-foreground sm:table-cell">Slug</th>
@@ -225,6 +301,17 @@ export default function AdminKycPage() {
               <tbody>
                 {sellers.map((seller) => (
                   <tr key={seller.id} className="border-b border-border last:border-b-0 hover:bg-muted/30">
+                    {status === "PENDING" && (
+                      <td className="w-10 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          aria-label={`Sélectionner ${seller.displayName || seller.slug}`}
+                          className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                          checked={selection.isSelected(seller.id)}
+                          onChange={() => selection.toggleOne(seller.id)}
+                        />
+                      </td>
+                    )}
                     <td className="px-4 py-3">
                       <div>
                         <a
@@ -324,6 +411,91 @@ export default function AdminKycPage() {
           )}
         </>
       )}
+
+      {/* Bulk action bar — visible uniquement sur l'onglet PENDING */}
+      {status === "PENDING" && (
+        <BulkActionBar
+          count={selection.selectedCount}
+          onClear={selection.clear}
+        >
+          <Button
+            variant="primary"
+            size="md"
+            iconLeft={<Check size={16} />}
+            onClick={() => { setBulkAction("APPROVED"); setBulkError(null); }}
+            className="!min-h-9 !px-3 !py-1.5 !text-xs bg-green-600 hover:bg-green-700"
+          >
+            Approuver
+          </Button>
+          <Button
+            variant="danger"
+            size="md"
+            iconLeft={<X size={16} />}
+            onClick={() => { setBulkAction("REJECTED"); setBulkReason(""); setBulkError(null); }}
+            className="!min-h-9 !px-3 !py-1.5 !text-xs"
+          >
+            Rejeter
+          </Button>
+        </BulkActionBar>
+      )}
+
+      {/* Bulk confirm modal */}
+      <Modal
+        open={bulkAction !== null}
+        onClose={() => { setBulkAction(null); setBulkError(null); }}
+        title={
+          bulkAction === "APPROVED"
+            ? "Approuver les dossiers sélectionnés"
+            : "Rejeter les dossiers sélectionnés"
+        }
+        size="sm"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Vous êtes sur le point de{" "}
+            <span className="font-medium text-primary">
+              {bulkAction === "APPROVED" ? "approuver" : "rejeter"}{" "}
+              {selection.selectedCount} dossier{selection.selectedCount > 1 ? "s" : ""}
+            </span>
+            {" "}KYC. Les dossiers déjà traités seront ignorés.
+          </p>
+          {bulkAction === "REJECTED" && (
+            <Textarea
+              label="Raison du rejet (obligatoire)"
+              placeholder="Ex: Photo d'identité floue, selfie non conforme..."
+              value={bulkReason}
+              onChange={(e) => setBulkReason(e.target.value)}
+              maxLength={500}
+            />
+          )}
+          {bulkError && (
+            <p role="alert" className="text-sm text-red-600">{bulkError}</p>
+          )}
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              fullWidth
+              onClick={() => { setBulkAction(null); setBulkError(null); }}
+              disabled={bulkLoading}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant={bulkAction === "APPROVED" ? "primary" : "danger"}
+              fullWidth
+              loading={bulkLoading}
+              onClick={handleBulkConfirm}
+              className={
+                bulkAction === "APPROVED"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : undefined
+              }
+            >
+              Confirmer
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Image preview modal */}
       <Modal
