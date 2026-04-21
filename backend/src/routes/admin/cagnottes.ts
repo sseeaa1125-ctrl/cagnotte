@@ -277,6 +277,60 @@ cagnottesAdminRouter.patch("/:id/toggle-active", requireRole("ADMIN", "SUPER_ADM
   }
 });
 
+// ── POST /bulk/set-active — Bulk activate/deactivate cagnottes ──
+// Pas de hard delete : les cagnottes FUNDRAISER avec PAID orders sont
+// financièrement traçables — désactivation = isActive=false (soft).
+// Historique + compteurs préservés.
+const bulkActiveSchema = z.object({
+  cagnotteIds: z.array(z.string().min(1)).min(1).max(100),
+  isActive: z.boolean(),
+});
+
+cagnottesAdminRouter.post(
+  "/bulk/set-active",
+  requireRole("ADMIN", "SUPER_ADMIN"),
+  async (req, res) => {
+    const parsed = bulkActiveSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
+      return;
+    }
+    const { cagnotteIds, isActive } = parsed.data;
+
+    // Filtrer uniquement les FUNDRAISER existants
+    const existing = await prisma.block.findMany({
+      where: { id: { in: cagnotteIds }, type: "FUNDRAISER" },
+      select: { id: true },
+    });
+    const existingIds = existing.map((b) => b.id);
+
+    const { count: updatedCount } = await prisma.block.updateMany({
+      where: { id: { in: existingIds } },
+      data: { isActive },
+    });
+
+    await logAdminAction(
+      req.admin!.id,
+      isActive ? "CAGNOTTE_BULK_ACTIVATED" : "CAGNOTTE_BULK_DEACTIVATED",
+      `cagnottes:${existingIds.length}`,
+      {
+        requestedIds: cagnotteIds,
+        appliedIds: existingIds,
+        count: updatedCount,
+      },
+      req.ip,
+    );
+
+    const failedIds = cagnotteIds.filter((id) => !existingIds.includes(id));
+    res.json({
+      ok: true,
+      updated: updatedCount,
+      succeededIds: existingIds,
+      failedIds,
+    });
+  },
+);
+
 // ── PATCH /:id/toggle-visibility — Toggle config.visibility (public ↔ private) ──
 cagnottesAdminRouter.patch("/:id/toggle-visibility", requireRole("ADMIN", "SUPER_ADMIN"), async (req, res) => {
   try {

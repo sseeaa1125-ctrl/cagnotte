@@ -7,15 +7,21 @@ import {
   ChevronRight,
   Eye,
   EyeOff,
+  Power,
 } from "lucide-react";
-import { adminApi } from "@/lib/adminApi";
+import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { DateRangeFilter } from "@/components/admin/DateRangeFilter";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Pagination } from "@/components/ui/Pagination";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/contexts/ToastContext";
+import { useAdminSelection } from "@/hooks/useAdminSelection";
 
 // ── Types ──
 interface CagnotteSeller {
@@ -73,6 +79,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminCagnottesPage() {
+  const { toast } = useToast();
   const [data, setData] = React.useState<CagnottesResponse | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -84,6 +91,12 @@ export default function AdminCagnottesPage() {
   const [dateFrom, setDateFrom] = React.useState("");
   const [dateTo, setDateTo] = React.useState("");
   const [page, setPage] = React.useState(1);
+
+  // Bulk activate/deactivate — pas de hard delete (audit-036 rec : les
+  // cagnottes avec PAID orders sont financièrement traçables).
+  const selection = useAdminSelection(`${page}|${search}|${subtype}|${status}|${dateFrom}|${dateTo}`);
+  const [bulkAction, setBulkAction] = React.useState<"ACTIVATE" | "DEACTIVATE" | null>(null);
+  const [bulkError, setBulkError] = React.useState<string | null>(null);
 
   // Fetch data
   const fetchCagnottes = React.useCallback(async () => {
@@ -118,6 +131,38 @@ export default function AdminCagnottesPage() {
   React.useEffect(() => {
     setPage(1);
   }, [subtype, status, dateFrom, dateTo]);
+
+  async function handleBulkActive() {
+    if (selection.selectedCount === 0 || bulkAction === null) return;
+    const isActive = bulkAction === "ACTIVATE";
+    setBulkError(null);
+    try {
+      const res = await adminApi<{
+        ok: boolean;
+        updated: number;
+        succeededIds: string[];
+        failedIds: string[];
+      }>(`/api/admin/cagnottes/bulk/set-active`, {
+        method: "POST",
+        body: {
+          cagnotteIds: selection.selectedIds,
+          isActive,
+        },
+      });
+      toast(
+        `${res.updated} cagnotte(s) ${isActive ? "activée(s)" : "désactivée(s)"}${
+          res.failedIds.length ? `, ${res.failedIds.length} ignorée(s)` : ""
+        }.`,
+        "success",
+      );
+      setBulkAction(null);
+      selection.clear();
+      fetchCagnottes();
+    } catch (err) {
+      setBulkError(err instanceof AdminApiError ? err.message : "Erreur");
+      throw err;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -181,6 +226,24 @@ export default function AdminCagnottesPage() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/50">
+                <th className="w-10 px-4 py-3">
+                  {(() => {
+                    const ids = (data?.cagnottes ?? []).map((c) => c.id);
+                    const allSelected = ids.length > 0 && ids.every((id) => selection.isSelected(id));
+                    const someSelected = ids.some((id) => selection.isSelected(id));
+                    return (
+                      <input
+                        type="checkbox"
+                        aria-label="Tout sélectionner"
+                        className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-40"
+                        disabled={ids.length === 0}
+                        checked={allSelected}
+                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                        onChange={() => selection.toggleAll(ids)}
+                      />
+                    );
+                  })()}
+                </th>
                 <th className="px-4 py-3 font-semibold text-primary">Titre</th>
                 <th className="hidden px-4 py-3 font-semibold text-primary sm:table-cell">Vendeur</th>
                 <th className="hidden px-4 py-3 font-semibold text-primary md:table-cell">Type</th>
@@ -195,7 +258,7 @@ export default function AdminCagnottesPage() {
               {loading
                 ? Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b border-border">
-                      <td colSpan={8} className="px-4 py-4">
+                      <td colSpan={9} className="px-4 py-4">
                         <div className="h-4 w-full animate-pulse rounded bg-muted" />
                       </td>
                     </tr>
@@ -212,6 +275,16 @@ export default function AdminCagnottesPage() {
                           !c.isActive ? "opacity-50" : ""
                         }`}
                       >
+                        {/* Checkbox */}
+                        <td className="w-10 px-4 py-3">
+                          <input
+                            type="checkbox"
+                            aria-label={`Sélectionner ${c.title}`}
+                            className="h-4 w-4 cursor-pointer rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={selection.isSelected(c.id)}
+                            onChange={() => selection.toggleOne(c.id)}
+                          />
+                        </td>
                         {/* Title + slug */}
                         <td className="px-4 py-3">
                           <div className="min-w-0">
@@ -330,6 +403,60 @@ export default function AdminCagnottesPage() {
           onChange={setPage}
         />
       ) : null}
+
+      {/* Bulk action bar */}
+      <BulkActionBar
+        count={selection.selectedCount}
+        onClear={selection.clear}
+      >
+        <Button
+          variant="primary"
+          iconLeft={<Power size={14} />}
+          onClick={() => { setBulkAction("ACTIVATE"); setBulkError(null); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs bg-green-600 hover:bg-green-700"
+        >
+          Activer
+        </Button>
+        <Button
+          variant="danger"
+          iconLeft={<Power size={14} />}
+          onClick={() => { setBulkAction("DEACTIVATE"); setBulkError(null); }}
+          className="!min-h-9 !px-3 !py-1.5 !text-xs"
+        >
+          Désactiver
+        </Button>
+      </BulkActionBar>
+
+      {/* Bulk confirm dialog */}
+      <ConfirmDialog
+        open={bulkAction !== null}
+        onClose={() => { setBulkAction(null); setBulkError(null); }}
+        title={
+          bulkAction === "ACTIVATE"
+            ? "Activer les cagnottes sélectionnées"
+            : "Désactiver les cagnottes sélectionnées"
+        }
+        message={
+          <div className="space-y-3">
+            <p>
+              Vous êtes sur le point de{" "}
+              <span className="font-bold">
+                {bulkAction === "ACTIVATE" ? "activer" : "désactiver"}{" "}
+                {selection.selectedCount} cagnotte{selection.selectedCount > 1 ? "s" : ""}
+              </span>.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {bulkAction === "DEACTIVATE"
+                ? "Les cagnottes désactivées ne seront plus accessibles publiquement mais leur historique financier est préservé."
+                : "Les cagnottes activées redeviennent immédiatement accessibles aux donateurs."}
+            </p>
+          </div>
+        }
+        confirmLabel={bulkAction === "ACTIVATE" ? "Activer" : "Désactiver"}
+        tone={bulkAction === "ACTIVATE" ? "primary" : "danger"}
+        onConfirm={handleBulkActive}
+        errorMessage={bulkError}
+      />
     </div>
   );
 }
