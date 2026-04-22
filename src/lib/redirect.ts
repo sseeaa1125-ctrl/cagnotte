@@ -29,6 +29,9 @@ const PAY_REDIRECT_ALLOWED_DOMAINS = [
   // spécifique à Orange prod — ne whitelist PAS `web.app` racine, sinon
   // n'importe quel site Firebase passerait.
   "orange-money-prod-flowlinks.web.app",
+  // Maxit (Sonatel / Orange SN) — Bictorys renvoie un lien sugu. pour
+  // le paiement via Maxit. Observé en prod : sugu.orange-sonatel.com/mp/...
+  "sugu.orange-sonatel.com",
 ];
 
 export type OpenResult = "navigated" | "shared" | "copied" | "unsupported";

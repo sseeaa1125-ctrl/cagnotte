@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     "pay.bfrpay.com",
     "bictorys.com",
     "orange-money-prod-flowlinks.web.app",
+    "sugu.orange-sonatel.com",
   ];
 
   try {
