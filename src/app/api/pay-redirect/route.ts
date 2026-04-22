@@ -25,12 +25,16 @@ export async function GET(request: NextRequest) {
   // Sécurité: n'autoriser que les domaines de paiement connus.
   // `bictorys.com` (racine) couvre pay.bictorys.com (prod) ET
   // api.test.bictorys.com (simulateur test).
+  // IMPORTANT : garder en phase avec PAY_REDIRECT_ALLOWED_DOMAINS dans
+  // src/lib/redirect.ts — tout domaine payment doit exister dans les 2
+  // (allowlist client pour window.location + allowlist proxy TikTok).
   const ALLOWED_DOMAINS = [
     "pay.wave.com",
     "checkout.bfrpay.com",
     "checkout.bfrpay.net",
     "pay.bfrpay.com",
     "bictorys.com",
+    "orange-money-prod-flowlinks.web.app",
   ];
 
   try {
