@@ -103,22 +103,31 @@ export class BictorysProvider implements PaymentProvider {
   /**
    * Check transaction status directly with Bictorys API.
    * Fallback when webhook doesn't arrive (local dev, network issues).
+   *
+   * Endpoint : GET /pay/v1/transactions/{id}/status?by_charge_id=true
+   * (l'ancien GET /pay/v1/charges/{id} renvoyait systématiquement 500).
+   * Le flag by_charge_id=true signale à Bictorys que `transactionId` est
+   * l'ID de charge renvoyé par POST /pay/v1/charges (stocké côté DB en
+   * Order.paymentExternalId).
+   *
+   * Shape de retour : uniquement { id, status }. Plus de `amount` ni
+   * `paymentReference` — la vérification anti-fraude (amount match) est
+   * exclusivement côté webhook qui, lui, reçoit le montant encaissé.
    */
   async checkTransactionStatus(transactionId: string): Promise<{
     status: "succeeded" | "failed" | "cancelled" | "pending" | "processing" | "authorized" | "reversed";
-    // Bictorys peut renvoyer null (changement de format avril 2026). Le caller
-    // doit skip l'anti-fraude au lieu de marquer FAILED — voir orders.ts poll fallback.
-    amount: number | null;
-    paymentReference: string;
   } | null> {
     if (!BICTORYS_API_URL || !BICTORYS_API_KEY) return null;
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15_000); // 15s timeout
-      const res = await fetch(`${BICTORYS_API_URL}/pay/v1/charges/${transactionId}`, {
-        headers: { "X-Api-Key": BICTORYS_API_KEY },
-        signal: controller.signal,
-      });
+      const res = await fetch(
+        `${BICTORYS_API_URL}/pay/v1/transactions/${transactionId}/status?by_charge_id=true`,
+        {
+          headers: { "X-Api-Key": BICTORYS_API_KEY },
+          signal: controller.signal,
+        },
+      );
       clearTimeout(timeout);
       if (!res.ok) {
         // Reduire le niveau de log pour les erreurs 500 (probleme cote provider) pour eviter le bruit
@@ -129,15 +138,9 @@ export class BictorysProvider implements PaymentProvider {
         }
         return null;
       }
-      const data = await res.json() as {
-        status: string;
-        amount: number | null;
-        paymentReference: string;
-      };
+      const data = (await res.json()) as { id?: string; status: string };
       return {
         status: data.status as "succeeded" | "failed" | "cancelled" | "pending" | "processing" | "authorized" | "reversed",
-        amount: data.amount ?? null,
-        paymentReference: data.paymentReference,
       };
     } catch (err) {
       logger.warn("Bictorys status check error", err);

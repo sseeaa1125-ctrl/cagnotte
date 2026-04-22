@@ -27,8 +27,8 @@ async function main() {
   if (result) {
     console.log(`\n=== Bictorys API response ===`);
     console.log(`Bictorys status: ${result.status}`);
-    console.log(`Bictorys amount: ${result.amount}`);
-    console.log(`Bictorys ref: ${result.paymentReference}`);
+    // amount / paymentReference retirés depuis la migration vers
+    // GET /pay/v1/transactions/:id/status?by_charge_id=true (avril 2026).
   } else {
     console.log("\nBictorys API returned null (check failed or API not configured)");
   }

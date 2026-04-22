@@ -111,6 +111,9 @@ const MOBILE_PROVIDERS: readonly Provider[] = [
 // webhook Bictorys qui arrive en quelques secondes.
 const WAIT_POLL_INTERVAL_MS = 3_000;
 const WAIT_MAX_POLLS = 40;
+// Circuit breaker : arrêt après N erreurs consécutives (5xx, network, etc.)
+// pour éviter de poller 2 min sur un backend HS. Reset sur chaque succès.
+const WAIT_MAX_CONSECUTIVE_ERRORS = 5;
 
 // ─────────────────────────────────────────────────────────────────────────
 // Design-system primitives — extraits au niveau module pour être réutilisés
@@ -164,6 +167,10 @@ export default function PaiementPage() {
   const [waitingStatus, setWaitingStatus] =
     React.useState<WaitingStatus>("polling");
   const [waitingAttempts, setWaitingAttempts] = React.useState(0);
+  // Circuit breaker counter — reset à chaque poll réussi, incrémenté sur
+  // erreur 5xx/429/network. Au-delà de WAIT_MAX_CONSECUTIVE_ERRORS, on
+  // stoppe le polling pour ne pas cramer batterie/bande passante.
+  const [waitingErrors, setWaitingErrors] = React.useState(0);
   const [copied, setCopied] = React.useState(false);
 
   // Hydrate sessionStorage. Redirect back to /participer if missing.
@@ -202,6 +209,7 @@ export default function PaiementPage() {
     if (!waitingData) return;
     if (waitingStatus !== "polling") return;
     if (waitingAttempts >= WAIT_MAX_POLLS) return;
+    if (waitingErrors >= WAIT_MAX_CONSECUTIVE_ERRORS) return;
 
     let cancelled = false;
     const id = window.setTimeout(async () => {
@@ -210,6 +218,8 @@ export default function PaiementPage() {
           status: "PENDING" | "PAID" | "FAILED" | "EXPIRED";
         }>(`/api/orders/${waitingData.reference}/status`);
         if (cancelled) return;
+        // Reset du circuit breaker sur chaque poll réussi.
+        setWaitingErrors(0);
         if (data.status === "PAID") {
           // La redirection est gérée par un effet séparé keyé sur
           // `waitingStatus === "paid"` pour éviter le souci de cleanup
@@ -222,8 +232,17 @@ export default function PaiementPage() {
         } else {
           setWaitingAttempts((n) => n + 1);
         }
-      } catch {
-        if (!cancelled) setWaitingAttempts((n) => n + 1);
+      } catch (err) {
+        if (cancelled) return;
+        // Stop immédiat sur 404 — la commande n'existe pas, continuer à
+        // poller ne sert à rien (état terminal).
+        if (err instanceof ApiError && err.status === 404) {
+          setWaitingErrors(WAIT_MAX_CONSECUTIVE_ERRORS);
+          return;
+        }
+        // 5xx / 429 / network → incrémente le compteur circuit breaker.
+        setWaitingErrors((n) => n + 1);
+        setWaitingAttempts((n) => n + 1);
       }
     }, WAIT_POLL_INTERVAL_MS);
 
@@ -231,7 +250,7 @@ export default function PaiementPage() {
       cancelled = true;
       window.clearTimeout(id);
     };
-  }, [waitingData, waitingStatus, waitingAttempts, router, slug]);
+  }, [waitingData, waitingStatus, waitingAttempts, waitingErrors, router, slug]);
 
   // Redirection vers /merci quand le paiement est confirmé. Placé dans un
   // effet séparé car la tempo de 900ms doit survivre au cleanup déclenché

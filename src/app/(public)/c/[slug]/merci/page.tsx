@@ -6,12 +6,15 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Check, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui";
 import { ShareSheet } from "@/components/share/ShareSheet";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import { MERCI_LABELS } from "@/lib/constants";
 
 const POLL_INTERVAL_MS = 3_000;
 const MAX_POLLS = 40; // 3s × 40 = 2 minutes
+// Circuit breaker : arrêt après N erreurs consécutives (5xx/429/network).
+// Reset sur chaque poll réussi. Stop immédiat sur 404 (état terminal).
+const MAX_CONSECUTIVE_ERRORS = 5;
 const PUBLIC_BASE_URL =
   process.env.NEXT_PUBLIC_BASE_URL || "https://cagnotte.sn";
 
@@ -39,6 +42,7 @@ export default function MerciPage() {
   const [status, setStatus] = React.useState<Status>("PENDING");
   const [order, setOrder] = React.useState<OrderStatusResponse | null>(null);
   const [attempts, setAttempts] = React.useState(0);
+  const [consecutiveErrors, setConsecutiveErrors] = React.useState(0);
 
   // Hydrate reference from sessionStorage if URL query is missing
   // (TikTok WebView sometimes drops query params on share-sheet round trips).
@@ -61,6 +65,10 @@ export default function MerciPage() {
       setStatus("TIMEOUT");
       return;
     }
+    if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+      setStatus("TIMEOUT");
+      return;
+    }
 
     let cancelled = false;
     const id = window.setTimeout(async () => {
@@ -73,6 +81,7 @@ export default function MerciPage() {
           `/api/orders/${reference}/status`,
         );
         if (cancelled) return;
+        setConsecutiveErrors(0); // reset circuit breaker sur chaque succès
         setOrder(data);
         if (
           data.status === "PAID" ||
@@ -83,8 +92,15 @@ export default function MerciPage() {
         } else {
           setAttempts((n) => n + 1);
         }
-      } catch {
-        if (!cancelled) setAttempts((n) => n + 1);
+      } catch (err) {
+        if (cancelled) return;
+        // Stop immédiat sur 404 — commande introuvable, état terminal.
+        if (err instanceof ApiError && err.status === 404) {
+          setConsecutiveErrors(MAX_CONSECUTIVE_ERRORS);
+          return;
+        }
+        setConsecutiveErrors((n) => n + 1);
+        setAttempts((n) => n + 1);
       }
     }, POLL_INTERVAL_MS);
 
@@ -92,7 +108,7 @@ export default function MerciPage() {
       cancelled = true;
       window.clearTimeout(id);
     };
-  }, [reference, status, attempts]);
+  }, [reference, status, attempts, consecutiveErrors]);
 
   // Wake the polling loop when the tab becomes visible again.
   React.useEffect(() => {
@@ -111,6 +127,7 @@ export default function MerciPage() {
   function manualRetry() {
     setStatus("PENDING");
     setAttempts(0);
+    setConsecutiveErrors(0);
   }
 
   // No reference at all → user landed on /merci without an order.
