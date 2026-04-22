@@ -59,7 +59,9 @@ async function uploadCover(file: File): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
   const csrf = readAdminCsrfToken();
-  const res = await fetch(`${BACKEND_URL}/api/upload`, {
+  // Admin endpoint — requireAdmin, pas requireAuth seller.
+  // Backend : backend/src/routes/admin/upload.ts.
+  const res = await fetch(`${BACKEND_URL}/api/admin/upload`, {
     method: "POST",
     body: formData,
     credentials: "include",
@@ -151,11 +153,11 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
   const [hideDonors, setHideDonors] = React.useState<boolean>(
     safeConfig.hideDonors === true,
   );
-  // Admin only — la page créateur n'expose pas le status (géré via un autre flow).
-  // L'admin peut forcer la clôture ou ré-ouvrir une cagnotte.
-  const [status, setStatus] = React.useState<"active" | "closed">(
-    safeConfig.status === "closed" ? "closed" : "active",
-  );
+  // NOTE (audit-038 §3.2) : l'ancien toggle "Statut actif/clôturée" écrivait
+  // dans `config.status` qui est un label cosmétique sans effet sur la
+  // visibilité publique. La VRAIE activation se fait via
+  // `PATCH /api/admin/cagnottes/:id/toggle-active` depuis la page détail.
+  // Toggle retiré pour éviter la confusion UX.
   const [uploading, setUploading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -191,8 +193,8 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
 
     // Build the next config by MERGING the preserved safeConfig (subtype,
     // occasion, cause, beneficiary, showDonorCount, minAmount, checkoutFields,
-    // etc.) avec les champs éditables. Admin peut aussi toucher `status`
-    // (actif/clôturé) que le form créateur n'expose pas.
+    // status, etc.) avec les champs éditables. `status` n'est pas édité ici
+    // (cf. audit-038 §3.2) — la valeur existante est préservée via safeConfig.
     const trimmedThankYou = thankYouMessage.trim();
     const nextConfig: Record<string, unknown> = {
       ...safeConfig,
@@ -202,7 +204,6 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
       goalAmount: parsedGoal,
       endDate: endDate ? endDate.toISOString() : null,
       visibility,
-      status,
       thankYouMessage: trimmedThankYou.length > 0 ? trimmedThankYou : null,
       suggestedAmounts: parseSuggestedAmounts(suggestedAmounts),
       hideAmount,
@@ -242,45 +243,15 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
       onSubmit={handleSubmit}
       className="flex flex-col gap-6 rounded-2xl bg-white p-6 shadow-sm md:p-8"
     >
-      {/* Admin-only : statut de la cagnotte (actif / clôturée). Le form
-          créateur n'expose PAS ce champ — c'est un pouvoir réservé à l'admin
-          pour forcer la fermeture ou ré-ouvrir une campagne. */}
-      <fieldset className="flex flex-col gap-3 rounded-2xl border-2 border-indigo-200 bg-indigo-50 p-5">
-        <legend className="px-2 font-headings text-base font-black text-indigo-900">
-          Statut de la cagnotte (admin)
-        </legend>
-        <p className="text-xs text-indigo-900/70">
-          Actif : les dons sont acceptés. Clôturée : la page publique affiche
-          &laquo; Cagnotte clôturée &raquo; et le formulaire de don est bloqué.
-          Distinct de la date de fin (endDate) qui désactive automatiquement.
-        </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setStatus("active")}
-            className={cn(
-              "flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition",
-              status === "active"
-                ? "bg-green-600 text-white shadow-sm"
-                : "bg-white text-gray-700 hover:bg-gray-100",
-            )}
-          >
-            Active
-          </button>
-          <button
-            type="button"
-            onClick={() => setStatus("closed")}
-            className={cn(
-              "flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition",
-              status === "closed"
-                ? "bg-red-600 text-white shadow-sm"
-                : "bg-white text-gray-700 hover:bg-gray-100",
-            )}
-          >
-            Clôturée
-          </button>
-        </div>
-      </fieldset>
+      {/* Note admin (audit-038 §3.2) : pour désactiver / réactiver une cagnotte,
+          utiliser le bouton dédié sur la page détail `/admin/cagnottes/:id`
+          qui appelle PATCH /toggle-active (modifie Block.isActive).
+          L'ancien toggle `config.status` ne pilotait rien de public. */}
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-xs text-indigo-900/80">
+        Pour activer / désactiver cette cagnotte (la retirer de la page
+        publique), utilisez le bouton dédié sur la page de détail admin.
+        Ce formulaire édite uniquement le contenu (texte, images, objectifs…).
+      </div>
 
       {/* Médias — grouped section so creators immediately see where to
           edit cover + gallery (previous version had two small unlabeled

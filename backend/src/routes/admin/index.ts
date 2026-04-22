@@ -11,6 +11,7 @@ import { notificationsAdminRouter } from "./notifications.js";
 import { configRouter } from "./config.js";
 import { usersRouter } from "./users.js";
 import { logsRouter } from "./logs.js";
+import { adminUploadRouter } from "./upload.js";
 import { verifyAdminCsrf } from "../../lib/adminAuth.js";
 
 export const adminRouter = Router();
@@ -53,3 +54,8 @@ adminRouter.use("/users", usersRouter);
 
 // ── Activity logs ──
 adminRouter.use("/logs", logsRouter);
+
+// ── Admin file uploads (édition cagnottes depuis le dashboard admin) ──
+// Distinct de /api/upload qui exige requireAuth (seller). Voir admin/upload.ts
+// pour la raison. Cap 5 Mo, images only, pas de FileUpload DB row.
+adminRouter.use("/upload", adminUploadRouter);
