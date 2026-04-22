@@ -109,10 +109,13 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
 
   // Slug-safe destructure — rename ignored var to match the
   // underscore-prefixed lint convention.
-  const { slug: _ignoredSlug, ...safeConfig } = initial.config as Record<
-    string,
-    unknown
-  > & { slug?: unknown };
+  // Defensive (?? {}) : si le backend renvoie config:null / undefined
+  // (ancienne build déployée, bug API, etc.), on ne crash pas — on part
+  // d'un objet vide et le form affiche les placeholders.
+  const rawConfig = (initial.config ?? {}) as Record<string, unknown> & {
+    slug?: unknown;
+  };
+  const { slug: _ignoredSlug, ...safeConfig } = rawConfig;
   // Reference the ignored var so TS/lint don't strip or warn.
   void _ignoredSlug;
 
