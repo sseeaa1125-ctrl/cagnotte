@@ -24,6 +24,11 @@ const PAY_REDIRECT_ALLOWED_DOMAINS = [
   // api.test.bictorys.com (simulateur test). Le match `endsWith(".bictorys.com")`
   // n'ouvre que les sous-domaines Bictorys — acceptable en défense-en-profondeur.
   "bictorys.com",
+  // Orange Money — Bictorys renvoie un Firebase Flow Link qui deep-link
+  // vers l'app OM (iOS Universal Links / Android App Links). Domaine
+  // spécifique à Orange prod — ne whitelist PAS `web.app` racine, sinon
+  // n'importe quel site Firebase passerait.
+  "orange-money-prod-flowlinks.web.app",
 ];
 
 export type OpenResult = "navigated" | "shared" | "copied" | "unsupported";
