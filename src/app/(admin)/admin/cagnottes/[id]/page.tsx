@@ -15,6 +15,7 @@ import {
   PowerOff,
   Calendar,
   User,
+  Pencil,
 } from "lucide-react";
 import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { useToast } from "@/contexts/ToastContext";
@@ -281,6 +282,14 @@ export default function AdminCagnotteDetailPage() {
             </p>
           ) : null}
         </div>
+        {/* Right : edit CTA (SUPER_ADMIN only côté backend) */}
+        <Link
+          href={`/admin/cagnottes/${id}/modifier`}
+          className="inline-flex items-center gap-2 self-start rounded-lg border border-primary bg-white px-4 py-2 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary hover:text-white"
+        >
+          <Pencil size={16} />
+          Modifier
+        </Link>
       </div>
 
       {/* Progress bar */}

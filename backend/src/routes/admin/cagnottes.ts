@@ -4,6 +4,7 @@ import { requireAdmin, requireRole } from "../../middleware/requireAdmin.js";
 import { prisma } from "../../lib/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { logAdminAction } from "../../lib/adminLog.js";
+import { validateBlockConfig } from "../../lib/blocks/schemas.js";
 import * as logger from "../../lib/logger.js";
 
 export const cagnottesAdminRouter = Router();
@@ -226,6 +227,10 @@ cagnottesAdminRouter.get("/:id", async (req, res) => {
         isActive: block.isActive,
         createdAt: block.createdAt.toISOString(),
         updatedAt: block.updatedAt.toISOString(),
+        // Config brute — consommée par la page d'édition admin
+        // /admin/cagnottes/:id/modifier pour alimenter tous les champs
+        // (gallery, suggestedAmounts, hideAmount, thankYouMessage, etc.).
+        config: block.config,
       },
       seller: block.seller,
       stats: {
@@ -370,3 +375,119 @@ cagnottesAdminRouter.patch("/:id/toggle-visibility", requireRole("ADMIN", "SUPER
     res.status(500).json({ error: "Erreur interne" });
   }
 });
+
+// ── PATCH /:id — Full admin edit of a FUNDRAISER cagnotte ──
+// L'admin peut modifier tous les champs d'une cagnotte : titre, description,
+// images (coverUrl + gallery), montant objectif, date de fin, visibilité,
+// statut, masques, message de remerciement, etc.
+//
+// Payload partiel : seuls les champs fournis dans `config` sont mutés.
+// La config complète est re-validée par `validateBlockConfig("FUNDRAISER")`
+// pour garantir les invariants cross-field (subtype × occasion/cause × bénéficiaire).
+//
+// Le titre peut être fourni en `title` au root (aligne Block.title + config.title).
+//
+// Auth : SUPER_ADMIN uniquement — l'édition arbitraire d'une cagnotte
+// d'autrui est un pouvoir sensible (peut réécrire l'histoire d'une campagne
+// avec PAID orders). Les ADMIN réguliers gardent toggle-active / flag seller.
+const updateCagnotteBodySchema = z.object({
+  title: z.string().trim().min(1).max(200).optional(),
+  // config = patch partiel — merged avec la config existante puis re-validé
+  config: z.record(z.string(), z.unknown()).optional(),
+});
+
+cagnottesAdminRouter.patch(
+  "/:id",
+  requireRole("SUPER_ADMIN"),
+  async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const parsed = updateCagnotteBodySchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: "Donnees invalides", details: parsed.error.flatten() });
+        return;
+      }
+      const { title, config: configPatch } = parsed.data;
+
+      if (!title && !configPatch) {
+        res.status(400).json({ error: "Aucune modification fournie" });
+        return;
+      }
+
+      const existing = await prisma.block.findUnique({
+        where: { id },
+        select: { id: true, title: true, config: true, type: true },
+      });
+      if (!existing || existing.type !== "FUNDRAISER") {
+        res.status(404).json({ error: "Cagnotte introuvable" });
+        return;
+      }
+
+      const existingCfg = (existing.config as Record<string, unknown>) || {};
+      const mergedCfg: Record<string, unknown> = configPatch
+        ? { ...existingCfg, ...configPatch }
+        : existingCfg;
+
+      // Valide la config COMPLÈTE (pas juste le patch) — attrape les
+      // invariants cross-field comme subtype=solidaire + occasion=anniversaire
+      // (qui serait silencieusement accepté par un .partial()).
+      let validatedCfg: Record<string, unknown>;
+      try {
+        validatedCfg = validateBlockConfig("FUNDRAISER", mergedCfg) as Record<string, unknown>;
+      } catch (zodErr) {
+        const msg = zodErr instanceof z.ZodError
+          ? zodErr.flatten()
+          : { error: "Config invalide", detail: String(zodErr) };
+        res.status(400).json({ error: "Config invalide", details: msg });
+        return;
+      }
+
+      // Calcule un diff compact pour l'audit log (juste les clés modifiées)
+      const changedKeys: string[] = [];
+      if (configPatch) {
+        for (const k of Object.keys(configPatch)) {
+          if (JSON.stringify(existingCfg[k]) !== JSON.stringify(validatedCfg[k])) {
+            changedKeys.push(k);
+          }
+        }
+      }
+      const titleChanged = typeof title === "string" && title !== existing.title;
+
+      // Cast via InputJsonValue — validatedCfg est un JSON plain object
+      // validé par Zod (pas de Date, pas de BigInt), compatible avec la
+      // colonne Prisma Json.
+      const updateData: Prisma.BlockUpdateInput = {
+        config: validatedCfg as Prisma.InputJsonValue,
+      };
+      if (titleChanged) updateData.title = title;
+      // Si le config.title est fourni, l'aligner sur Block.title pour rester cohérent
+      if (!titleChanged && typeof validatedCfg.title === "string" && validatedCfg.title !== existing.title) {
+        updateData.title = validatedCfg.title;
+      }
+
+      const updated = await prisma.block.update({
+        where: { id },
+        data: updateData,
+        select: { id: true, title: true, slug: true, config: true, isActive: true },
+      });
+
+      await logAdminAction(
+        req.admin!.id,
+        "CAGNOTTE_EDITED",
+        `block:${id}`,
+        {
+          changedKeys,
+          titleChanged,
+          previousTitle: titleChanged ? existing.title : undefined,
+          newTitle: titleChanged ? title : undefined,
+        },
+        req.ip,
+      );
+
+      res.json({ ok: true, cagnotte: updated });
+    } catch (err) {
+      logger.error("admin:cagnottes:edit", err);
+      res.status(500).json({ error: "Erreur interne" });
+    }
+  },
+);
