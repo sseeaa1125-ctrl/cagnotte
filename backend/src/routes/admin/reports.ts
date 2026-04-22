@@ -148,6 +148,23 @@ reportsRouter.get("/export.csv", async (req: Request, res: Response) => {
       r.seller?.email ?? "",
     ]);
 
+    logAdminAction(
+      req.admin!.id,
+      "CSV_EXPORTED",
+      "reports",
+      {
+        rowCount: reports.length,
+        truncated: reports.length >= 50_000,
+        filters: {
+          search: (req.query.search as string) || null,
+          status: (req.query.status as string) || null,
+          dateFrom: (req.query.dateFrom as string) || null,
+          dateTo: (req.query.dateTo as string) || null,
+        },
+      },
+      req.ip,
+    ).catch((err) => logger.error("admin:reports:export audit", err));
+
     const filename = `reports-${new Date().toISOString().slice(0, 10)}.csv`;
     sendCsv(res, filename, toCsv(headers, rows));
   } catch (err) {

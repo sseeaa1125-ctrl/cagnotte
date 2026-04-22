@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { requireAdmin } from "../../middleware/requireAdmin.js";
 import { toCsv, sendCsv } from "../../lib/csv.js";
+import { logAdminAction } from "../../lib/adminLog.js";
 import * as logger from "../../lib/logger.js";
 
 function buildLogsWhere(req: Request): Prisma.AdminLogWhereInput {
@@ -181,6 +182,24 @@ logsRouter.get("/export.csv", async (req: Request, res: Response) => {
       l.ip ?? "",
       l.details,
     ]);
+
+    logAdminAction(
+      req.admin!.id,
+      "CSV_EXPORTED",
+      "admin-logs",
+      {
+        rowCount: logs.length,
+        truncated: logs.length >= 50_000,
+        filters: {
+          search: (req.query.search as string) || null,
+          adminId: (req.query.adminId as string) || null,
+          action: (req.query.action as string) || null,
+          dateFrom: (req.query.dateFrom as string) || null,
+          dateTo: (req.query.dateTo as string) || null,
+        },
+      },
+      req.ip,
+    ).catch((err) => logger.error("admin:logs:export audit", err));
 
     const filename = `admin-logs-${new Date().toISOString().slice(0, 10)}.csv`;
     sendCsv(res, filename, toCsv(headers, rows));

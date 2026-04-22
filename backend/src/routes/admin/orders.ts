@@ -3,6 +3,7 @@ import { requireAdmin } from "../../middleware/requireAdmin.js";
 import { prisma } from "../../lib/prisma.js";
 import { Prisma, OrderType, PaymentStatus } from "../../generated/prisma/client.js";
 import { toCsv, sendCsv } from "../../lib/csv.js";
+import { logAdminAction } from "../../lib/adminLog.js";
 import * as logger from "../../lib/logger.js";
 
 // Helper partagé — extrait les filtres de la requête en objet Prisma where.
@@ -197,6 +198,27 @@ ordersAdminRouter.get("/export.csv", async (req, res) => {
       o.paidAt,
       o.createdAt,
     ]);
+
+    // Audit trail — tracer quel admin a dumpé quelle tranche de données, avec
+    // les filtres actifs. Volume de lignes inclus pour repérer les dumps
+    // anormalement larges. N'attend pas la promesse pour ne pas bloquer le CSV.
+    logAdminAction(
+      req.admin!.id,
+      "CSV_EXPORTED",
+      "orders",
+      {
+        rowCount: orders.length,
+        truncated: orders.length >= 50_000,
+        filters: {
+          search: (req.query.search as string) || null,
+          orderType: (req.query.orderType as string) || null,
+          paymentStatus: (req.query.paymentStatus as string) || null,
+          dateFrom: (req.query.dateFrom as string) || null,
+          dateTo: (req.query.dateTo as string) || null,
+        },
+      },
+      req.ip,
+    ).catch((err) => logger.error("admin:orders:export audit", err));
 
     const filename = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
     sendCsv(res, filename, toCsv(headers, rows));
