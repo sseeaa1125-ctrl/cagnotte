@@ -365,7 +365,22 @@ export default function PaiementPage() {
         setError(PAIEMENT_LABELS.errorGeneric);
         return;
       }
-      await openPaymentUrl(paymentUrl);
+      const openResult = await openPaymentUrl(paymentUrl);
+      // Scénario 5 (fallback) — openPaymentUrl a rejeté (domaine hors
+      // allowlist, ex: Orange Money renvoie un lien operator-specific non
+      // encore whitelisté). Afficher la waiting card avec Ouvrir/Partager/
+      // Copier (même pattern que scénario 1) pour que l'utilisateur ait
+      // toujours un chemin pour finaliser le paiement, même si Bictorys
+      // ajoute un nouveau provider ou change un domaine.
+      if (openResult === "unsupported") {
+        setWaitingData({
+          link: paymentUrl,
+          reference: res.order.reference,
+        });
+        setWaitingStatus("polling");
+        setWaitingAttempts(0);
+        return;
+      }
     } catch (err) {
       const status = err instanceof ApiError ? err.status : 0;
       if (status === 429) {

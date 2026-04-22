@@ -45,6 +45,19 @@ export function isAllowedPayDomain(url: string): boolean {
 }
 
 /**
+ * Extrait le hostname d'une URL pour le diagnostic — utilisé par le caller
+ * quand openPaymentUrl retourne "unsupported" pour afficher l'info dans la
+ * console devtools ET remonter le domaine rejeté via un toast / waiting card.
+ */
+export function getHostnameSafe(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return "invalide";
+  }
+}
+
+/**
  * Builds a /api/pay-redirect?t=BASE64 URL (the sealed proxy route). Used only
  * as an ultimate fallback — the current TikTok path is navigator.share, not
  * this proxy (audit-009 found that TikTok blocks both).
@@ -71,9 +84,14 @@ export function buildProxyRedirectUrl(bictorysUrl: string): string {
 export async function openPaymentUrl(url: string): Promise<OpenResult> {
   // Defense-in-depth allowlist.
   if (!isAllowedPayDomain(url)) {
-    if (process.env.NODE_ENV !== "production") {
-      console.warn("[openPaymentUrl] Unknown domain, refusing:", url);
-    }
+    // Log always (plus uniquement en dev). Le caller bascule sur la waiting
+    // card pour donner à l'utilisateur un chemin de secours (lien manuel).
+    // Le hostname est visible dans les devtools pour diagnostiquer quel
+    // domaine (ex : OM) doit être ajouté à l'allowlist.
+    console.warn(
+      "[openPaymentUrl] Domaine rejeté par l'allowlist:",
+      getHostnameSafe(url),
+    );
     return "unsupported";
   }
 
