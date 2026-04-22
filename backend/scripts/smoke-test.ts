@@ -123,8 +123,11 @@ interface BictorysWebhook {
   id: string;
   paymentReference: string;
   status: "succeeded";
-  amount: number;
-  currency: string;
+  // Bictorys peut envoyer amount/currency à null (audit-036 — format webhook
+  // modifié avril 2026). Le handler backend doit skip l'anti-fraude dans ce
+  // cas plutôt que marquer FAILED. Test 16 couvre ce cas.
+  amount: number | null;
+  currency: string | null;
 }
 
 async function postWebhook(payload: BictorysWebhook): Promise<Response> {
@@ -801,6 +804,168 @@ async function main(): Promise<void> {
         if (j2.unread > 0) {
           const anyUnread = j1.items.some((i) => i.readAt === null);
           assert.ok(anyUnread, `count says unread=${j2.unread} but feed has no readAt:null row`);
+        }
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 16 — Webhook amount=null must skip anti-fraude, not mark FAILED
+    // (regression audit-036 — Bictorys change format avril 2026)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "16. Webhook Bictorys amount=null → order passe PAID (skip anti-fraude)",
+      async () => {
+        const c1 = await prisma.block.findUnique({
+          where: { slug: "anniversaire-de-fatou" },
+        });
+        assert.ok(c1, "anniversaire-de-fatou block missing");
+        const reference = `smoke-amount-null-${Date.now()}`;
+        const order = await prisma.order.create({
+          data: {
+            reference,
+            sellerId: c1!.sellerId,
+            orderType: "DONATION",
+            amount: 5150,
+            currency: "XOF",
+            commissionRate: 800,
+            commissionAmount: 412,
+            sellerAmount: 4738,
+            paymentStatus: "PENDING",
+            paymentProvider: "bictorys",
+            customerEmail: `smoke-amount-null-${Date.now()}@test.cagnottes.sn`,
+            customerName: "Smoke amount null",
+            isAnonymous: false,
+            messageIsPrivate: false,
+            blockId: c1!.id,
+          },
+          select: { id: true, reference: true },
+        });
+        cleanup.pendingOrderIds.push(order.id);
+
+        const externalId = `bictorys-smoke-amount-null-${Date.now()}`;
+        // Payload avec amount et currency explicitement null (nouveau format
+        // Bictorys observé en prod 2026-04-20).
+        const r = await postWebhook({
+          id: externalId,
+          paymentReference: order.reference,
+          status: "succeeded",
+          amount: null,
+          currency: null,
+        });
+        assert.strictEqual(r.status, 200, `webhook status ${r.status}`);
+
+        const refreshed = await prisma.order.findUnique({
+          where: { id: order.id },
+          select: { paymentStatus: true },
+        });
+        assert.strictEqual(
+          refreshed?.paymentStatus,
+          "PAID",
+          `expected PAID (anti-fraude skippé quand amount=null), got ${refreshed?.paymentStatus}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 17 — POST /api/orders avec cagnotteSlug inconnu → 400
+    // (regression audit-036 — bug routing blockId via cagnotteSlug)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "17. POST /api/orders avec cagnotteSlug inexistant → 400 explicite",
+      async () => {
+        const r = await req("/api/orders", {
+          method: "POST",
+          body: {
+            sellerSlug: "test-seller-a",
+            orderType: "DONATION",
+            amount: 2000,
+            paymentType: "wave_money",
+            customerEmail: `smoke17-${Date.now()}@test.cagnottes.sn`,
+            customerName: "Smoke 17",
+            customerPhone: "+221770000017",
+            // Slug volontairement inexistant pour ce seller
+            cagnotteSlug: "slug-qui-nexiste-pas-garanti",
+            isAnonymous: false,
+            messageIsPrivate: false,
+          },
+        });
+        assert.strictEqual(
+          r.status,
+          400,
+          `expected 400 for unknown cagnotteSlug, got ${r.status}`,
+        );
+        const body = (await r.json()) as { error?: string };
+        assert.ok(
+          /introuvable|introuvable pour ce vendeur/i.test(body.error || ""),
+          `expected 'introuvable' error, got: ${body.error}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 18 — POST /api/orders sur cagnotte expirée → 400 "terminée"
+    // (regression hotfix — guard endDate)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "18. POST /api/orders sur cagnotte endDate passée → 400 terminée",
+      async () => {
+        // Crée une cagnotte fraîche avec endDate hier pour isoler du reste.
+        const sellerA = await prisma.seller.findUnique({
+          where: { slug: "test-seller-a" },
+          select: { id: true },
+        });
+        assert.ok(sellerA, "test-seller-a seller missing");
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerA!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 18 — cagnotte expirée",
+            slug: `smoke-18-expired-${Date.now()}`,
+            isActive: true,
+            config: {
+              title: "Smoke 18 — cagnotte expirée",
+              subtype: "festive",
+              occasion: "anniversaire",
+              goalAmount: 100000,
+              endDate: yesterday.toISOString(),
+              visibility: "public",
+              status: "active",
+              showDonorCount: true,
+              suggestedAmounts: [2000, 5000, 10000],
+            },
+          },
+          select: { id: true, slug: true },
+        });
+        try {
+          const r = await req("/api/orders", {
+            method: "POST",
+            body: {
+              sellerSlug: "test-seller-a",
+              orderType: "DONATION",
+              amount: 2000,
+              paymentType: "wave_money",
+              customerEmail: `smoke18-${Date.now()}@test.cagnottes.sn`,
+              customerName: "Smoke 18",
+              customerPhone: "+221770000018",
+              cagnotteSlug: block.slug!,
+              isAnonymous: false,
+              messageIsPrivate: false,
+            },
+          });
+          assert.strictEqual(
+            r.status,
+            400,
+            `expected 400 for expired cagnotte, got ${r.status}`,
+          );
+          const body = (await r.json()) as { error?: string };
+          assert.ok(
+            /terminée|levée de fonds/i.test(body.error || ""),
+            `expected 'terminée' error, got: ${body.error}`,
+          );
+        } finally {
+          // Nettoie le block de test (pas d'ordre lié car le POST a été refusé)
+          await prisma.block.delete({ where: { id: block.id } }).catch(() => {});
         }
       },
     );
