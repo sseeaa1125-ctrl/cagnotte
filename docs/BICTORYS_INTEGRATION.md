@@ -1,118 +1,133 @@
-# Bictorys Payment API — Guide d'intégration complet
+# Bictorys Payment API — Skill d'intégration complet
 
-> Guide **généraliste et complet** pour intégrer l'API Bictorys dans n'importe quelle application. Couvre les paiements (charges), les retraits (payouts), les webhooks, le flow OTP Orange Money CI, et tous les opérateurs mobile money d'Afrique de l'Ouest. Basé sur des tests réels en mars 2026.
+> **Skill self-contained pour intégrer Bictorys dans n'importe quel projet** (Wave, Orange Money, Maxit, MTN, Moov, Carte) — Sénégal et Afrique de l'Ouest. Tous les patterns ci-dessous sont **production-validated** sur cagnottes.sn (avril 2026), avec hotfixes et reverts inclus.
+>
+> **Lecture recommandée** : §1 (mental model) → §11 (TikTok / WebView, à lire AVANT de toucher au flow paiement) → §6 (status check, l'endpoint a changé) → §7 (webhook, sécurité critique) → reste.
 
 ---
 
 ## Table des matières
 
-1. [Configuration & Variables d'environnement](#1-configuration--variables-denvironnement)
-2. [Authentification](#2-authentification)
-3. [Créer un paiement (Charge)](#3-créer-un-paiement-charge)
-4. [Flow OTP — Orange Money Côte d'Ivoire](#4-flow-otp--orange-money-côte-divoire)
-5. [Vérifier le statut d'une transaction](#5-vérifier-le-statut-dune-transaction)
-6. [Webhooks — Recevoir les notifications](#6-webhooks--recevoir-les-notifications)
-7. [Créer un retrait (Payout)](#7-créer-un-retrait-payout)
-8. [Moyens de paiement supportés](#8-moyens-de-paiement-supportés)
-9. [Normalisation pays](#9-normalisation-pays)
-10. [Erreurs courantes & Debugging](#10-erreurs-courantes--debugging)
-11. [Checklist de mise en production](#11-checklist-de-mise-en-production)
-12. [Exemples de code complets](#12-exemples-de-code-complets)
+1. [Mental model en 30 secondes](#1-mental-model-en-30-secondes)
+2. [Configuration & variables d'environnement](#2-configuration--variables-denvironnement)
+3. [Authentification — 3 clés distinctes](#3-authentification--3-clés-distinctes)
+4. [Créer un paiement (Charge) — mobile money](#4-créer-un-paiement-charge--mobile-money)
+5. [Créer un paiement (Charge) — carte bancaire](#5-créer-un-paiement-charge--carte-bancaire)
+6. [Vérifier le statut d'une transaction (NOUVEAU endpoint)](#6-vérifier-le-statut-dune-transaction-nouveau-endpoint)
+7. [Webhooks — réception & sécurité](#7-webhooks--réception--sécurité)
+8. [Circuit breaker — protéger l'API contre les ratés Bictorys](#8-circuit-breaker--protéger-lapi-contre-les-ratés-bictorys)
+9. [Polling fallback — serveur (cache 30s)](#9-polling-fallback--serveur-cache-30s)
+10. [Polling fallback — client (circuit breaker + stop-on-404)](#10-polling-fallback--client-circuit-breaker--stop-on-404)
+11. [⚠️ TikTok & in-app browsers (audits 008/009)](#11-️-tiktok--in-app-browsers-audits-008009)
+12. [Allowlist des domaines de redirection (à maintenir en double)](#12-allowlist-des-domaines-de-redirection-à-maintenir-en-double)
+13. [Normalisation pays & opérateurs](#13-normalisation-pays--opérateurs)
+14. [Payouts — retraits vers mobile money](#14-payouts--retraits-vers-mobile-money)
+15. [Erreurs courantes & debugging](#15-erreurs-courantes--debugging)
+16. [Checklist production](#16-checklist-production)
+17. [Historique des hotfixes (à ne pas refaire)](#17-historique-des-hotfixes-à-ne-pas-refaire)
 
 ---
 
-## 1. Configuration & Variables d'environnement
+## 1. Mental model en 30 secondes
 
-### Clés nécessaires
+```
+┌─────────────┐  POST /pay/v1/charges    ┌──────────┐
+│  Frontend   │─────────────────────────▶│ Bictorys │
+│  (Next.js)  │  ◀─ {transactionId, link, qrCode}  │
+└─────────────┘                          └──────────┘
+       │                                       │
+       │  redirect/QR/USSD                     │  webhook
+       ▼                                       ▼
+   ┌────────┐  POST /api/webhooks   ┌──────────────────┐
+   │ Wave / │ ◀───────────────────  │  Backend Express │
+   │ OM /   │                       │  (signature +    │
+   │ Maxit  │                       │  Serializable tx)│
+   └────────┘                       └──────────────────┘
+                                            │
+                                            ▼ (si webhook ne vient pas)
+                                   GET /pay/v1/transactions/
+                                       :id/status?by_charge_id=true
+                                   (poll fallback, cache 30s)
+```
 
-| Variable | Usage | Où la trouver |
-|---|---|---|
-| `BICTORYS_API_URL` | Base URL de l'API | Voir tableau ci-dessous |
-| `BICTORYS_API_KEY` | Clé publique — pour créer des charges et vérifier des statuts | Dashboard → Developers → API Keys → Public Key |
-| `BICTORYS_PRIVATE_KEY` | Clé privée — pour les payouts et la lecture des payment methods | Dashboard → Developers → API Keys → Private Key |
-| `BICTORYS_WEBHOOK_SECRET` | Secret dédié webhook — pour valider les notifications entrantes | Dashboard → Developers → Webhooks → Secret Key |
-| `BICTORYS_MERCHANT_SECRET_CODE` | Code secret marchand — requis dans le body des payouts | Dashboard → Entreprise → Préférences |
+**Flux nominal** :
+1. Frontend → backend → `POST /pay/v1/charges` → backend stocke `transactionId` (= `paymentExternalId`)
+2. Frontend redirige l'user vers Wave/OM/Maxit (deep link, QR, ou USSD)
+3. User valide le paiement
+4. Bictorys → POST webhook → backend marque PAID dans une transaction Serializable
+5. Frontend poll `/api/orders/:ref/status` toutes les 3s → voit PAID → redirige vers /merci
 
-### URLs par environnement
+**Flux fallback** : si le webhook n'arrive pas (réseau flaky, dev local sans tunnel), le poll backend appelle `GET /pay/v1/transactions/:id/status?by_charge_id=true` (cache 30s) et passe l'order PAID si Bictorys confirme.
 
-| Environnement | Base URL | Préfixe des clés |
-|---|---|---|
-| **Test (Sandbox)** | `https://api.test.bictorys.com` | `test_public-...`, `test_secret-...` |
-| **Production** | `https://api.bictorys.com` | `public-...`, `secret-...` |
+**Trois sources d'auth distinctes** : `BICTORYS_API_KEY` (publique, charges + status), `BICTORYS_PRIVATE_KEY` (privée, payouts), `BICTORYS_WEBHOOK_SECRET` (validation webhook). **Ne jamais mélanger** — la publique sur un payout = 401, la privée sur un webhook = pas de validation possible.
 
-### Exemple `.env`
+---
+
+## 2. Configuration & variables d'environnement
 
 ```env
-BICTORYS_API_URL=https://api.bictorys.com
-BICTORYS_API_KEY=public-XXXX.YYYY
-BICTORYS_PRIVATE_KEY=secret-XXXX.YYYY
+# Base
+BICTORYS_API_URL=https://api.bictorys.com               # prod
+# BICTORYS_API_URL=https://api.test.bictorys.com        # sandbox
+
+# Charges & status (clé PUBLIQUE)
+BICTORYS_API_KEY=public-XXXX.YYYY                       # prefix `test_public-` en sandbox
+
+# Payouts (clé PRIVÉE — jamais côté client)
+BICTORYS_PRIVATE_KEY=secret-XXXX.YYYY                   # prefix `test_secret-` en sandbox
+
+# Webhook (secret indépendant configuré dans le dashboard)
 BICTORYS_WEBHOOK_SECRET=votre_secret_webhook
-BICTORYS_MERCHANT_SECRET_CODE=1234
+
+# Payouts uniquement
+BICTORYS_MERCHANT_SECRET_CODE=1234                      # Dashboard → Entreprise → Préférences
 ```
 
-### IMPORTANT — Différence entre les 3 clés/secrets
-
-- **`BICTORYS_API_KEY` (publique)** : Header `X-Api-Key` pour créer des charges et vérifier des transactions. C'est la clé principale pour les paiements entrants.
-- **`BICTORYS_PRIVATE_KEY` (privée)** : Header `X-API-Key` pour les payouts (retraits) et la lecture des opérateurs activés. Ne JAMAIS exposer côté client.
-- **`BICTORYS_WEBHOOK_SECRET`** : Secret dédié aux webhooks. Bictorys l'envoie dans le header `X-Secret-Key` de chaque notification. Ce n'est PAS la private key — c'est un secret séparé configuré dans le dashboard webhooks.
+**Pièges classiques** :
+- Webhook configuré en sandbox mais clés API en prod (ou inverse) → webhooks silencieusement perdus
+- `test_public-` en prod → 401 sur charges
+- Confusion `BICTORYS_API_KEY` ↔ `BICTORYS_PRIVATE_KEY` → "Access right not sufficient"
 
 ---
 
-## 2. Authentification
+## 3. Authentification — 3 clés distinctes
 
-Toutes les requêtes API utilisent le header `X-Api-Key` (ou `X-API-Key`, les deux fonctionnent).
+| Opération | Header | Clé |
+|---|---|---|
+| `POST /pay/v1/charges` (paiements entrants) | `X-Api-Key` | **publique** |
+| `GET /pay/v1/transactions/:id/status?by_charge_id=true` | `X-Api-Key` | **publique** |
+| `POST /pay/v1/payouts` (retraits) | `X-API-Key` | **privée** |
+| `GET /onboarding/v1/payment-methods/me` | `X-API-Key` | **privée** |
+| Webhook entrant (Bictorys → vous) | `X-Secret-Key` reçu | secret webhook |
 
-```
-X-Api-Key: <votre_clé>
-Content-Type: application/json
-```
-
-| Opération | Clé à utiliser |
-|---|---|
-| Charges (paiements entrants) | Clé **publique** (`BICTORYS_API_KEY`) |
-| Status check (`GET /charges/{id}`) | Clé **publique** (`BICTORYS_API_KEY`) |
-| Payouts (retraits) | Clé **privée** (`BICTORYS_PRIVATE_KEY`) |
-| Payment methods (lecture opérateurs activés) | Clé **privée** (`BICTORYS_PRIVATE_KEY`) |
-| Webhooks (réception) | Pas de header sortant — Bictorys envoie `X-Secret-Key` dans sa requête |
-
-**⚠️ Erreur courante** : utiliser la clé publique pour un payout → `403 "Access right not sufficient"`. Utiliser la clé privée pour une charge fonctionne, mais ce n'est pas recommandé.
+**Note** : `X-Api-Key` et `X-API-Key` sont équivalents côté Bictorys (insensible à la casse), mais respecter la convention par opération évite la confusion.
 
 ---
 
-## 3. Créer un paiement (Charge)
+## 4. Créer un paiement (Charge) — mobile money
 
 ### Endpoint
 
 ```
 POST {BICTORYS_API_URL}/pay/v1/charges?payment_type={type}
+Headers:
+  X-Api-Key: {BICTORYS_API_KEY}
+  Content-Type: application/json
 ```
 
-Pour carte bancaire, ajouter `&payment_category=card` :
-```
-POST {BICTORYS_API_URL}/pay/v1/charges?payment_type=card&payment_category=card
-```
+### `payment_type` (query param)
 
-### Headers
-
-| Header | Valeur |
+| Valeur | Opérateur |
 |---|---|
-| `X-Api-Key` | `BICTORYS_API_KEY` (clé publique) |
-| `Content-Type` | `application/json` |
+| `wave_money` | Wave (SN, CI, BF) |
+| `orange_money` | Orange Money (SN, CI, ML, BK) |
+| `maxit` | Maxit (SN) — sortie 2025 |
+| `mtn_money` | MTN Money (CI, BJ) |
+| `moov` | Moov Money (TG, CI, BF, BJ) |
+| `togocell` | Togocell (TG) |
+| `mobicash` | Mobicash (BF, ML) |
 
-### Payment Types (query parameter `payment_type`)
-
-| Valeur | Description |
-|---|---|
-| `wave_money` | Paiement Wave |
-| `orange_money` | Paiement Orange Money |
-| `mtn_money` | Paiement MTN Money |
-| `moov` | Paiement Moov Money |
-| `togocell` | Paiement Togocell |
-| `mobicash` | Paiement Mobicash |
-| `maxit` | Paiement Maxit (SN) |
-| `card` | Carte bancaire (Visa/Mastercard) — nécessite aussi `&payment_category=card` |
-
-### Body (JSON)
+### Body
 
 ```json
 {
@@ -121,9 +136,9 @@ POST {BICTORYS_API_URL}/pay/v1/charges?payment_type=card&payment_category=card
   "country": "SN",
   "paymentReference": "ORDER-ABC123",
   "successRedirectUrl": "https://monsite.com/success?ref=ORDER-ABC123",
-  "ErrorRedirectUrl": "https://monsite.com/error?ref=ORDER-ABC123",
+  "ErrorRedirectUrl":   "https://monsite.com/error?ref=ORDER-ABC123",
   "customerObject": {
-    "name": "Amadou Fall",
+    "name":  "Amadou Fall",
     "phone": "+221771234567",
     "email": "amadou@example.com",
     "country": "SN"
@@ -132,861 +147,573 @@ POST {BICTORYS_API_URL}/pay/v1/charges?payment_type=card&payment_category=card
 }
 ```
 
-### Paramètres du body
+### ⚠️ Pièges critiques
 
-| Champ | Type | Requis | Description |
-|---|---|---|---|
-| `amount` | `integer` | ✅ | Montant en FCFA (entier, pas de décimales). Bictorys min: 100 |
-| `currency` | `string` | ✅ | Toujours `"XOF"` pour le franc CFA |
-| `country` | `string` | ✅ | Code pays Bictorys — `"SN"`, `"CI"`, `"BK"` (Burkina), `"ML"`, `"TG"`, `"BJ"` |
-| `paymentReference` | `string` | ✅ | Référence unique de votre commande |
-| `successRedirectUrl` | `string` | ✅ | URL de redirection navigateur après paiement réussi |
-| `ErrorRedirectUrl` | `string` | ✅ | URL de redirection après échec. **⚠️ E majuscule obligatoire** |
-| `customerObject` | `object` | ❌ | Informations client (recommandé) |
-| `customerObject.name` | `string` | ❌ | Nom du client |
-| `customerObject.phone` | `string` | ❌ | Téléphone format `"+221771234567"` (pas d'espaces) |
-| `customerObject.email` | `string` | ❌ | Email du client |
-| `customerObject.country` | `string` | ❌ | Code pays du client |
-| `otp` | `string` | ❌ | Code OTP pour Orange Money CI uniquement (voir §4) |
+| Piège | Symptôme | Fix |
+|---|---|---|
+| `errorRedirectUrl` au lieu de `ErrorRedirectUrl` | Pas de redirect erreur, silencieux | **E majuscule obligatoire** |
+| Téléphone `771234567` ou `221 77 123 45 67` | 400 silencieux ou paiement coincé | Format `+221XXXXXXXXX` collé, pas d'espaces |
+| `country: "BF"` pour Orange Money Burkina | `wrong payment type` | Utiliser `country: "BK"` (convention Bictorys) |
+| Carte avec `payment_type=card` seul | Erreur | Ajouter `&payment_category=card` (voir §5) |
 
-### ⚠️ PIÈGE CRITIQUE : `ErrorRedirectUrl` avec E majuscule
-
-Bictorys attend `ErrorRedirectUrl` avec un **E majuscule**. Pas `errorRedirectUrl`. Si vous utilisez la mauvaise casse, la redirection d'erreur ne fonctionnera pas silencieusement — aucune erreur ne sera levée.
-
-### ⚠️ Format du téléphone
-
-Le numéro doit être au format **`+INDICATIF` + `NUMERO`** collé, sans espaces :
-- ✅ `"+221771234567"` (Sénégal)
-- ✅ `"+2250701234567"` (Côte d'Ivoire)
-- ❌ `"221771234567"` (manque le `+`)
-- ❌ `"771234567"` (pas de préfixe pays)
-- ❌ `"+221 77 123 45 67"` (espaces interdits)
-
-Ce format s'applique pour les charges ET les payouts.
-
-### Réponse succès — `201 Created`
+### Réponse 201 Created
 
 ```json
 {
   "transactionId": "33e1c83b-7cb0-437b-bc50-a7a58e5660ad",
-  "redirectUrl": "https://pay.bictorys.com/checkout/33e1c83b-...",
-  "link": "https://pay.bictorys.com/link/...",
-  "qrCode": "data:image/png;base64,...",
-  "message": "Composez *144*82# pour valider..."
+  "redirectUrl":   "https://pay.bictorys.com/checkout/...",
+  "link":          "https://pay.wave.com/...",
+  "qrCode":        "data:image/png;base64,...",
+  "message":       "Composez *144*82# pour valider..."
 }
 ```
 
-| Champ | Type | Quand présent | Usage |
-|---|---|---|---|
-| `transactionId` | `string` (UUID) | Toujours | ID unique Bictorys — **à sauvegarder en base** pour le polling et la réconciliation |
-| `redirectUrl` | `string` | Toujours | URL de redirection (fallback général) |
-| `link` | `string` | Wave, Carte | Lien de paiement direct (deep link mobile Wave ou page checkout carte) |
-| `qrCode` | `string` (base64 PNG) | Wave | QR code à afficher pour les users desktop (scannent avec l'app Wave) |
-| `message` | `string` | Orange CI, MTN CI, Orange SN | Message USSD/instruction à afficher à l'utilisateur |
+| Champ | Quand présent | Usage UX |
+|---|---|---|
+| `transactionId` | Toujours | **À stocker en DB** (= `paymentExternalId`) pour status check + réconciliation |
+| `redirectUrl` | Toujours | Fallback générique (page checkout Bictorys) |
+| `link` | Wave, Carte | Deep link mobile (Wave) ou URL hosted-checkout (Carte) |
+| `qrCode` | Wave | Afficher en modal pour desktop, l'user scanne avec son tel |
+| `message` | Orange CI, MTN CI, Orange SN, Maxit | Instructions USSD à afficher |
 
-### Flux UX selon l'opérateur
+### UX par opérateur
 
-| Opérateur | Flux recommandé |
-|---|---|
-| **Wave (mobile)** | Rediriger vers `link` → deep link app Wave → paiement → webhook |
-| **Wave (desktop)** | Afficher `qrCode` dans un modal + polling statut → l'utilisateur scanne → webhook |
-| **Orange Money CI** | Step OTP dédié (`#144*82#`) → envoyer `otp` dans le body → afficher `message` + polling → webhook |
-| **Orange Money SN** | Afficher `message` USSD + polling → l'utilisateur valide sur son téléphone → webhook |
-| **MTN Money CI** | Afficher `message` + polling → l'utilisateur valide sur son téléphone → webhook |
-| **Carte** | Rediriger vers `link` → page checkout Bictorys → saisie carte → 3DS → webhook |
+| Opérateur | Mobile | Desktop |
+|---|---|---|
+| **Wave** | Redirect vers `link` (deep link app) | QR code + polling |
+| **Orange Money SN** | Redirect vers `link` (Firebase flow link `orange-money-prod-flowlinks.web.app`) | Idem ou QR |
+| **Maxit (SN)** | Redirect vers `link` (`sugu.orange-sonatel.com`) | Idem |
+| **Orange Money CI** | Step OTP (`#144*82#`) → `otp` dans body → afficher `message` + polling | Idem |
+| **MTN Money CI** | Afficher `message` + polling | Idem |
+| **Carte** | Redirect vers `link` (page checkout Bictorys → 3DS) | Idem |
 
-### Protection WAF — Retry obligatoire
+### Retry WAF AWS (CRITIQUE)
 
-Bictorys utilise un WAF AWS qui bloque parfois les requêtes avec un **403 HTML** (pas JSON). Implémentez un retry avec backoff exponentiel :
+Bictorys utilise un WAF AWS qui retourne parfois **403 HTML** (pas JSON) sur des requêtes valides. **Toujours implémenter un retry exponentiel** sur ce cas spécifique :
 
 ```typescript
-async function createCharge(url: string, headers: HeadersInit, body: string): Promise<any> {
-  const MAX_RETRIES = 3;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000)); // 2s, 4s, 8s
-    }
-    const response = await fetch(url, { method: "POST", headers, body });
-    if (response.ok) return await response.json();
-
-    const errorText = await response.text();
-    // Retry uniquement sur 403 WAF HTML
-    if (response.status === 403 && errorText.includes("Forbidden") && attempt < MAX_RETRIES) {
-      continue;
-    }
-    throw new Error(`Bictorys error (${response.status}): ${errorText}`);
+const MAX_RETRIES = 3;
+for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+  if (attempt > 0) {
+    await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000)); // 2s, 4s, 8s
   }
+  const response = await fetch(url, { method: "POST", headers, body });
+  if (response.ok) return await response.json();
+  const errorText = await response.text();
+  if (response.status === 403 && errorText.includes("Forbidden") && attempt < MAX_RETRIES) {
+    continue;  // WAF → retry
+  }
+  throw new Error(`Bictorys charge error (${response.status}): ${errorText}`);
 }
 ```
 
-**Note** : en mode test, ajouter un délai de **5 secondes entre les requêtes** pour éviter que le WAF ne bloque avec des réponses 200 vides.
+En sandbox : ajouter **5s entre les requêtes** sinon le WAF retourne des `200` vides silencieusement.
 
-### Réponses d'erreur
+### Flow OTP — Orange Money Côte d'Ivoire (seul cas)
 
-| HTTP Status | Cause | Action |
-|---|---|---|
-| `400` | Paramètres invalides, `"wrong payment type"`, `"country not available"` | Vérifier le body et les query params |
-| `401` | Clé API invalide ou manquante | Vérifier `X-Api-Key` |
-| `403` (HTML) | WAF rate-limit | Retry avec backoff exponentiel |
-| `403` (JSON) | `"Access right not sufficient"` | Mauvaise clé (publique vs privée) |
-| `500` | Erreur interne Bictorys | Réessayer plus tard |
-
----
-
-## 4. Flow OTP — Orange Money Côte d'Ivoire
-
-Orange Money CI est le **seul opérateur** qui nécessite un code OTP généré par le client.
-
-### Comment ça marche
-
-1. L'utilisateur compose **`#144*82#`** sur son téléphone Orange CI
-2. Il reçoit un code OTP (6-8 chiffres)
-3. Il saisit ce code dans votre formulaire de paiement
-4. Vous envoyez le code dans le champ `otp` du body de la charge
-5. Bictorys retourne un `message` USSD
-6. L'utilisateur valide sur son téléphone
-7. Bictorys envoie un webhook avec le statut
-
-### Détection côté code
+1. User compose `#144*82#` sur son tel
+2. Reçoit un OTP (6-8 chiffres)
+3. Saisit dans votre form
+4. Vous l'envoyez dans `body.otp`
+5. Bictorys retourne `message` USSD
+6. User valide sur tel → webhook
 
 ```typescript
 const needsOtp = paymentType === "orange_money" && country === "CI";
+if (otp) body.otp = otp;
 ```
 
-### Envoi dans le body
-
-```typescript
-const body: Record<string, unknown> = {
-  amount, currency, country, paymentReference,
-  successRedirectUrl, ErrorRedirectUrl, customerObject,
-};
-if (otp) {
-  body.otp = otp; // Uniquement pour Orange Money CI
-}
-```
-
-### Conseils UX
-
-- Afficher un step dédié pour la saisie OTP (avant le paiement)
-- Expliquer clairement : *"Compose #144*82# sur ton téléphone pour générer ton code OTP"*
-- Si le paiement échoue → ramener au step OTP (pas au formulaire complet) pour réessayer facilement
-- L'OTP expire rapidement — l'utilisateur devra peut-être recomposer `#144*82#`
+L'OTP expire vite — prévoir un step dédié et la possibilité de redemander.
 
 ---
 
-## 5. Vérifier le statut d'une transaction
+## 5. Créer un paiement (Charge) — carte bancaire
+
+```
+POST {BICTORYS_API_URL}/pay/v1/charges?payment_type=card&payment_category=card
+```
+
+**Différences avec mobile money** :
+- Query : ajouter `&payment_category=card` (sans ça → erreur)
+- `country` : **toujours envoyer `"SN"`** quel que soit le pays du client (Bictorys normalise en interne)
+- Réponse : utiliser le champ `link` qui pointe vers la page checkout Bictorys (saisie carte + 3DS)
+- Pas de `qrCode` ni de `message` dans la réponse
+- Pays supportés en pratique : SN, CI, BF (et plus, via la normalisation `SN`)
+
+**UX recommandée** : redirect direct vers `link` dans la même fenêtre (`window.location.href`). Le 3DS challenge se fait sur le site Bictorys, puis Bictorys redirige vers `successRedirectUrl` ou `ErrorRedirectUrl`.
+
+> **Note cagnottes.sn** : la carte a été retirée du UI v1 (avril 2026, mobile money only). Le code reste compatible — pour réactiver, ajouter le picker côté frontend et router le `payment_type` correctement.
+
+---
+
+## 6. Vérifier le statut d'une transaction (NOUVEAU endpoint)
+
+> ⚠️ **Migration avril 2026** : l'ancien `GET /pay/v1/charges/{id}` retourne **HTTP 500 systématiquement** (en prod ET en test). Utilisez le nouveau endpoint ci-dessous.
 
 ### Endpoint
 
 ```
-GET {BICTORYS_API_URL}/pay/v1/charges/{transactionId}
+GET {BICTORYS_API_URL}/pay/v1/transactions/{transactionId}/status?by_charge_id=true
+Headers:
+  X-Api-Key: {BICTORYS_API_KEY}
 ```
 
-### Headers
+Le flag `by_charge_id=true` indique à Bictorys que `transactionId` est l'ID de **charge** retourné par `POST /pay/v1/charges` (pas un autre identifiant interne).
 
-| Header | Valeur |
-|---|---|
-| `X-Api-Key` | `BICTORYS_API_KEY` (clé publique) |
+### Réponse 200
+
+```json
+{ "id": "33e1c83b-...", "status": "succeeded" }
+```
+
+**Plus de `amount` ni `paymentReference` dans la réponse.** L'anti-fraude amount-match est désormais **exclusivement webhook-side** (le webhook reçoit toujours le montant encaissé).
 
 ### Statuts possibles
 
-| Statut | Description | Action recommandée |
-|---|---|---|
-| `succeeded` | Paiement confirmé | ✅ Valider la commande |
-| `authorized` | Paiement autorisé (pré-capture carte) | ✅ Traiter comme `succeeded` |
-| `pending` | En attente de validation client | ⏳ Continuer le polling |
-| `processing` | En cours de traitement | ⏳ Continuer le polling |
-| `failed` | Paiement échoué | ❌ Marquer FAILED |
-| `cancelled` | Annulé par le client | ❌ Marquer FAILED |
-| `reversed` | Remboursé/annulé après succès | ❌ Marquer FAILED |
+| Statut | Action |
+|---|---|
+| `succeeded` | ✅ Marquer PAID |
+| `authorized` | ✅ Traiter comme PAID (pré-capture carte) |
+| `pending` | ⏳ Continuer le polling |
+| `processing` | ⏳ Continuer le polling |
+| `failed` | ❌ Marquer FAILED |
+| `cancelled` | ❌ Marquer FAILED |
+| `reversed` | ❌ Marquer FAILED (remboursé) |
 
-### Usage recommandé : polling en fallback du webhook
+### Implémentation TypeScript
 
-Ne pas se baser uniquement sur le polling — utiliser les **webhooks comme source principale** et le polling comme fallback :
-
+```typescript
+async checkTransactionStatus(transactionId: string): Promise<{
+  status: "succeeded" | "failed" | "cancelled" | "pending" | "processing" | "authorized" | "reversed";
+} | null> {
+  if (!BICTORYS_API_URL || !BICTORYS_API_KEY) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const res = await fetch(
+      `${BICTORYS_API_URL}/pay/v1/transactions/${transactionId}/status?by_charge_id=true`,
+      { headers: { "X-Api-Key": BICTORYS_API_KEY }, signal: controller.signal },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) {
+      // Downgrade les 500 (problème provider) en log info pour ne pas spammer
+      if (res.status === 500) logger.log(`[Bictorys] 500 for txn=${transactionId}`);
+      else logger.warn(`Bictorys status check failed: ${res.status}`);
+      return null;
+    }
+    const data = (await res.json()) as { id?: string; status: string };
+    return { status: data.status as ... };
+  } catch (err) {
+    logger.warn("Bictorys status check error", err);
+    return null;
+  }
+}
 ```
-Intervalle : toutes les 4 secondes
-Max : 75 polls (≈ 5 minutes)
-→ Si "succeeded" ou "authorized" → commande payée
-→ Si "failed" ou "cancelled" → commande échouée
-→ Si timeout (75 polls) → afficher "paiement non confirmé" + bouton réessayer
-```
 
-### ⚠️ Limitation sandbox
-
-`GET /pay/v1/charges/{id}` retourne souvent **500** en environnement test (`api.test.bictorys.com`). Fonctionne normalement en production. En test, se baser uniquement sur les webhooks.
+**Logger un `warn` si `data.status` n'est pas dans l'enum attendu** — Bictorys peut introduire de nouveaux statuts silencieusement.
 
 ---
 
-## 6. Webhooks — Recevoir les notifications
+## 7. Webhooks — réception & sécurité
 
-### Configuration dans le dashboard Bictorys
+### Configuration dashboard
 
-1. Dashboard → **Developers** → **Webhooks**
-2. Ajouter votre URL : `https://votre-api.com/webhooks/bictorys`
-3. Renseigner le **Secret Key**
-4. Sauvegarder
+1. Dashboard → Developers → Webhooks → URL `https://votre-api.com/api/webhooks`
+2. Renseigner le **Secret Key** (= `BICTORYS_WEBHOOK_SECRET`)
+3. **⚠️ La config webhook est séparée test/prod** — configurer les deux
 
-**⚠️ IMPORTANT** : La configuration webhook est **séparée** entre mode test et production. Le webhook configuré en test n'est PAS actif en production et vice-versa. Il faut configurer les deux.
-
-### Headers envoyés par Bictorys
+### Headers reçus
 
 ```
-POST https://votre-api.com/webhooks/bictorys
-Headers:
-  Content-Type: application/json
-  X-Secret-Key: <votre_webhook_secret>           ← toujours présent
-  X-Webhook-Signature: <hmac_sha256_hex>          ← optionnel (si HMAC activé)
-  X-Webhook-Timestamp: <unix_timestamp_ms>        ← optionnel (si HMAC activé)
+POST /api/webhooks
+  Content-Type:        application/json
+  X-Secret-Key:        <votre_webhook_secret>          ← toujours présent
+  X-Webhook-Signature: <hmac_sha256_hex>               ← optionnel (HMAC activé)
+  X-Webhook-Timestamp: <unix_timestamp_ms>             ← optionnel (HMAC activé)
 ```
 
-### Validation de la signature (2 méthodes)
-
-#### Méthode 1 : HMAC-SHA256 (recommandée, si `X-Webhook-Signature` présent)
+### Validation signature (HMAC + fallback static-key)
 
 ```typescript
-import crypto from "crypto";
+const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000;
 
-function verifyHmacSignature(rawBody: string, secret: string, signature: string, timestamp: string): boolean {
-  // 1. Replay protection — rejeter si timestamp > 5 minutes
-  const ts = parseInt(timestamp, 10);
-  if (isNaN(ts) || Math.abs(Date.now() - ts) > 5 * 60 * 1000) {
-    return false;
+function verifyWebhookSignature(rawBody: string | Buffer, headers: Record<string, string | undefined>): boolean {
+  const signature = headers["x-webhook-signature"];
+  const timestamp = headers["x-webhook-timestamp"];
+
+  if (signature && timestamp) {
+    // 1. Replay protection
+    const ts = parseInt(timestamp, 10);
+    if (isNaN(ts) || Math.abs(Date.now() - ts) > WEBHOOK_TIMESTAMP_TOLERANCE_MS) return false;
+
+    // 2. HMAC-SHA256(secret, "<timestamp>.<rawBody>")
+    const body = Buffer.isBuffer(rawBody) ? rawBody.toString("utf-8") : rawBody;
+    const expected = crypto.createHmac("sha256", BICTORYS_WEBHOOK_SECRET)
+      .update(`${timestamp}.${body}`).digest("hex");
+
+    // 3. Length-guard puis timing-safe (sinon throw asymétrique = leak côté timing)
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expected);
+    if (sigBuf.length !== expBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expBuf);
   }
-  // 2. Calculer le HMAC
-  const expected = crypto.createHmac("sha256", secret)
-    .update(`${timestamp}.${rawBody}`)
-    .digest("hex");
-  // 3. Comparaison timing-safe
-  try {
-    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-  } catch {
-    return false;
+
+  // Fallback : static x-secret-key
+  const secretKey = headers["x-secret-key"];
+  if (secretKey) {
+    const a = Buffer.from(secretKey);
+    const b = Buffer.from(BICTORYS_WEBHOOK_SECRET);
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
   }
+  return false;
 }
 ```
 
-#### Méthode 2 : Static key (fallback, si pas de HMAC)
+### Express : raw body AVANT json (CRITIQUE)
 
 ```typescript
-function verifyStaticKey(secretKeyHeader: string, expectedSecret: string): boolean {
-  try {
-    return crypto.timingSafeEqual(
-      Buffer.from(secretKeyHeader),
-      Buffer.from(expectedSecret)
-    );
-  } catch {
-    return false;
-  }
+// L'ordre du middleware compte — Bictorys signe les bytes bruts.
+app.use("/api/webhooks", express.raw({ type: "application/json" }));
+app.use(express.json());     // ← APRÈS le raw
+```
+
+### Anti-fraude null-safe (hotfix prod fd88421)
+
+Bictorys peut envoyer `amount: null` / `currency: null` (changement de format). **Skip l'anti-fraude dans ce cas plutôt que mark FAILED** — la money est déjà débitée côté Wave/OM, et `paymentReference` suffit à identifier l'order :
+
+```typescript
+if (amount == null || currency == null) {
+  logger.warn(`Webhook: amount/currency absent ref=${paymentReference} amount=${amount} (${typeof amount}) — skip anti-fraude`);
+} else if (amount !== order.amount || currency !== order.currency) {
+  logger.warn(`Webhook: mismatch ref=${paymentReference} expected=${order.amount} got=${amount}`);
+  await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "FAILED" } });
+  res.status(200).json({ received: true });
+  return;
 }
 ```
 
-**⚠️ IMPORTANT** : Toujours utiliser `crypto.timingSafeEqual()`, jamais `===` pour la comparaison de secrets.
+### Idempotency : triple protection
 
-### Payload du webhook
+Le webhook peut être livré 2× (réseau, retry Bictorys). Trois lignes de défense :
 
-```json
-{
-  "id": "33e1c83b-7cb0-437b-bc50-a7a58e5660ad",
-  "merchantId": "d2d2053b-638d-4133-957e-3caf63e6b79c",
-  "type": "payment",
-  "amount": 5000,
-  "currency": "XOF",
-  "paymentReference": "ORDER-ABC123",
-  "customerId": "fbd2053b-...",
-  "customerObject": {
-    "id": "fbd2053b-...",
-    "name": "Amadou Fall",
-    "phone": 221771234567,
-    "email": "amadou@example.com",
-    "address": "",
-    "city": "Dakar",
-    "postalCode": 0,
-    "country": "SN",
-    "locale": "fr-FR",
-    "createdAt": "2026-03-01T12:00:00Z",
-    "updatedAt": "2026-03-01T12:00:00Z"
-  },
-  "pspName": "wave_money",
-  "paymentMeans": "+221 *** ** 67",
-  "paymentChannel": "Terminal",
-  "merchantFees": 150,
-  "customerFees": 0,
-  "merchantReference": "ORDER-ABC123",
-  "status": "succeeded",
-  "timestamp": "2026-03-01T12:05:00Z"
+1. **Postgres unique constraint** sur `WebhookLog (externalId, eventType)` — la 2ème écriture lève P2002
+2. **Serializable isolation** — Postgres SSI abort le perdant en cas de race
+3. **Notification.dedupeKey @unique** sur le path post-commit — si une notification est dispatchée 2× malgré tout
+
+```typescript
+// Triple-protected. CRITIQUE : tx body MUST stay <2s — Neon serverless ceiling.
+// Aucun email, aucune notif, aucun appel HTTP DANS la tx.
+const result = await prisma.$transaction(async (tx) => {
+  await tx.webhookLog.upsert({
+    where: { externalId_eventType: { externalId: transactionId, eventType: status } },
+    create: { provider: "bictorys", eventType: status, externalId: transactionId, payload },
+    update: {},     // no-op — l'unique constraint a déjà gagné
+  });
+  // ... order.update, customer.updateMany, etc.
+}, { isolationLevel: "Serializable" });
+
+// POST-commit (hors tx) : dispatcher notif, envoyer email.
+await fireDonationReceived(...);
+```
+
+### TOUJOURS retourner 200
+
+Même en cas d'erreur interne. Sinon Bictorys retentera indéfiniment et amplifiera la charge.
+
+```typescript
+try { /* logique */ } catch (err) {
+  logger.error("Webhook error", err);
+}
+res.status(200).json({ received: true });
+```
+
+---
+
+## 8. Circuit breaker — protéger l'API contre les ratés Bictorys
+
+```typescript
+const WINDOW_MS = 30_000;             // fenêtre glissante
+const COOLDOWN_MS = 60_000;           // OPEN duration
+const FAILURE_THRESHOLD = 5;
+```
+
+```
+État machine :
+  CLOSED    → [5 failures en 30s]   → OPEN
+  OPEN      → [60s écoulés]         → HALF_OPEN  (un seul appel autorisé)
+  HALF_OPEN → [1 success]           → CLOSED
+  HALF_OPEN → [1 failure]           → OPEN       (reset cooldown 60s)
+```
+
+Quand OPEN, `POST /api/orders` short-circuit en **HTTP 503** sans appeler Bictorys. Évite de cramer le quota / d'amplifier la panne (P07).
+
+**Limitation v1** : single-instance (state in-memory). Multi-instance → swap pour Redis (`INCR` + TTL key).
+
+---
+
+## 9. Polling fallback — serveur (cache 30s)
+
+Le webhook est la source nominale ; le polling est un filet de sécurité (réseau flaky, dev local sans tunnel public). Pour ne pas harceler Bictorys, **cache 30s par `transactionId`**, cap 10 000 entrées, FIFO eviction.
+
+```typescript
+const cache = new Map<string, { result: { status: string } | null; expiresAt: number }>();
+const TTL = 30_000;
+const MAX_SIZE = 10_000;
+
+function set(externalId: string, result: { status: string } | null) {
+  if (cache.size >= MAX_SIZE) {
+    const iter = cache.keys();
+    for (let i = 0; i < 1000; i++) { const k = iter.next().value; if (k) cache.delete(k); }
+  }
+  cache.set(externalId, { result, expiresAt: Date.now() + TTL });
 }
 ```
 
-### Champs clés
-
-| Champ | Type | Description |
-|---|---|---|
-| `id` | `string` (UUID) | ID unique de la transaction Bictorys |
-| `status` | `string` | `"succeeded"`, `"failed"`, `"cancelled"`, `"authorized"`, `"reversed"` |
-| `paymentReference` | `string` | Votre référence de commande (celle envoyée à la création) |
-| `amount` | `integer` | Montant en FCFA |
-| `currency` | `string` | `"XOF"` |
-| `pspName` | `string` | Opérateur utilisé (`"wave_money"`, `"orange_money"`, etc.) |
-| `merchantFees` | `integer` | Frais Bictorys facturés au marchand |
-| `customerFees` | `integer` | Frais facturés au client |
-| `merchantReference` | `string` | Même valeur que `paymentReference` |
-| `timestamp` | `string` (ISO 8601) | Date/heure de la transaction |
-
-**⚠️ Note** : `customerObject.phone` est un **nombre** (pas une string) dans le webhook, contrairement à ce que vous envoyez dans la charge.
-
-### Bonnes pratiques d'implémentation webhook
-
-```
-1. Recevoir le body en raw Buffer (AVANT le JSON parser global)
-   → express.raw() sur la route webhook, AVANT express.json()
-
-2. Vérifier la signature (HMAC ou static key)
-
-3. Logger le webhook en base AVANT tout traitement (debug + audit)
-
-4. Anti-fraude : vérifier que amount + currency correspondent à votre commande
-
-5. Idempotency : ne pas traiter deux fois le même webhook
-   → Table de logs avec transactionId + status "processed"
-   → Transaction sérialisable (Serializable isolation level)
-
-6. TOUJOURS retourner HTTP 200 — même en cas d'erreur interne
-   → Sinon Bictorys réessaiera indéfiniment
-```
-
-### Implémentation Express.js
+**Important** : si le poll détecte PAID, marquer l'order PAID **dans une transaction Serializable** ET upsert un `WebhookLog` avec `eventType: "succeeded_poll_fallback"` — sinon le webhook qui arrive 30s plus tard re-déclenchera les notifications.
 
 ```typescript
-import express from "express";
-import crypto from "crypto";
-
-const app = express();
-
-// ⚠️ ORDRE CRITIQUE : raw AVANT json
-app.use("/webhooks", express.raw({ type: "application/json" }));
-app.use(express.json());
-
-app.post("/webhooks/bictorys", async (req, res) => {
-  try {
-    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString("utf-8") : req.body;
-    const signature = req.headers["x-webhook-signature"] as string | undefined;
-    const timestamp = req.headers["x-webhook-timestamp"] as string | undefined;
-    const secretKey = req.headers["x-secret-key"] as string | undefined;
-
-    // Vérifier signature
-    let isValid = false;
-    if (signature && timestamp) {
-      isValid = verifyHmacSignature(rawBody, WEBHOOK_SECRET, signature, timestamp);
-    } else if (secretKey) {
-      isValid = verifyStaticKey(secretKey, WEBHOOK_SECRET);
-    }
-    if (!isValid) {
-      console.error("Webhook signature invalid");
-      res.status(200).json({ received: true }); // 200 quand même
-      return;
-    }
-
-    const payload = JSON.parse(rawBody);
-    const { id, status, paymentReference, amount, currency } = payload;
-
-    // Logger, vérifier anti-fraude, traiter idempotent...
-    // ... votre logique métier ici ...
-
-    res.status(200).json({ received: true });
-  } catch (error) {
-    console.error("Webhook error:", error);
-    res.status(200).json({ received: true }); // TOUJOURS 200
-  }
+await tx.webhookLog.upsert({
+  where: { externalId_eventType: { externalId, eventType: "succeeded_poll_fallback" } },
+  create: { provider: "bictorys", eventType: "succeeded_poll_fallback",
+            externalId, payload: { source: "polling", amount: order.amount }, status: "processed" },
+  update: {},
 });
 ```
 
+**Trust status only** depuis la migration §6 (l'amount n'est plus dans la réponse). L'anti-fraude reste webhook-side uniquement.
+
 ---
 
-## 7. Créer un retrait (Payout)
+## 10. Polling fallback — client (circuit breaker + stop-on-404)
 
-Les payouts permettent d'envoyer de l'argent vers un compte mobile money. En mars 2026, seuls **Wave SN** et **Orange Money SN** supportent les payouts (`transferEnabled: true`).
-
-### Endpoint
-
-```
-POST {BICTORYS_API_URL}/pay/v1/payouts?payment_type={type}
+```typescript
+const POLL_INTERVAL_MS = 3_000;       // 3s
+const MAX_POLLS = 40;                 // 2 min total
+const MAX_CONSECUTIVE_ERRORS = 5;     // circuit breaker
 ```
 
-### Headers
+```typescript
+React.useEffect(() => {
+  if (!ref) return;
+  if (status !== "PENDING") return;
+  if (attempts >= MAX_POLLS) { setStatus("TIMEOUT"); return; }
+  if (errors >= MAX_CONSECUTIVE_ERRORS) { setStatus("TIMEOUT"); return; }
 
-| Header | Valeur |
-|---|---|
-| `X-API-Key` | `BICTORYS_PRIVATE_KEY` (clé **privée** — obligatoire) |
-| `Content-Type` | `application/json` |
-| `accept` | `application/json` |
-| `idempotency-key` | UUID unique par retrait (empêche les doublons) |
+  let cancelled = false;
+  const id = setTimeout(async () => {
+    try {
+      const data = await api<{ status: string }>(`/api/orders/${ref}/status`);
+      if (cancelled) return;
+      setErrors(0);   // reset circuit breaker sur chaque succès
+      if (data.status === "PAID" || data.status === "FAILED" || data.status === "EXPIRED") {
+        setStatus(data.status);
+      } else {
+        setAttempts(n => n + 1);
+      }
+    } catch (err) {
+      if (cancelled) return;
+      // Stop immédiat sur 404 — order n'existe pas, état terminal.
+      if (err instanceof ApiError && err.status === 404) {
+        setErrors(MAX_CONSECUTIVE_ERRORS);
+        return;
+      }
+      setErrors(n => n + 1);
+      setAttempts(n => n + 1);
+    }
+  }, POLL_INTERVAL_MS);
 
-**⚠️ La clé publique retourne 401 sur les payouts. Seule la clé privée fonctionne.**
-
-### Payment types payout
-
-| Valeur | Description |
-|---|---|
-| `wave_money` | Retrait vers Wave SN |
-| `orange_money` | Retrait vers Orange Money SN |
-
-### Body (JSON)
-
-```json
-{
-  "amount": 10000,
-  "currency": "XOF",
-  "country": "SN",
-  "customerObject": {
-    "name": "Amadou Fall",
-    "phone": "+221771234567",
-    "email": "amadou@example.com",
-    "country": "SN",
-    "locale": "fr-FR"
-  },
-  "transactionType": "payment",
-  "paymentReason": "Appel de fonds",
-  "merchantReference": "WD-ABC123",
-  "merchant": {
-    "secretCode": "1234"
-  }
-}
+  return () => { cancelled = true; clearTimeout(id); };
+}, [ref, status, attempts, errors]);
 ```
 
-### Paramètres du body
+**À NE PAS pause quand l'onglet est caché** (waiting card paiement) : l'user peut scanner un QR sur desktop puis payer sur mobile — le desktop doit redirect vers /merci quand il redevient visible. Sur la page /merci elle-même, par contre, on peut pause (cf. `document.visibilityState`).
 
-| Champ | Type | Requis | Description |
-|---|---|---|---|
-| `amount` | `integer` | ✅ | Montant en FCFA (entier) |
-| `currency` | `string` | ✅ | `"XOF"` |
-| `country` | `string` | ✅ | `"SN"` (seul pays payout activé en mars 2026) |
-| `customerObject` | `object` | ✅ | Destinataire du payout |
-| `customerObject.phone` | `string` | ✅ | Téléphone format `"+221771234567"` |
-| `customerObject.name` | `string` | ✅ | Nom du destinataire |
-| `transactionType` | `string` | ✅ | `"payment"` |
-| `paymentReason` | `string` | ✅ | Motif du retrait |
-| `merchantReference` | `string` | ✅ | Votre référence unique |
-| `merchant.secretCode` | `string` | ✅ | `BICTORYS_MERCHANT_SECRET_CODE` |
+---
 
-### Réponse succès — `200 OK` ou `201 Created`
+## 11. ⚠️ TikTok & in-app browsers (audits 008/009)
 
-```json
-{
-  "id": "abc123-def456",
-  "merchantId": "d2d2053b-...",
-  "amount": -10000,
-  "merchantFee": 150,
-  "customerFee": 0,
-  "currency": "XOF",
-  "paymentReference": "...",
-  "customerName": "Amadou Fall",
-  "customerPhone": "221771234567",
-  "customerCountry": "SN",
-  "pspName": "wave_money",
-  "merchantReference": "WD-ABC123",
-  "status": 0,
-  "createdAt": "2026-03-01T12:00:00Z"
-}
-```
+**À LIRE AVANT DE TOUCHER AU FLOW PAIEMENT.** TikTok bloque toutes les redirections sortantes. Plusieurs approches ont été tentées et **revertées** — ne pas refaire la même erreur.
 
-**Notes** :
-- `amount` est **négatif** (argent sortant du marchand)
-- `status: 0` = succès
-- `merchantFee` = frais Bictorys sur le transfert
+### Matrice de comportement WebView
 
-### Erreurs courantes payout
-
-| HTTP | Body contient | Signification |
+| Méthode | Instagram / FB | TikTok |
 |---|---|---|
-| `401` | — | Mauvaise clé (utiliser PRIVATE_KEY, pas API_KEY) |
-| `400` | `"balance"` | Solde Bictorys insuffisant |
-| `400` | `"plafon"` ou `"limit"` | Plafond mobile money du destinataire atteint |
-| `400` | `"phone"` | Numéro de téléphone invalide |
-| `400` | `"secretCode"` | Code marchand incorrect |
-| `500+` | — | Erreur serveur Bictorys |
+| `<a target="_blank">` | ✅ Ouvre Safari | ❌ Bloqué |
+| `window.location.href` (async) | ❌ | ❌ |
+| `window.location.href` (sur user click) | — | ❌ |
+| Server 302 redirect | — | ❌ |
+| 302 + URL Base64 | — | ❌ |
+| `navigator.share()` | ✅ | ✅ (seul échappatoire) |
 
-### Recommandations payout
+### Ce qui marche
 
-- Toujours envoyer un `idempotency-key` (UUID) pour éviter les double-envois
-- Mettre un **timeout de 30 secondes** sur la requête (les payouts peuvent être lents)
-- Gérer les réponses non-JSON (le WAF peut retourner du HTML)
-- Logger la réponse brute pour le debug
+```typescript
+// src/lib/redirect.ts — branch order CRITIQUE : TikTok first (specificity).
+// isInAppBrowser() détecte tous les WebViews dont TikTok ; tester TikTok d'abord.
+export async function openPaymentUrl(url: string): Promise<"navigated" | "shared" | "copied" | "unsupported"> {
+  if (!isAllowedPayDomain(url)) return "unsupported";
+
+  if (isTikTokBrowser()) {
+    // Essayer navigator.share()
+    if (navigator.share) {
+      try { await navigator.share({ url, title: "Lien de paiement" }); return "shared"; }
+      catch { /* user a cancel */ }
+    }
+    // Fallback : copier dans clipboard, afficher un toast à l'user
+    await navigator.clipboard.writeText(url);
+    return "copied";
+  }
+
+  if (isInAppBrowser()) {
+    // Meta : laisser le caller render <a target="_blank" rel="noopener noreferrer">
+    return "unsupported";
+  }
+
+  window.location.href = url;   // navigateur normal
+  return "navigated";
+}
+```
+
+### Proxy route (pour Meta + same-domain hop)
+
+`src/app/api/pay-redirect/route.ts` — wrapper qui prend une URL Base64-encodée et 302 vers la vraie cible. Utile pour Meta WebView qui supporte `<a target="_blank">` mais filtre certains query params longs.
+
+```typescript
+export async function GET(request: NextRequest) {
+  const encoded = request.nextUrl.searchParams.get("t");
+  if (!encoded) return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+
+  let url: string;
+  try { url = atob(encoded); }
+  catch { return NextResponse.json({ error: "Invalid encoding" }, { status: 400 }); }
+
+  // Allowlist obligatoire — voir §12.
+  const parsed = new URL(url);
+  if (!ALLOWED_DOMAINS.some(d => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`))) {
+    return NextResponse.json({ error: "Domain not allowed" }, { status: 400 });
+  }
+  return NextResponse.redirect(url, 302);
+}
+```
+
+### Approches revertées (audit-009)
+
+1. ❌ Retirer TikTok de `isInAppBrowser()` → interstitial bloque quand même
+2. ❌ `window.location.href` sur user-gesture click → bloqué
+3. ❌ Proxy `?url=pay.wave.com` → TikTok scanne les query params, bloqué
+4. ❌ Proxy + Base64 → bloqué depuis WebView TikTok aussi (le scan est plus profond qu'on pensait)
+5. ✅ `navigator.share()` + fallback clipboard → seule sortie viable
+
+### Détection WebView (utilitaires sealed)
+
+```typescript
+// src/lib/utils.ts — NE PAS modifier sans audit.
+export function isInAppBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  return /FBAN|FBAV|Instagram|TikTok|Line|Snapchat/i.test(ua);
+}
+export function isTikTokBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /TikTok|musically/i.test(navigator.userAgent);
+}
+```
 
 ---
 
-## 8. Moyens de paiement supportés
+## 12. Allowlist des domaines de redirection (à maintenir en double)
 
-### Endpoint pour lister vos opérateurs activés
+Deux listes **doivent rester synchronisées** : le proxy serveur et le validateur client.
+
+### Server (`src/app/api/pay-redirect/route.ts`)
+
+```typescript
+const ALLOWED_DOMAINS = [
+  "pay.wave.com",
+  "checkout.bfrpay.com",
+  "checkout.bfrpay.net",
+  "pay.bfrpay.com",
+  "bictorys.com",                            // couvre pay.bictorys.com + api.test.bictorys.com
+  "orange-money-prod-flowlinks.web.app",     // Firebase flow links Orange Money
+  "sugu.orange-sonatel.com",                 // Maxit
+];
+```
+
+### Client (`src/lib/redirect.ts`)
+
+```typescript
+const PAY_REDIRECT_ALLOWED_DOMAINS = [
+  "pay.wave.com",
+  "checkout.bfrpay.com",
+  "checkout.bfrpay.net",
+  "pay.bfrpay.com",
+  "bictorys.com",
+  "orange-money-prod-flowlinks.web.app",
+  "sugu.orange-sonatel.com",
+];
+
+function isAllowedPayDomain(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return PAY_REDIRECT_ALLOWED_DOMAINS.some(d =>
+      parsed.hostname === d || parsed.hostname.endsWith(`.${d}`));
+  } catch { return false; }
+}
+```
+
+**Règle** : tout nouveau domaine de paiement (nouveau opérateur, nouveau pays) doit être ajouté **dans les deux listes simultanément**. Ne jamais autoriser un domaine racine comme `web.app` (= tout Firebase Hosting).
+
+**Fallback gracieux** : si `isAllowedPayDomain` retourne `false`, afficher une "waiting card" avec QR + lien copiable au lieu de planter.
+
+---
+
+## 13. Normalisation pays & opérateurs
+
+### Codes pays Bictorys
+
+| Code | Pays | Indicatif tel |
+|---|---|---|
+| `SN` | Sénégal | +221 |
+| `CI` | Côte d'Ivoire | +225 |
+| `BK` | Burkina Faso | +226 ⚠️ (`BK`, pas `BF` comme ISO) |
+| `ML` | Mali | +223 |
+| `TG` | Togo | +228 |
+| `BJ` | Bénin | +229 |
+
+### Règles de normalisation
+
+```typescript
+function normalizeBictorysCountry(paymentType: string, country: string): string {
+  if (paymentType === "card") return "SN";                                  // carte = toujours SN
+  if (paymentType === "orange_money" && country === "BF") return "BK";      // OM Burkina spécial
+  return country;
+}
+```
+
+### Matrice pays × opérateurs (observée mars 2026)
+
+```typescript
+const ALL_COUNTRY_OPERATORS = {
+  SN: ["wave_money", "orange_money", "maxit", "moov"],
+  CI: ["wave_money", "orange_money", "mtn_money", "moov"],
+  BF: ["wave_money", "moov", "mobicash"],
+  ML: ["orange_money", "mobicash"],
+  TG: ["moov", "togocell"],
+  BJ: ["mtn_money", "moov"],
+};
+```
+
+**Vérifier les opérateurs réellement activés sur votre compte** via :
 
 ```
 GET {BICTORYS_API_URL}/onboarding/v1/payment-methods/me
 Header: X-API-Key: BICTORYS_PRIVATE_KEY
 ```
 
-### Catalogue complet Bictorys (mars 2026)
-
-| Nom interne | payment_type | Pays | Pay-in | Pay-out | Téléphone requis |
-|---|---|---|---|---|---|
-| `wave_money` | `wave_money` | **SN** | ✅ | ✅ | non |
-| `wave_money_civ` | `wave_money` | **CI, BF** | ✅ | ❌ | oui |
-| `orange_money_sn` | `orange_money` | **SN** | ✅ | ✅ | non |
-| `orange_money_civ` | `orange_money` | **CI** | ✅ | ❌ | oui |
-| `orange_money_ml` | `orange_money` | **ML** | ✅ | ❌ | oui |
-| `orange_money_bk` | `orange_money` | **BK** | ✅ | ❌ | oui |
-| `mtn_money` | `mtn_money` | **CI, BJ** | ✅ | ❌ | oui |
-| `moov` | `moov` | **TG, CI, BF, BJ** | ✅ | ❌ | oui |
-| `togocell` | `togocell` | **TG** | ✅ | ❌ | oui |
-| `mobicash` | `mobicash` | **BF, ML** | ✅ | ❌ | oui |
-| `maxit` | `maxit` | **SN** | ✅ | ❌ | non |
-| `card` | `card` | **SN, CI** | ✅ | ❌ | non |
-
-### Résultats des tests réels (mars 2026, environnement test)
-
-| Opérateur + Pays | Résultat | Remarque |
-|---|---|---|
-| Wave SN | ✅ | — |
-| Wave CI | ✅ | — |
-| Orange Money SN | ✅ | — |
-| Orange Money CI (OTP) | ✅ | Requiert `otp` dans le body |
-| MTN Money CI | ✅ | — |
-| Card SN | ✅ | `&payment_category=card` |
-| Card CI | ✅ | `&payment_category=card` |
-| Card BF | ✅ | `&payment_category=card` |
-| Wave BF | ❌ | `"wrong payment type"` |
-| Orange Money BK (Burkina) | ❌ | `"wrong payment type"` |
-| Orange Money ML | ❌ | `"country not available"` |
-| MTN Money BJ | ❌ | `"country not available"` |
-| Moov CI | ❌ | `"Unexpected value 'moov'"` |
-| Moov TG/BF/BJ | ❌ | `"country not available"` |
-| Togocell TG | ❌ | `"country not available"` |
-| Mobicash BF/ML | ❌ | `"wrong payment type"` / `"country not available"` |
-
-**Conclusion** : en mars 2026, les opérateurs fonctionnels en sandbox sont Wave (SN, CI), Orange Money (SN, CI), MTN Money (CI), et Carte (SN, CI, BF). Les autres pays/opérateurs retournent des erreurs — à vérifier sur le compte production.
-
-**Note** : la carte fonctionne pour **tous les pays** car Bictorys normalise le pays en interne. Vous pouvez toujours envoyer `country: "SN"` pour les paiements carte quel que soit le pays du client.
-
----
-
-## 9. Normalisation pays
-
-### Codes pays Bictorys
-
-| Code Bictorys | Pays | Indicatif téléphonique |
-|---|---|---|
-| `SN` | Sénégal | +221 |
-| `CI` | Côte d'Ivoire | +225 |
-| `BK` | Burkina Faso | +226 |
-| `ML` | Mali | +223 |
-| `TG` | Togo | +228 |
-| `BJ` | Bénin | +229 |
-
-**⚠️ Le Burkina Faso utilise `"BK"` chez Bictorys, pas `"BF"` (code ISO standard)**. C'est une convention Bictorys spécifique.
-
-### Pays supportés par opérateur
-
-```
-wave_money:    ["SN", "CI", "BF"]     ← BF fonctionne pas encore en test (mars 2026)
-orange_money:  ["SN", "CI", "BK", "ML"]  ← BK = Burkina chez Bictorys
-mtn_money:     ["CI", "BJ"]
-moov:          ["TG", "CI", "BF", "BJ"]
-togocell:      ["TG"]
-mobicash:      ["BF", "ML"]
-maxit:         ["SN"]
-card:          ["SN", "CI"]           ← mais fonctionne pour tous les pays en pratique
-```
-
-### Normalisation recommandée
-
-Avant d'envoyer le pays à Bictorys, appliquez ces règles :
-
-```
-1. Si payment_type === "card" → toujours envoyer "SN"
-   (Bictorys normalise en interne, pas besoin du vrai pays)
-
-2. Si payment_type === "orange_money" ET pays === "BF" → envoyer "BK"
-   (Convention Bictorys pour Burkina Faso sur Orange Money)
-
-3. Sinon → envoyer le code pays tel quel
-```
-
-### Détection du pays par indicatif téléphonique
-
-Pour détecter automatiquement le pays du client à partir de son numéro :
-
-```
-+221... → SN (Sénégal)
-+225... → CI (Côte d'Ivoire)
-+226... → BF (Burkina Faso)
-+223... → ML (Mali)
-+228... → TG (Togo)
-+229... → BJ (Bénin)
-```
-
----
-
-## 10. Erreurs courantes & Debugging
-
-### ❌ WAF 403 — Réponse HTML au lieu de JSON
-
-**Cause** : Rate limit AWS WAF. La réponse est du HTML `<html>... Forbidden ...`.
-**Solution** : Retry avec backoff exponentiel (voir §3). En test, espacer les requêtes de 5 secondes.
-
-### ❌ 403 JSON — `"Access right not sufficient"`
-
-**Cause** : Mauvaise clé. Clé publique utilisée pour un payout, ou clé privée d'un autre compte.
-**Solution** : Vérifier que vous utilisez la bonne clé pour l'opération (voir §2).
-
-### ❌ 400 — `"wrong payment type"`
-
-**Cause** : L'opérateur n'est pas activé pour ce pays sur votre compte Bictorys.
-**Solution** : Vérifier via `GET /onboarding/v1/payment-methods/me`.
-
-### ❌ 400 — `"country not available"`
-
-**Cause** : Le pays n'est pas activé pour cet opérateur sur votre compte.
-**Solution** : Contacter Bictorys pour activer le pays.
-
-### ❌ `ErrorRedirectUrl` ne fonctionne pas
-
-**Cause** : Mauvaise casse. Bictorys attend `ErrorRedirectUrl` (E majuscule).
-**Solution** : S'assurer que le E est en majuscule dans le body.
-
-### ❌ Webhook non reçu
-
-**Causes possibles** :
-- Webhook pas configuré (ou configuré en test mais pas en prod)
-- URL non accessible depuis Internet
-- Secret Key ne correspond pas
-- Le mode (test/prod) ne correspond pas aux clés API utilisées
-
-**Solution** : Vérifier dans le dashboard Bictorys → Developers → Webhooks que l'URL et le secret sont corrects pour le bon environnement.
-
-### ❌ 500 sur `GET /charges/{id}` en test
-
-**Cause** : Comportement connu de la sandbox Bictorys.
-**Solution** : Se baser sur les webhooks en environnement test. Le status check fonctionne en production.
-
-### ❌ OTP invalide / expiré (Orange Money CI)
-
-**Cause** : Le code OTP expire rapidement.
-**Solution** : L'utilisateur doit recomposer `#144*82#` pour générer un nouveau code.
-
-### ❌ Réponse 200 vide (pas de JSON)
-
-**Cause** : WAF en mode test qui bloque silencieusement les requêtes trop rapides.
-**Solution** : Ajouter un délai de 5 secondes entre les requêtes en test.
-
----
-
-## 11. Checklist de mise en production
-
-### Dashboard Bictorys
-
-- [ ] Mode **Production** activé dans le dashboard
-- [ ] Clés API de production obtenues (pas de préfixe `test_`)
-- [ ] Webhook configuré en mode production avec la bonne URL et le bon secret
-- [ ] Micro-paiement test validé (500 FCFA) en production
-
-### Variables d'environnement
-
-- [ ] `BICTORYS_API_URL` → `https://api.bictorys.com` (pas `api.test.bictorys.com`)
-- [ ] `BICTORYS_API_KEY` → clé publique production (préfixe `public-`, pas `test_public-`)
-- [ ] `BICTORYS_PRIVATE_KEY` → clé privée production (préfixe `secret-`, pas `test_secret-`)
-- [ ] `BICTORYS_WEBHOOK_SECRET` → secret webhook production
-- [ ] `BICTORYS_MERCHANT_SECRET_CODE` → code marchand (si payouts utilisés)
-
-### Sécurité
-
-- [ ] Webhook : validation signature (HMAC-SHA256 ou static key avec `timingSafeEqual`)
-- [ ] Anti-fraude webhook : vérification montant + devise
-- [ ] Idempotency webhook : transaction sérialisable + table de logs
-- [ ] Retry WAF 403 : backoff exponentiel implémenté
-- [ ] Payout : `idempotency-key` envoyé + timeout 30s
-- [ ] `express.raw()` AVANT `express.json()` pour les webhooks
-- [ ] Toujours retourner 200 sur le webhook (même en cas d'erreur)
-- [ ] Clé privée jamais exposée côté client
-- [ ] Polling fallback implémenté si webhook n'arrive pas
-
----
-
-## 12. Exemples de code complets
-
-### Provider TypeScript complet (Node.js / Express)
+### Détection auto du pays par tel
 
 ```typescript
-// bictorys-provider.ts
-import crypto from "crypto";
-
-const API_URL = process.env.BICTORYS_API_URL!;
-const API_KEY = process.env.BICTORYS_API_KEY!;
-const PRIVATE_KEY = process.env.BICTORYS_PRIVATE_KEY!;
-const WEBHOOK_SECRET = process.env.BICTORYS_WEBHOOK_SECRET!;
-const MERCHANT_SECRET_CODE = process.env.BICTORYS_MERCHANT_SECRET_CODE!;
-
-// ─── Créer un paiement ───
-
-interface CreateChargeParams {
-  amount: number;
-  currency: "XOF";
-  country: string;
-  paymentType: string;
-  paymentReference: string;
-  successRedirectUrl: string;
-  errorRedirectUrl: string;
-  customer?: { name: string; phone: string; email: string; country: string };
-  otp?: string;
-}
-
-interface ChargeResult {
-  transactionId: string;
-  redirectUrl: string;
-  link?: string;
-  qrCode?: string;
-  message?: string;
-}
-
-async function createCharge(params: CreateChargeParams): Promise<ChargeResult> {
-  const queryParams = params.paymentType === "card"
-    ? `payment_type=card&payment_category=card`
-    : `payment_type=${params.paymentType}`;
-
-  const url = `${API_URL}/pay/v1/charges?${queryParams}`;
-  const body: Record<string, unknown> = {
-    amount: params.amount,
-    currency: params.currency,
-    country: params.country,
-    paymentReference: params.paymentReference,
-    successRedirectUrl: params.successRedirectUrl,
-    ErrorRedirectUrl: params.errorRedirectUrl, // ⚠️ E majuscule
-    customerObject: params.customer,
-  };
-  if (params.otp) body.otp = params.otp;
-
-  const MAX_RETRIES = 3;
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    if (attempt > 0) {
-      await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
-    }
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "X-Api-Key": API_KEY, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (response.ok) return await response.json();
-
-    const errorText = await response.text();
-    if (response.status === 403 && errorText.includes("Forbidden") && attempt < MAX_RETRIES) {
-      continue; // WAF → retry
-    }
-    throw new Error(`Bictorys charge error (${response.status}): ${errorText}`);
-  }
-  throw new Error("Bictorys charge: max retries reached");
-}
-
-// ─── Vérifier le statut ───
-
-async function checkChargeStatus(transactionId: string): Promise<string> {
-  const response = await fetch(`${API_URL}/pay/v1/charges/${transactionId}`, {
-    headers: { "X-Api-Key": API_KEY },
-  });
-  if (!response.ok) throw new Error(`Status check error: ${response.status}`);
-  const data = await response.json();
-  return data.status; // "succeeded", "pending", "failed", etc.
-}
-
-// ─── Créer un payout ───
-
-interface PayoutParams {
-  amount: number;
-  paymentType: "wave_money" | "orange_money";
-  phone: string;
-  name: string;
-  email: string;
-  merchantReference: string;
-}
-
-async function createPayout(params: PayoutParams, idempotencyKey: string) {
-  const url = `${API_URL}/pay/v1/payouts?payment_type=${params.paymentType}`;
-  const body = {
-    amount: params.amount,
-    currency: "XOF",
-    country: "SN",
-    customerObject: {
-      name: params.name,
-      phone: params.phone,
-      email: params.email,
-      country: "SN",
-      locale: "fr-FR",
-    },
-    transactionType: "payment",
-    paymentReason: "Appel de fonds",
-    merchantReference: params.merchantReference,
-    merchant: { secretCode: MERCHANT_SECRET_CODE },
-  };
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "X-API-Key": PRIVATE_KEY,
-        "Content-Type": "application/json",
-        accept: "application/json",
-        "idempotency-key": idempotencyKey,
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-
-    if (response.ok) return { success: true, data: await response.json() };
-    const errorText = await response.text();
-    return { success: false, error: errorText, httpStatus: response.status };
-  } catch (error) {
-    clearTimeout(timeout);
-    throw error;
-  }
-}
-
-// ─── Vérifier un webhook ───
-
-function verifyWebhook(rawBody: string, headers: Record<string, string | undefined>): boolean {
-  const signature = headers["x-webhook-signature"];
-  const timestamp = headers["x-webhook-timestamp"];
-  const secretKey = headers["x-secret-key"];
-
-  if (signature && timestamp) {
-    const ts = parseInt(timestamp, 10);
-    if (isNaN(ts) || Math.abs(Date.now() - ts) > 5 * 60 * 1000) return false;
-    const expected = crypto.createHmac("sha256", WEBHOOK_SECRET)
-      .update(`${timestamp}.${rawBody}`).digest("hex");
-    try {
-      return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
-    } catch { return false; }
-  }
-
-  if (secretKey) {
-    try {
-      return crypto.timingSafeEqual(Buffer.from(secretKey), Buffer.from(WEBHOOK_SECRET));
-    } catch { return false; }
-  }
-
-  return false;
-}
-```
-
-### Normalisation pays
-
-```typescript
-function normalizeBictorysCountry(paymentType: string, country: string): string {
-  if (paymentType === "card") return "SN";
-  if (paymentType === "orange_money" && country === "BF") return "BK";
-  return country;
-}
-
 function detectCountryFromPhone(phone: string): string | null {
   if (phone.startsWith("+221") || phone.startsWith("221")) return "SN";
   if (phone.startsWith("+225") || phone.startsWith("225")) return "CI";
@@ -1000,5 +727,181 @@ function detectCountryFromPhone(phone: string): string | null {
 
 ---
 
-*Dernière mise à jour : mars 2026*
-*Basé sur des tests réels avec Bictorys API v1 — environnements test et production*
+## 14. Payouts — retraits vers mobile money
+
+**Pas de webhook pour les payouts** — la réponse synchrone décide COMPLETED / FAILED. En mars 2026 : seuls **Wave SN** et **Orange Money SN** supportent les payouts (`transferEnabled: true`).
+
+### Endpoint
+
+```
+POST {BICTORYS_API_URL}/pay/v1/payouts?payment_type={wave_money|orange_money}
+Headers:
+  X-API-Key:        {BICTORYS_PRIVATE_KEY}            ← clé PRIVÉE obligatoire
+  Content-Type:     application/json
+  accept:           application/json
+  Idempotency-Key:  {UUID-unique-par-retrait}
+```
+
+⚠️ La clé publique retourne 401 ici. Toujours envoyer `Idempotency-Key` (UUID v4) pour éviter les double-envois.
+
+### Body
+
+```json
+{
+  "amount": 10000,
+  "currency": "XOF",
+  "country": "SN",
+  "customerObject": {
+    "name":  "Amadou Fall",
+    "phone": "+221771234567",
+    "country": "SN",
+    "locale":  "fr-FR"
+  },
+  "transactionType":   "payment",
+  "paymentReason":     "Payout",
+  "merchantReference": "WD-ABC123",
+  "merchant": { "secretCode": "1234" }
+}
+```
+
+### Réponse 200/201
+
+```json
+{
+  "id": "abc123-def456",
+  "amount": -10000,
+  "merchantFee": 150,
+  "status": 0,
+  "createdAt": "2026-03-01T12:00:00Z"
+}
+```
+
+`amount: -10000` → NÉGATIF (argent sortant). `status: 0` → succès.
+
+### Implémentation (timeout 30s, AbortController)
+
+```typescript
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 30_000);
+try {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "X-API-Key": BICTORYS_PRIVATE_KEY,
+      "Content-Type": "application/json",
+      "accept": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(body),
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+  if (response.ok) return { success: true, data: await response.json(), idempotencyKey };
+  return { success: false, error: await response.text(), httpStatus: response.status, idempotencyKey };
+} catch (err) {
+  clearTimeout(timeout);
+  // Network/timeout — DO NOT retry automatiquement (risque double payout).
+  // Re-essayer manuellement via la même Idempotency-Key.
+  throw err;
+}
+```
+
+### Erreurs courantes payout
+
+| HTTP | Body | Cause |
+|---|---|---|
+| `401` | — | Mauvaise clé (publique au lieu de privée) |
+| `400` | `"balance"` | Solde Bictorys insuffisant |
+| `400` | `"plafon"` / `"limit"` | Plafond mobile money atteint |
+| `400` | `"phone"` | Numéro invalide |
+| `400` | `"secretCode"` | Code marchand incorrect |
+
+### Limites connues
+
+- Pas de retry auto (risque double payout) — préférer un cron de réconciliation qui re-essaye avec la même `Idempotency-Key`
+- Pas de circuit breaker payout (audit 017)
+- État final connu uniquement par la réponse synchrone — stocker `httpStatus` + `rawResponse` pour le debug
+
+---
+
+## 15. Erreurs courantes & debugging
+
+| Symptôme | Cause | Fix |
+|---|---|---|
+| `403 HTML` (`<html>... Forbidden ...`) | WAF AWS rate-limit | Retry exponentiel 2s/4s/8s, en sandbox espacer les requêtes de 5s |
+| `403 JSON` (`Access right not sufficient`) | Mauvaise clé pour l'opération | Publique pour charges/status, privée pour payouts |
+| `400 wrong payment type` | Opérateur pas activé pour le pays sur votre compte | Vérifier via `GET /onboarding/v1/payment-methods/me` |
+| `400 country not available` | Pays pas activé pour cet opérateur | Contacter Bictorys |
+| `ErrorRedirectUrl` ne fonctionne pas | Mauvaise casse | E majuscule obligatoire |
+| Webhook non reçu | Config webhook test/prod désynchronisée OU URL inaccessible OU mauvais Secret Key | Vérifier dashboard, mode actif (test vs prod), et que les clés API matchent le mode |
+| `500` sur `/pay/v1/charges/{id}` | **Endpoint déprécié** | Migrer vers `/pay/v1/transactions/:id/status?by_charge_id=true` (§6) |
+| OTP invalide / expiré (OM CI) | OTP expire vite | User doit recomposer `#144*82#` |
+| Réponse 200 vide en sandbox | WAF bloque les requêtes trop rapides | 5s entre requêtes |
+| Order coincé en PENDING + webhook arrivé | Race tx Serializable abort | Vérifier `WebhookLog` ; si présent, le post-commit dispatch a peut-être échoué — re-jouer la notif |
+| Double notification donateur | Webhook + poll fallback ont tous deux marqué PAID | Vérifier que le poll fallback insère bien `WebhookLog` avec `eventType: "succeeded_poll_fallback"` |
+
+---
+
+## 16. Checklist production
+
+**Dashboard Bictorys**
+- [ ] Mode **Production** activé
+- [ ] Clés API prod obtenues (pas de prefix `test_`)
+- [ ] Webhook configuré en mode prod avec la bonne URL et le bon Secret Key
+- [ ] Micro-paiement test (500 FCFA) validé en prod
+
+**Variables d'environnement**
+- [ ] `BICTORYS_API_URL=https://api.bictorys.com`
+- [ ] `BICTORYS_API_KEY=public-...` (pas `test_public-`)
+- [ ] `BICTORYS_PRIVATE_KEY=secret-...`
+- [ ] `BICTORYS_WEBHOOK_SECRET=...`
+- [ ] `BICTORYS_MERCHANT_SECRET_CODE=...` (si payouts)
+
+**Sécurité backend**
+- [ ] `express.raw()` AVANT `express.json()` sur la route webhook
+- [ ] `verifyWebhookSignature` : HMAC-SHA256 + replay window 5 min + length-guard avant `timingSafeEqual`
+- [ ] Anti-fraude null-safe (`amount == null` → skip + warn)
+- [ ] Idempotency : `WebhookLog @@unique([externalId, eventType])` + tx Serializable + `Notification.dedupeKey`
+- [ ] PAID branch tx body **< 2s** (pas d'email, pas de notif, pas d'HTTP dans la tx — tout post-commit)
+- [ ] **Toujours retourner 200** sur le webhook (même en cas d'erreur interne)
+- [ ] Retry WAF 403 implémenté (charges)
+- [ ] Circuit breaker (5 fails / 30s → 60s OPEN)
+- [ ] Polling fallback serveur avec cache 30s + cap 10k entrées
+- [ ] Polling fallback insère `WebhookLog` avec `eventType: "succeeded_poll_fallback"` quand il marque PAID
+- [ ] Payout : `Idempotency-Key` UUID + timeout 30s + clé PRIVÉE
+- [ ] Clé privée jamais exposée côté client
+
+**Frontend**
+- [ ] Polling client : 3s × 40 polls + circuit breaker 5 erreurs + stop-on-404
+- [ ] Reset du compteur d'erreurs sur chaque succès
+- [ ] Continue de poller quand l'onglet est caché (waiting card paiement)
+- [ ] `openPaymentUrl()` testé sur TikTok, Instagram, Facebook, Safari, Chrome mobile
+- [ ] Allowlist `PAY_REDIRECT_ALLOWED_DOMAINS` synchronisée entre `redirect.ts` et `pay-redirect/route.ts`
+- [ ] Branch order TikTok-first dans `openPaymentUrl`
+- [ ] Fallback "waiting card" avec QR + clipboard copy si redirect fail
+
+**Auto-retry interdit sur les mutating verbs**
+- [ ] POST/PUT/PATCH/DELETE NE doivent PAS être retry automatiquement sur erreur réseau (risque double charge / double payout). Seuls GET/HEAD peuvent.
+
+---
+
+## 17. Historique des hotfixes (à ne pas refaire)
+
+| Commit | Type | Leçon |
+|---|---|---|
+| `da56715` | migration | `GET /pay/v1/charges/{id}` → 500 systématique. Migrer vers `/pay/v1/transactions/:id/status?by_charge_id=true`. Plus d'`amount` dans la réponse — anti-fraude exclusivement webhook |
+| `ed16ccb` | hotfix | Maxit utilise `sugu.orange-sonatel.com` — ajouter à l'allowlist (les 2 listes) |
+| `c890a2d` | hotfix | Allowlist proxy serveur DOIT matcher l'allowlist client — désynchronisation = redirect cassé |
+| `1bae62f` | hotfix | Orange Money utilise `orange-money-prod-flowlinks.web.app` (Firebase). Ne PAS autoriser `web.app` racine |
+| `354c565` | hotfix | Si `openPaymentUrl()` retourne `unsupported`, NE PAS planter — afficher la waiting card avec QR + lien copiable |
+| `fd88421` | hotfix | Bictorys peut envoyer `amount: null` dans le webhook. Skip anti-fraude au lieu de mark FAILED (paiement déjà débité) |
+
+**Audits à lire** :
+- `audits/audit-008-inapp-browser-payment.md` — comportement WebView Meta/Instagram/Facebook
+- `audits/audit-009-tiktok-payment-flow.md` — pourquoi TikTok est spécial, ce qui a été tenté et reverté
+- `audits/audit-017-payouts-reconciliation.md` — limitations payout
+
+---
+
+*Skill basé sur cagnottes.sn (Sénégal) — production avril 2026.*
+*Tous les patterns ci-dessus sont en service ; toutes les `Pièges critiques` ont causé un incident prod historique.*
