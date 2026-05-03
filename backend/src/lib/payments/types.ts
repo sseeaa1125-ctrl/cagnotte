@@ -1,7 +1,10 @@
-// cagnottes.sn v1 — bank cards removed. Only Senegalese mobile money
-// operators are used in production ("wave_money", "orange_money",
-// "moov" = Free Money). The other operators remain typed so upstream
-// code still compiles for future WAEMU markets.
+// cagnottes.sn — opérateurs supportés. La carte bancaire est ré-introduite
+// avec un workflow d'approbation par cagnotte (cf. fundraiserBlockConfigSchema
+// `cardStatus`). Les autres opérateurs WAEMU restent typés pour future expansion.
+//
+// `card` ⇒ flow Bictorys hosted-checkout 3DS (`&payment_category=card`,
+// country forcé à "SN"). Pas de phone requis côté API — Bictorys collecte
+// le PAN sur sa page checkout. Voir docs/BICTORYS_INTEGRATION.md §5.
 export type PaymentType =
   | "orange_money"
   | "wave_money"
@@ -9,7 +12,8 @@ export type PaymentType =
   | "mtn_money"
   | "moov"
   | "togocell"
-  | "mobicash";
+  | "mobicash"
+  | "card";
 
 export interface CreateTransactionParams {
   amount: number;

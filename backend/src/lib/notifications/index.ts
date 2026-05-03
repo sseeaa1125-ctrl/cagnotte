@@ -91,6 +91,8 @@ export function notifTypeToPrefKeys(
       return ["payouts", "paymentReceipts"];
     case "KYC_APPROVED":
     case "KYC_REJECTED":
+    case "CARD_APPROVED":
+    case "CARD_REJECTED":
       return ["kyc", "paymentReceipts"];
     case "SYSTEM":
       // Admin broadcasts — always delivered, no user pref opt-out

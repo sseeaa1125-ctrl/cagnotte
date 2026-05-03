@@ -177,6 +177,17 @@ export const fundraiserBlockConfigSchema = z.object({
     )
     .max(10)
     .optional(),
+  // Phase carte bancaire — workflow d'approbation par cagnotte.
+  // L'admin active la carte au cas par cas après KYC validé. Le creator
+  // peut "demander" l'activation (NONE → REQUESTED) ; l'admin accepte
+  // (→ APPROVED) ou rejette avec raison (→ REJECTED). En cas de rejet,
+  // le creator peut re-soumettre — l'ancienne raison est archivée dans
+  // cardLastRejectionReason. cf. docs/BICTORYS_INTEGRATION.md §5.
+  cardStatus: z.enum(["NONE", "REQUESTED", "APPROVED", "REJECTED"]).default("NONE"),
+  cardRequestedAt: z.string().datetime().nullable().optional().default(null),
+  cardReviewedAt: z.string().datetime().nullable().optional().default(null),
+  cardRejectionReason: z.string().max(500).nullable().optional().default(null),
+  cardLastRejectionReason: z.string().max(500).nullable().optional().default(null),
 }).superRefine((data, ctx) => {
   if (data.subtype === "festive") {
     if (!data.occasion) {
@@ -221,6 +232,37 @@ export const fundraiserBlockConfigSchema = z.object({
         code: z.ZodIssueCode.custom,
         path: ["occasion"],
         message: "L'occasion doit être vide pour une cagnotte solidaire.",
+      });
+    }
+  }
+  // Card workflow invariants
+  if (data.cardStatus === "REQUESTED" && !data.cardRequestedAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cardRequestedAt"],
+      message: "cardRequestedAt requis quand cardStatus=REQUESTED",
+    });
+  }
+  if (data.cardStatus === "APPROVED" && !data.cardReviewedAt) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["cardReviewedAt"],
+      message: "cardReviewedAt requis quand cardStatus=APPROVED",
+    });
+  }
+  if (data.cardStatus === "REJECTED") {
+    if (!data.cardReviewedAt) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cardReviewedAt"],
+        message: "cardReviewedAt requis quand cardStatus=REJECTED",
+      });
+    }
+    if (!data.cardRejectionReason || data.cardRejectionReason.trim().length < 5) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cardRejectionReason"],
+        message: "Raison du rejet requise (≥5 caractères)",
       });
     }
   }
