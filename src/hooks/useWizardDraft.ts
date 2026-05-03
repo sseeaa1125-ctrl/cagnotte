@@ -62,6 +62,9 @@ export type FestiveDraft = {
   visibility?: Visibility;
   hideAmount?: boolean;
   hideDonors?: boolean;
+  // Workflow d'approbation carte par cagnotte. Si true, le block est créé
+  // avec config.cardStatus = "REQUESTED" → apparaît dans la queue admin.
+  cardRequested?: boolean;
   tosAccepted?: boolean;
   step?: 1 | 2 | 3;
   updatedAt?: string;

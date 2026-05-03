@@ -147,6 +147,19 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
   const [hideDonors, setHideDonors] = React.useState<boolean>(
     safeConfig.hideDonors === true,
   );
+  // État du workflow d'approbation carte. NONE/REQUESTED/APPROVED/REJECTED.
+  // Le creator peut soumettre une demande (NONE→REQUESTED, REJECTED→REQUESTED)
+  // mais le passage à APPROVED/REJECTED reste admin-only (backend refuse 403).
+  const cardStatus = (typeof safeConfig.cardStatus === "string"
+    ? safeConfig.cardStatus
+    : "NONE") as "NONE" | "REQUESTED" | "APPROVED" | "REJECTED";
+  const cardRejectionReason =
+    typeof safeConfig.cardRejectionReason === "string"
+      ? safeConfig.cardRejectionReason
+      : null;
+  const [requestCard, setRequestCard] = React.useState<boolean>(
+    cardStatus === "REQUESTED",
+  );
   const [uploading, setUploading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -199,6 +212,21 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
       hideAmount,
       hideDonors,
     };
+
+    // Workflow carte (creator-side) :
+    // - APPROVED reste APPROVED (le creator ne peut pas désactiver — admin-only)
+    // - NONE → REQUESTED si toggle on
+    // - REJECTED → REQUESTED si toggle on (re-soumission ; backend archive l'ancienne raison)
+    // - REQUESTED → NONE si toggle off (annulation de la demande)
+    // Backend (blocks.ts) timestamp cardRequestedAt automatiquement.
+    if (cardStatus !== "APPROVED") {
+      if (requestCard && cardStatus !== "REQUESTED") {
+        nextConfig.cardStatus = "REQUESTED";
+      } else if (!requestCard && cardStatus === "REQUESTED") {
+        nextConfig.cardStatus = "NONE";
+        nextConfig.cardRequestedAt = null;
+      }
+    }
 
     // Defensive: never ship a `slug` key, even if one leaks in from elsewhere.
     if ("slug" in nextConfig) {
@@ -408,6 +436,56 @@ export function EditForm({ initial }: { initial: EditFormInitial }) {
           onChange={setHideDonors}
         />
       </div>
+
+      {/* Section paiement par carte (workflow d'approbation par cagnotte). */}
+      <fieldset className="flex flex-col gap-3 rounded-xl border border-border bg-white p-4">
+        <legend className="px-2 text-sm font-bold text-primary">
+          Paiement par carte bancaire
+        </legend>
+        {cardStatus === "APPROVED" ? (
+          <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800">
+            ✓ Activé — vos donateurs voient l&apos;option « Carte bancaire »
+            sur la page de paiement. Pour désactiver, contacter l&apos;admin.
+          </div>
+        ) : cardStatus === "REQUESTED" ? (
+          <>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              ⏳ En attente de validation par l&apos;admin (24-48h après KYC validé).
+            </div>
+            <Toggle
+              checked={requestCard}
+              onChange={setRequestCard}
+              label="Demander l'activation des paiements par carte"
+              description="Décocher annule la demande en cours."
+            />
+          </>
+        ) : cardStatus === "REJECTED" ? (
+          <>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900">
+              ✗ Demande refusée
+              {cardRejectionReason ? (
+                <>
+                  {" "}— Raison : <strong>{cardRejectionReason}</strong>
+                </>
+              ) : null}
+              . Vous pouvez modifier votre cagnotte et re-soumettre.
+            </div>
+            <Toggle
+              checked={requestCard}
+              onChange={setRequestCard}
+              label="Re-soumettre une demande d'activation de la carte bancaire"
+              description="L'admin examinera à nouveau votre cagnotte."
+            />
+          </>
+        ) : (
+          <Toggle
+            checked={requestCard}
+            onChange={setRequestCard}
+            label="Demander l'activation des paiements par carte bancaire"
+            description="Validation manuelle de l'admin sous 24-48h après KYC validé. Une fois approuvée, vos donateurs verront « Carte bancaire » en plus de Wave / Orange Money / Maxit."
+          />
+        )}
+      </fieldset>
 
       <div className="flex items-center justify-end pt-2">
         <Button

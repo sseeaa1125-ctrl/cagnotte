@@ -27,6 +27,8 @@ export default function SolidaireStep3Page() {
   const [visibility, setVisibility] = useState<Visibility>("public");
   const [hideAmount, setHideAmount] = useState(false);
   const [hideDonors, setHideDonors] = useState(false);
+  // Demande d'activation paiement carte bancaire — l'admin valide ensuite.
+  const [cardRequested, setCardRequested] = useState(false);
   const [tosAccepted, setTosAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +49,8 @@ export default function SolidaireStep3Page() {
     if (draft.visibility) setVisibility(draft.visibility);
     if (typeof draft.hideAmount === "boolean") setHideAmount(draft.hideAmount);
     if (typeof draft.hideDonors === "boolean") setHideDonors(draft.hideDonors);
+    if (typeof draft.cardRequested === "boolean")
+      setCardRequested(draft.cardRequested);
     if (typeof draft.tosAccepted === "boolean")
       setTosAccepted(draft.tosAccepted);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,7 +73,7 @@ export default function SolidaireStep3Page() {
       return;
     }
 
-    setDraft({ visibility, hideAmount, hideDonors, tosAccepted });
+    setDraft({ visibility, hideAmount, hideDonors, cardRequested, tosAccepted });
 
     setSubmitting(true);
     try {
@@ -97,6 +101,7 @@ export default function SolidaireStep3Page() {
               visibility,
               hideAmount,
               hideDonors,
+              ...(cardRequested ? { cardStatus: "REQUESTED" as const } : {}),
             },
           },
         },
@@ -185,6 +190,18 @@ export default function SolidaireStep3Page() {
             onChange={setHideDonors}
             label={WIZARD_FIELDS.hideDonorsLabel}
             description={WIZARD_FIELDS.hideDonorsHelp}
+          />
+        </fieldset>
+
+        <fieldset className="flex flex-col gap-4 border-t border-border pt-6">
+          <legend className="text-sm font-semibold text-primary">
+            Paiements (optionnel)
+          </legend>
+          <Toggle
+            checked={cardRequested}
+            onChange={setCardRequested}
+            label="Demander l'activation des paiements par carte bancaire"
+            description="Validation manuelle de l'admin sous 24-48h après KYC validé. Une fois approuvée, vos donateurs verront « Carte bancaire » en plus de Wave / Orange Money / Maxit."
           />
         </fieldset>
 
