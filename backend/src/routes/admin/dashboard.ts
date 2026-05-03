@@ -149,22 +149,42 @@ adminDashboardRouter.get("/badges", async (_req, res) => {
     todayStart.setHours(0, 0, 0, 0);
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const [pendingKyc, pendingWithdrawals, pendingReports, todayOrders, newSellersWeek] =
-      await Promise.all([
-        prisma.seller.count({ where: { kycStatus: "PENDING" } }),
-        prisma.withdrawal.count({
-          where: { status: { in: ["PENDING", "PROCESSING"] } },
-        }),
-        prisma.report.count({ where: { status: "PENDING" } }),
-        prisma.order.count({
-          where: { paymentStatus: "PAID", paidAt: { gte: todayStart } },
-        }),
-        prisma.seller.count({
-          where: { createdAt: { gte: weekAgo }, deletedAt: null },
-        }),
-      ]);
+    const [
+      pendingKyc,
+      pendingWithdrawals,
+      pendingReports,
+      pendingCardRequests,
+      todayOrders,
+      newSellersWeek,
+    ] = await Promise.all([
+      prisma.seller.count({ where: { kycStatus: "PENDING" } }),
+      prisma.withdrawal.count({
+        where: { status: { in: ["PENDING", "PROCESSING"] } },
+      }),
+      prisma.report.count({ where: { status: "PENDING" } }),
+      // Cagnottes en attente d'approbation carte bancaire (workflow par cagnotte).
+      prisma.block.count({
+        where: {
+          type: "FUNDRAISER",
+          config: { path: ["cardStatus"], equals: "REQUESTED" },
+        },
+      }),
+      prisma.order.count({
+        where: { paymentStatus: "PAID", paidAt: { gte: todayStart } },
+      }),
+      prisma.seller.count({
+        where: { createdAt: { gte: weekAgo }, deletedAt: null },
+      }),
+    ]);
 
-    res.json({ pendingKyc, pendingWithdrawals, pendingReports, todayOrders, newSellersWeek });
+    res.json({
+      pendingKyc,
+      pendingWithdrawals,
+      pendingReports,
+      pendingCardRequests,
+      todayOrders,
+      newSellersWeek,
+    });
   } catch (err) {
     logger.error("Erreur admin /dashboard/badges", err);
     res.status(500).json({ error: "Erreur interne" });

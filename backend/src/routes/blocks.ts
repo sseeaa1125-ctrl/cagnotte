@@ -372,6 +372,28 @@ blocksRouter.post("/", verifyCsrf, requireAuth, async (req, res) => {
     // S10: Validate config only for types that carry meaningful config data
     // SALE/BOOKING/LEAD_MAGNET/WAITING_LIST use config: {} at creation (product/service created separately)
     const typesWithConfig = ["LINK", "PAYMENT", "DONATION", "FUNDRAISER", "PARTNERSHIP"];
+
+    // Garde-fou carte bancaire — à la création, le creator ne peut envoyer
+    // que cardStatus="NONE" ou "REQUESTED". Les états admin (APPROVED /
+    // REJECTED) sont rejetés (privilege escalation). Si REQUESTED, on
+    // timestamp automatiquement.
+    if (data.type === "FUNDRAISER" && data.config && typeof data.config === "object") {
+      const cfg = data.config as Record<string, unknown>;
+      if (cfg.cardStatus === "APPROVED" || cfg.cardStatus === "REJECTED") {
+        res.status(403).json({
+          error: "Seul un admin peut activer ou rejeter le paiement par carte",
+          code: "CARD_STATUS_FORBIDDEN",
+        });
+        return;
+      }
+      if (cfg.cardStatus === "REQUESTED") {
+        cfg.cardRequestedAt = new Date().toISOString();
+        // Reset des champs review au cas où le client en aurait envoyé.
+        cfg.cardReviewedAt = null;
+        cfg.cardRejectionReason = null;
+      }
+    }
+
     const validatedConfig = typesWithConfig.includes(data.type)
       ? validateBlockConfig(data.type, data.config)
       : (data.config || {});
@@ -508,6 +530,42 @@ blocksRouter.put("/:id", verifyCsrf, requireAuth, async (req, res) => {
 
     // S10: Validate config on update only for types with meaningful config
     const typesWithConfigUpdate = ["LINK", "PAYMENT", "DONATION", "FUNDRAISER", "FORMATION", "PARTNERSHIP"];
+
+    // Garde-fou carte bancaire (privilege escalation) :
+    // - Le creator ne peut PAS set cardStatus à APPROVED ou REJECTED.
+    // - Sur transition NONE|REJECTED → REQUESTED, on timestamp + on archive
+    //   l'éventuelle ancienne raison de rejet dans cardLastRejectionReason
+    //   et on clear cardRejectionReason / cardReviewedAt (nouveau cycle).
+    if (
+      existing.type === "FUNDRAISER" &&
+      data.config &&
+      typeof data.config === "object"
+    ) {
+      const incoming = data.config as Record<string, unknown>;
+      const previousCfg = (existing.config as Record<string, unknown>) || {};
+      if (incoming.cardStatus === "APPROVED" || incoming.cardStatus === "REJECTED") {
+        res.status(403).json({
+          error: "Seul un admin peut activer ou rejeter le paiement par carte",
+          code: "CARD_STATUS_FORBIDDEN",
+        });
+        return;
+      }
+      const wasNoneOrRejected =
+        previousCfg.cardStatus === undefined ||
+        previousCfg.cardStatus === "NONE" ||
+        previousCfg.cardStatus === "REJECTED";
+      if (incoming.cardStatus === "REQUESTED" && wasNoneOrRejected) {
+        incoming.cardRequestedAt = new Date().toISOString();
+        // Archive la raison du dernier rejet (si re-soumission après rejet).
+        if (previousCfg.cardStatus === "REJECTED" && previousCfg.cardRejectionReason) {
+          incoming.cardLastRejectionReason = previousCfg.cardRejectionReason;
+        }
+        // Nouveau cycle : clear les champs de review.
+        incoming.cardReviewedAt = null;
+        incoming.cardRejectionReason = null;
+      }
+    }
+
     const validatedUpdateConfig = data.config && typesWithConfigUpdate.includes(existing.type)
       ? validateBlockConfig(existing.type, data.config)
       : data.config;
