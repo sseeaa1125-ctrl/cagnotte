@@ -1582,32 +1582,24 @@ async function main(): Promise<void> {
           `expected 200, got ${rReview.status}: ${await rReview.text()}`,
         );
 
-        // Le dispatch est fire-and-forget — laisser un court délai pour
-        // que la Notification soit persistée en DB.
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        const notifs = await prisma.notification.findMany({
-          where: {
-            sellerId: sellerA!.id,
-            type: "CARD_APPROVED",
-            blockId: null, // dispatch ne set pas blockId, juste data
-            dedupeKey: { startsWith: `card:${block.id}:approved:` },
-          },
-        });
-        // Tolérant : si dispatch a écrit blockId, le 2ème where (null) le filtre out.
-        // On retombe sur une recherche dedupeKey-only.
-        const notifsLoose = notifs.length
-          ? notifs
-          : await prisma.notification.findMany({
-              where: {
-                sellerId: sellerA!.id,
-                type: "CARD_APPROVED",
-                dedupeKey: { startsWith: `card:${block.id}:approved:` },
-              },
-            });
+        // Le dispatch est fire-and-forget — polling court (jusqu'à 1s) pour
+        // robustesse CI lent / rate-limit Redis (audit-039 follow-up P2).
+        let notifs: Array<{ id: string }> = [];
+        for (let attempt = 0; attempt < 10; attempt++) {
+          notifs = await prisma.notification.findMany({
+            where: {
+              sellerId: sellerA!.id,
+              type: "CARD_APPROVED",
+              dedupeKey: { startsWith: `card:${block.id}:approved:` },
+            },
+            select: { id: true },
+          });
+          if (notifs.length >= 1) break;
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
         assert.ok(
-          notifsLoose.length >= 1,
-          `expected ≥1 CARD_APPROVED notif, got ${notifsLoose.length}`,
+          notifs.length >= 1,
+          `expected ≥1 CARD_APPROVED notif after 1s polling, got ${notifs.length}`,
         );
         clearCookies();
       },

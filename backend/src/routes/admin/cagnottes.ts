@@ -513,6 +513,33 @@ cagnottesAdminRouter.patch(
         ? { ...existingCfg, ...configPatch }
         : existingCfg;
 
+      // Override admin direct vers APPROVED — clear l'historique de rejet
+      // pour rester cohérent avec /card-review (audit-039 C-5 follow-up).
+      // Symétrie : sur transition vers REJECTED on archive l'ancienne raison
+      // courante dans cardLastRejectionReason si elle existe.
+      const prevCardStatus = existingCfg.cardStatus;
+      const nextCardStatus = mergedCfg.cardStatus;
+      if (
+        nextCardStatus === "APPROVED" &&
+        prevCardStatus !== "APPROVED"
+      ) {
+        mergedCfg.cardLastRejectionReason = null;
+        mergedCfg.cardRejectionReason = null;
+        if (!mergedCfg.cardReviewedAt) {
+          mergedCfg.cardReviewedAt = new Date().toISOString();
+        }
+      }
+      if (
+        nextCardStatus === "REJECTED" &&
+        prevCardStatus !== "REJECTED"
+      ) {
+        const incomingReason = (mergedCfg.cardRejectionReason as string | null | undefined) ?? null;
+        mergedCfg.cardLastRejectionReason = incomingReason;
+        if (!mergedCfg.cardReviewedAt) {
+          mergedCfg.cardReviewedAt = new Date().toISOString();
+        }
+      }
+
       // Valide la config COMPLÈTE (pas juste le patch) — attrape les
       // invariants cross-field comme subtype=solidaire + occasion=anniversaire
       // (qui serait silencieusement accepté par un .partial()).

@@ -311,8 +311,12 @@ export function ParticiperForm({
                     masque l'affichage public). En-dessous : comportement
                     legacy, fields disabled quand anonyme. */}
                 {totalAmount > HIGH_VALUE_THRESHOLD ? (
+                  // role=status + aria-live=polite → screen reader annonce
+                  // dynamiquement quand le donateur franchit le seuil 50k
+                  // (audit-039 follow-up P3).
                   <div
-                    role="note"
+                    role="status"
+                    aria-live="polite"
                     className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"
                   >
                     À partir de 50 000 FCFA, votre nom et votre email sont
