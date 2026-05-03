@@ -39,6 +39,7 @@ interface BlockPayload {
   slug: string | null;
   config: Record<string, unknown>;
   createdAt: string;
+  isActive: boolean;
 }
 
 async function fetchWithCookie<T>(
