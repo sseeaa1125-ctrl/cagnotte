@@ -79,10 +79,34 @@ export class BictorysProvider implements PaymentProvider {
 
         logger.log(`[Bictorys] Response: transactionId=${data.transactionId}, link=${data.link || "empty"}, qrCode=${data.qrCode ? "present" : "empty"}, message=${data.message || "empty"}, redirectUrl=${data.redirectUrl || "empty"}`);
 
+        // Carte bancaire : suffixer le `link` (page hostée Bictorys) avec
+        // `payment_category=card` pour que le hosted-checkout sélectionne
+        // d'office l'UI carte. Sans ce param, Bictorys retombe sur le picker
+        // mobile money par défaut. On utilise URL pour gérer proprement les
+        // cas avec/sans query string et l'idempotence (déjà présent → no-op).
+        let finalLink = data.link || undefined;
+        if (isCard && finalLink) {
+          try {
+            const u = new URL(finalLink);
+            if (u.searchParams.get("payment_category") !== "card") {
+              u.searchParams.set("payment_category", "card");
+            }
+            finalLink = u.toString();
+          } catch {
+            // URL malformée renvoyée par Bictorys (improbable) — fallback
+            // string concat, idempotent via includes() guard.
+            if (!finalLink.includes("payment_category=card")) {
+              finalLink += finalLink.includes("?")
+                ? "&payment_category=card"
+                : "?payment_category=card";
+            }
+          }
+        }
+
         return {
           externalId: data.transactionId,
           redirectUrl: data.redirectUrl || undefined,
-          link: data.link || undefined,
+          link: finalLink,
           qrCode: data.qrCode || undefined,
           message: data.message || undefined,
         };

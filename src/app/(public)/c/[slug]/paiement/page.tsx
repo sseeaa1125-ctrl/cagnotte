@@ -110,9 +110,8 @@ const MOBILE_PROVIDERS: readonly Provider[] = [
   { id: "orange_money", label: PAIEMENT_LABELS.methodOrange, logo: "/orange-money.png" },
   { id: "maxit", label: PAIEMENT_LABELS.methodMaxit, logo: "/maxit.png" },
   // Carte bancaire — affichée uniquement si la cagnotte a cardEnabled.
-  // Logo null car logo:string|null est accepté par le composant ci-dessous
-  // (texte fallback). Asset à fournir si nécessaire : /operators/card.png.
-  { id: "card", label: "Carte bancaire", logo: null },
+  // Logo combo Visa+Mastercard fourni par le métier (public/visa-mastercard.png).
+  { id: "card", label: "Carte bancaire", logo: "/visa-mastercard.png" },
 ] as const;
 
 // 3s × 40 = 2min max polling tout comme la merci page, aligné sur le

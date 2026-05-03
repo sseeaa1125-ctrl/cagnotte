@@ -1270,11 +1270,13 @@ async function main(): Promise<void> {
     );
 
     // ─────────────────────────────────────────────────────────────────────
-    // Test 23 — POST /api/orders amount > 50k sans email → 400 Zod
-    // (anti-blanchiment : nom + email obligatoires au-dessus de 50 000 FCFA)
+    // Test 23 — POST /api/orders amount = 50 000 (borne inclusive) sans
+    // email → 400 Zod. Vérifie que la borne anti-blanchiment est bien `>=`
+    // (décision business 2026-05-03 : 50 000 exactement déclenche
+    // l'obligation, pas seulement >50 000).
     // ─────────────────────────────────────────────────────────────────────
     await test(
-      "23. CARD-05: POST /api/orders amount=60000 sans email → 400 anti-blanchiment",
+      "23. CARD-05: POST /api/orders amount=50000 (borne incluse) sans email → 400 anti-blanchiment",
       async () => {
         const c1 = await prisma.block.findUnique({
           where: { slug: "anniversaire-de-fatou" },
@@ -1286,11 +1288,11 @@ async function main(): Promise<void> {
           body: JSON.stringify({
             sellerSlug: "test-seller-a",
             orderType: "DONATION",
-            amount: 60000,
+            amount: 50000,
             paymentType: "wave_money",
             customerName: "Test 23",
             customerPhone: "+221770000023",
-            // pas d'email — doit échouer
+            // pas d'email — doit échouer car borne inclusive
             blockId: c1!.id,
             cagnotteSlug: c1!.slug || undefined,
             isAnonymous: false,

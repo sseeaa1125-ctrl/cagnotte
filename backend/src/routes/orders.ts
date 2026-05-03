@@ -28,9 +28,10 @@ export const ordersRouter = Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const BICTORYS_REDIRECT_URL = process.env.BICTORYS_REDIRECT_URL || FRONTEND_URL;
 
-// Seuil anti-blanchiment — au-delà, name + email du donateur deviennent
-// obligatoires (mais le donateur peut continuer à cocher isAnonymous —
-// l'identité est stockée mais non affichée publiquement).
+// Seuil anti-blanchiment — à partir de 50 000 FCFA inclus, name + email
+// du donateur deviennent obligatoires (mais le donateur peut continuer à
+// cocher isAnonymous — l'identité est stockée mais non affichée publiquement).
+// Borne inclusive — décision business validée 2026-05-03.
 const HIGH_VALUE_DONATION_THRESHOLD = 50_000;
 
 const createOrderSchema = z.object({
@@ -78,10 +79,10 @@ const createOrderSchema = z.object({
       message: "Numéro de téléphone requis",
     });
   }
-  // Anti-blanchiment : > 50 000 FCFA → nom + email obligatoires.
+  // Anti-blanchiment : ≥ 50 000 FCFA → nom + email obligatoires.
   // Le flag isAnonymous masque l'identité publiquement mais ne dispense pas
-  // de la collecte (KYC donateur léger).
-  if (data.amount > HIGH_VALUE_DONATION_THRESHOLD) {
+  // de la collecte (KYC donateur léger). Borne inclusive (50 000 exact compte).
+  if (data.amount >= HIGH_VALUE_DONATION_THRESHOLD) {
     if (!data.customerName || data.customerName.trim().length < 2) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
