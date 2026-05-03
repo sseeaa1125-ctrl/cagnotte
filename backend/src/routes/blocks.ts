@@ -532,7 +532,9 @@ blocksRouter.put("/:id", verifyCsrf, requireAuth, async (req, res) => {
     const typesWithConfigUpdate = ["LINK", "PAYMENT", "DONATION", "FUNDRAISER", "FORMATION", "PARTNERSHIP"];
 
     // Garde-fou carte bancaire (privilege escalation) :
-    // - Le creator ne peut PAS set cardStatus à APPROVED ou REJECTED.
+    // - Le creator ne peut PAS *transitionner* cardStatus vers APPROVED ou
+    //   REJECTED. Renvoyer la valeur existante (cas du form qui POSTe le
+    //   config complet) est OK et ne déclenche pas le guard.
     // - Sur transition NONE|REJECTED → REQUESTED, on timestamp + on archive
     //   l'éventuelle ancienne raison de rejet dans cardLastRejectionReason
     //   et on clear cardRejectionReason / cardReviewedAt (nouveau cycle).
@@ -543,7 +545,18 @@ blocksRouter.put("/:id", verifyCsrf, requireAuth, async (req, res) => {
     ) {
       const incoming = data.config as Record<string, unknown>;
       const previousCfg = (existing.config as Record<string, unknown>) || {};
-      if (incoming.cardStatus === "APPROVED" || incoming.cardStatus === "REJECTED") {
+      const incomingStatus = incoming.cardStatus;
+      const previousStatus = previousCfg.cardStatus;
+      // Bloque uniquement les vraies transitions privilégiées : le creator
+      // n'a le droit ni de promouvoir une demande NONE/REQUESTED → APPROVED
+      // ni de poser un REJECTED de sa propre main. Si la valeur entrante
+      // EST DÉJÀ celle stockée, le form ne fait que repasser l'état actuel
+      // (cas typique de l'édition visibility/title pendant qu'une carte
+      // est déjà APPROVED) — laisser passer.
+      const isPrivilegedTransition =
+        (incomingStatus === "APPROVED" || incomingStatus === "REJECTED") &&
+        incomingStatus !== previousStatus;
+      if (isPrivilegedTransition) {
         res.status(403).json({
           error: "Seul un admin peut activer ou rejeter le paiement par carte",
           code: "CARD_STATUS_FORBIDDEN",
@@ -551,13 +564,13 @@ blocksRouter.put("/:id", verifyCsrf, requireAuth, async (req, res) => {
         return;
       }
       const wasNoneOrRejected =
-        previousCfg.cardStatus === undefined ||
-        previousCfg.cardStatus === "NONE" ||
-        previousCfg.cardStatus === "REJECTED";
-      if (incoming.cardStatus === "REQUESTED" && wasNoneOrRejected) {
+        previousStatus === undefined ||
+        previousStatus === "NONE" ||
+        previousStatus === "REJECTED";
+      if (incomingStatus === "REQUESTED" && wasNoneOrRejected) {
         incoming.cardRequestedAt = new Date().toISOString();
         // Archive la raison du dernier rejet (si re-soumission après rejet).
-        if (previousCfg.cardStatus === "REJECTED" && previousCfg.cardRejectionReason) {
+        if (previousStatus === "REJECTED" && previousCfg.cardRejectionReason) {
           incoming.cardLastRejectionReason = previousCfg.cardRejectionReason;
         }
         // Nouveau cycle : clear les champs de review.

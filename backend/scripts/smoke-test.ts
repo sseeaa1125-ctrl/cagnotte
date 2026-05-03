@@ -1,7 +1,8 @@
 /**
- * Phase 2+ smoke-test: 27 assertions covering every new/changed route + P01/P03/P05
+ * Phase 2+ smoke-test: 28 assertions covering every new/changed route + P01/P03/P05
  * + carte bancaire workflow (tests 19-24) + audit-039 follow-ups (tests 25-27 :
- * audit trail anti-blanchiment, transition REJECTED→REQUESTED, cascade notif).
+ * audit trail anti-blanchiment, transition REJECTED→REQUESTED, cascade notif)
+ * + régression test 28 (creator PUT cardStatus inchangé pendant edit visibility).
  *
  * Prerequisites:
  *   1. cd backend && npm run dev    (in another terminal)
@@ -1604,6 +1605,90 @@ async function main(): Promise<void> {
           `expected ≥1 CARD_APPROVED notif after 1s polling, got ${notifs.length}`,
         );
         clearCookies();
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 28 — Régression : creator PUT avec cardStatus="APPROVED" inchangé
+    // (le form renvoie le config complet, dont la valeur déjà-APPROVED) →
+    // 200, PAS de 403 CARD_STATUS_FORBIDDEN. Bug rapporté 2026-05-03 :
+    // editer la visibilité d'une cagnotte avec carte déjà approuvée fait
+    // échouer le submit.
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "28. CARD-10: creator PUT cardStatus='APPROVED' inchangé → 200 (pas de privilege escalation)",
+      async () => {
+        clearCookies();
+        const r1 = await req("/api/auth/login", {
+          method: "POST",
+          body: { email: "seller-a@test.cagnottes.sn", password: "password123" },
+        });
+        assert.strictEqual(r1.status, 200, `login A status ${r1.status}`);
+
+        const sellerA = await prisma.seller.findUnique({
+          where: { slug: "test-seller-a" },
+          select: { id: true },
+        });
+        assert.ok(sellerA, "test-seller-a missing");
+
+        const futureDate = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
+        const reviewedAt = new Date(Date.now() - 3600_000).toISOString();
+        const baseCfg = {
+          subtype: "festive" as const,
+          occasion: "anniversaire",
+          title: "Smoke 28",
+          description: "smoke",
+          coverUrl: null,
+          goalAmount: 100000,
+          endDate: futureDate,
+          visibility: "public",
+          status: "active",
+          showDonorCount: true,
+          suggestedAmounts: [1000, 5000, 10000],
+          cardStatus: "APPROVED" as const,
+          cardRequestedAt: new Date(Date.now() - 7200_000).toISOString(),
+          cardReviewedAt: reviewedAt,
+        };
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerA!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 28",
+            slug: `smoke-28-noop-${Date.now()}`,
+            isActive: true,
+            config: baseCfg,
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeBlockIds.push(block.id);
+
+        // Le creator édite (par exemple) la visibilité — le form renvoie
+        // le config complet incluant cardStatus="APPROVED" inchangé.
+        const r2 = await req(`/api/blocks/${block.id}`, {
+          method: "PUT",
+          body: {
+            config: { ...baseCfg, visibility: "private" },
+          },
+        });
+        assert.strictEqual(
+          r2.status,
+          200,
+          `expected 200, got ${r2.status}: ${await r2.text()}`,
+        );
+
+        const updated = await prisma.block.findUnique({
+          where: { id: block.id },
+          select: { config: true },
+        });
+        const cfg = (updated!.config as Record<string, unknown>) || {};
+        assert.strictEqual(cfg.visibility, "private");
+        assert.strictEqual(
+          cfg.cardStatus,
+          "APPROVED",
+          "cardStatus should remain APPROVED through unrelated edits",
+        );
       },
     );
   } finally {
