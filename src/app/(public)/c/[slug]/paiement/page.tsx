@@ -50,7 +50,10 @@ import { formatPrice } from "@/lib/format";
 // user must tap a second time (meta).
 // ─────────────────────────────────────────────────────────────────────────
 
-type MobileProviderId = "wave_money" | "orange_money" | "maxit";
+// "card" = paiement par carte bancaire via la page hosted-checkout 3DS de
+// Bictorys (link retourné par /pay/v1/charges?payment_type=card&payment_category=card).
+// Affiché uniquement si la cagnotte a config.cardStatus === "APPROVED".
+type MobileProviderId = "wave_money" | "orange_money" | "maxit" | "card";
 type BrowserKind = "tiktok" | "meta" | "normal" | "unknown";
 
 interface StashedPayload {
@@ -69,6 +72,7 @@ interface StashedPayload {
   cagnotteSubtype: FundraiserSubtype;
   cagnotteTitle: string;
   cagnotteCoverUrl: string | null;
+  cagnotteCardEnabled?: boolean;
 }
 
 interface CreateOrderResponse {
@@ -105,6 +109,10 @@ const MOBILE_PROVIDERS: readonly Provider[] = [
   { id: "wave_money", label: PAIEMENT_LABELS.methodWave, logo: "/wave.png" },
   { id: "orange_money", label: PAIEMENT_LABELS.methodOrange, logo: "/orange-money.png" },
   { id: "maxit", label: PAIEMENT_LABELS.methodMaxit, logo: "/maxit.png" },
+  // Carte bancaire — affichée uniquement si la cagnotte a cardEnabled.
+  // Logo null car logo:string|null est accepté par le composant ci-dessous
+  // (texte fallback). Asset à fournir si nécessaire : /operators/card.png.
+  { id: "card", label: "Carte bancaire", logo: null },
 ] as const;
 
 // 3s × 40 = 2min max polling tout comme la merci page, aligné sur le
@@ -279,10 +287,11 @@ export default function PaiementPage() {
 
   async function pay() {
     if (!stashed || pending) return;
-    // Phone is ALWAYS required — backend enforces `customerPhone.min(1)`
-    // for every orderType. We collect it here since /participer no
-    // longer asks for it.
-    if (!phoneLocal.trim()) {
+    // Le téléphone est requis pour les opérateurs mobile money. Pour la
+    // carte bancaire, Bictorys collecte le PAN sur sa page hosted-checkout
+    // 3DS — pas besoin de téléphone côté API.
+    const needsPhone = provider !== "card";
+    if (needsPhone && !phoneLocal.trim()) {
       setErrors({ phone: "Numéro de téléphone requis." });
       setError(null);
       // Scroll the phone card into view to make the error visible.
@@ -297,7 +306,7 @@ export default function PaiementPage() {
     setError(null);
     setPending(true);
 
-    const finalPhone = composePhone(phoneLocal);
+    const finalPhone = needsPhone ? composePhone(phoneLocal) : "";
 
     try {
       const body = {
@@ -490,10 +499,10 @@ export default function PaiementPage() {
                 (évite le double clic et les confusions visuelles). */}
             {!waitingData ? (
               <>
-            {/* Phone card — visible en mode "form". Since we stopped asking
-                for the phone on /participer, this is the canonical place it
-                gets collected for the Mobile Money flow.
-                Backend `customerPhone.min(1)` still passes. */}
+            {/* Phone card — visible uniquement pour le mobile money. La
+                carte bancaire utilise la page hosted-checkout 3DS de Bictorys
+                qui collecte le PAN sans téléphone. */}
+            {provider !== "card" ? (
             <section className="rounded-3xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
               <label
                 htmlFor="paiement-phone"
@@ -542,10 +551,10 @@ export default function PaiementPage() {
                 </p>
               ) : null}
             </section>
+            ) : null}
 
-            {/* Operator picker — Mobile Money only (v1). Wave / Orange Money
-                / Maxit side by side. No outer radio group anymore since
-                card was dropped. */}
+            {/* Operator picker — Mobile Money + Carte bancaire (si activée).
+                L'option Carte est filtrée selon stashed?.cagnotteCardEnabled. */}
             <section
               className="rounded-2xl border-2 border-primary bg-pink/40 p-4 sm:p-5"
               aria-label="Choisissez votre opérateur Mobile Money"
@@ -572,7 +581,9 @@ export default function PaiementPage() {
                 Choisissez votre opérateur
               </p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
-                {MOBILE_PROVIDERS.map((p) => {
+                {MOBILE_PROVIDERS.filter(
+                  (p) => p.id !== "card" || stashed?.cagnotteCardEnabled === true,
+                ).map((p) => {
                   const active = provider === p.id;
                   return (
                     <button

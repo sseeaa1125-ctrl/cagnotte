@@ -423,7 +423,7 @@ ordersRouter.post(
               sellerId: seller.id,
               email: resolvedEmail,
               name: data.customerName,
-              phone: cleanPhoneForStorage(data.customerPhone),
+              phone: cleanPhoneForStorage(data.customerPhone ?? ""),
             },
           });
         }
@@ -463,7 +463,7 @@ ordersRouter.post(
             customerId: customer.id,
             customerEmail: resolvedEmail,
             customerName: data.customerName,
-            customerPhone: cleanPhoneForStorage(data.customerPhone),
+            customerPhone: cleanPhoneForStorage(data.customerPhone ?? ""),
             productId: data.productId,
             bookingServiceId: data.bookingServiceId,
             bookingDate: data.bookingDate ? new Date(data.bookingDate) : undefined,
@@ -518,7 +518,7 @@ ordersRouter.post(
         ...(data.otp && { otp: data.otp }),
         customer: {
           name: data.customerName,
-          phone: cleanPhoneForStorage(data.customerPhone),
+          phone: cleanPhoneForStorage(data.customerPhone ?? ""),
           email: resolvedEmail,
           country: normalizeBictorysCountry(data.paymentType, data.paymentCountry || getBictorysCountry(getCountryFromRequest(req, data.timezone), data.paymentType, seller.payoutCountry, data.customerPhone)),
         },
@@ -883,7 +883,7 @@ ordersRouter.post("/lead-magnet", leadMagnetLimiter, leadMagnetProductLimiter, a
           customerId: customer.id,
           customerEmail: customerEmail,
           customerName: data.customerName,
-          customerPhone: data.customerPhone ? cleanPhoneForStorage(data.customerPhone) : undefined,
+          customerPhone: data.customerPhone ? cleanPhoneForStorage(data.customerPhone ?? "") : undefined,
           productId: data.productId,
           customFields: data.customFields || undefined,
           downloadUrl,

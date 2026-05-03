@@ -20,6 +20,9 @@ interface Cagnotte {
   totalRaised: number | null;
   hideAmount: boolean;
   hideDonors: boolean;
+  // Workflow d'approbation carte par cagnotte. Le picker /paiement n'affiche
+  // l'option "Carte bancaire" que si APPROVED. Default NONE pour cagnottes legacy.
+  cardEnabled: boolean;
   seller: { slug: string; displayName: string } | null;
 }
 
@@ -43,9 +46,14 @@ interface StashedPayload {
   cagnotteSubtype: FundraiserSubtype;
   cagnotteTitle: string;
   cagnotteCoverUrl: string | null;
+  cagnotteCardEnabled: boolean;
   voluntaryContribution: number;
   baseAmount: number;
 }
+
+// Anti-blanchiment — > 50 000 FCFA → name + email obligatoires (le donateur
+// peut toujours cocher anonyme : ses infos sont stockées mais non affichées).
+const HIGH_VALUE_THRESHOLD = 50_000;
 
 // Voluntary contribution = 3% of the base amount, floor favors the donor.
 function computeVoluntary(base: number): number {
@@ -104,6 +112,19 @@ export function ParticiperForm({
     } else if (baseAmount > 10_000_000) {
       e.amount = PARTICIPER_LABELS.errorAmountMax;
     }
+    // Anti-blanchiment : > 50 000 FCFA → name + email obligatoires.
+    // Le donateur peut quand même cocher anonyme (ses infos sont stockées
+    // en DB mais le nom est masqué publiquement par maskDonation côté backend).
+    if (totalAmount > HIGH_VALUE_THRESHOLD) {
+      const trimmedName = firstName.trim();
+      const trimmedEmail = email.trim();
+      if (trimmedName.length < 2) {
+        e.firstName = "À partir de 50 000 FCFA, votre nom est obligatoire (anti-blanchiment).";
+      }
+      if (!trimmedEmail) {
+        e.email = "À partir de 50 000 FCFA, votre email est obligatoire (anti-blanchiment).";
+      }
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -138,6 +159,7 @@ export function ParticiperForm({
       cagnotteSubtype: subtype,
       cagnotteTitle: cagnotte.title,
       cagnotteCoverUrl: cagnotte.coverUrl,
+      cagnotteCardEnabled: cagnotte.cardEnabled,
     };
 
     try {

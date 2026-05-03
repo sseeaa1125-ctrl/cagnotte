@@ -570,6 +570,10 @@ cagnottesRouter.get("/:slug", async (req, res) => {
       suggestedAmounts,
       hideAmount: cfg.hideAmount ?? false,
       hideDonors: cfg.hideDonors ?? false,
+      // Workflow d'approbation carte par cagnotte. Le picker /paiement
+      // n'affiche l'option "Carte bancaire" que si APPROVED. Cagnottes
+      // legacy (sans champ) → false par défaut.
+      cardEnabled: (cfg as { cardStatus?: string }).cardStatus === "APPROVED",
       totalRaised: isOwner || !cfg.hideAmount ? totalRaised : null,
       donorCount: isOwner || !cfg.hideDonors ? donorCount : null,
       recentDonations: recent.map((o) => maskDonation(o, ownerCfg)),

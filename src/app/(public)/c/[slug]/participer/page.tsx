@@ -34,6 +34,7 @@ interface CagnotteDetail {
   donorCount: number | null;
   hideAmount: boolean;
   hideDonors: boolean;
+  cardEnabled?: boolean;
   suggestedAmounts: number[] | null;
   seller: {
     id: string;
@@ -104,6 +105,7 @@ export default async function ParticiperPage({
         totalRaised: cagnotte.totalRaised,
         hideAmount: cagnotte.hideAmount,
         hideDonors: cagnotte.hideDonors,
+        cardEnabled: cagnotte.cardEnabled === true,
         seller: cagnotte.seller
           ? { slug: cagnotte.seller.slug, displayName: cagnotte.seller.displayName }
           : null,
