@@ -1,5 +1,6 @@
 /**
- * Phase 2 smoke-test: 15 assertions covering every new/changed route + P01/P03/P05.
+ * Phase 2+ smoke-test: 24 assertions covering every new/changed route + P01/P03/P05
+ * + carte bancaire workflow (tests 19-24).
  *
  * Prerequisites:
  *   1. cd backend && npm run dev    (in another terminal)
@@ -21,8 +22,10 @@
 
 import "dotenv/config";
 import assert from "node:assert/strict";
+import bcryptjs from "bcryptjs";
 import { prisma } from "../src/lib/prisma.js";
 import { redis } from "../src/lib/redis.js";
+import { validateBlockConfig } from "../src/lib/blocks/schemas.js";
 
 const API = process.env.API || "http://localhost:4000";
 const WEBHOOK_SECRET = process.env.BICTORYS_WEBHOOK_SECRET || "";
@@ -62,6 +65,7 @@ async function resetOrderRateLimiters(): Promise<void> {
 
 let cookieJar: Record<string, string> = {};
 let csrfToken = "";
+let adminCsrfToken = "";
 
 function parseSetCookie(header: string | null): void {
   if (!header) return;
@@ -78,6 +82,9 @@ function parseSetCookie(header: string | null): void {
     if (name === "izy-csrf") {
       csrfToken = decodeURIComponent(value);
     }
+    if (name === "izy-admin-csrf") {
+      adminCsrfToken = decodeURIComponent(value);
+    }
   }
 }
 
@@ -90,6 +97,7 @@ function buildCookieHeader(): string {
 function clearCookies(): void {
   cookieJar = {};
   csrfToken = "";
+  adminCsrfToken = "";
 }
 
 interface ReqOpts {
@@ -104,6 +112,26 @@ async function req(path: string, opts: ReqOpts = {}): Promise<Response> {
   if (cookieHeader) headers["Cookie"] = cookieHeader;
   if (csrfToken && opts.method && opts.method !== "GET") {
     headers["x-csrf-token"] = csrfToken;
+  }
+  if (opts.body !== undefined && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(`${API}${path}`, {
+    method: opts.method || "GET",
+    headers,
+    body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+  });
+  parseSetCookie(res.headers.get("set-cookie"));
+  return res;
+}
+
+// Variant for admin endpoints — sends `izy-admin-csrf` value via x-csrf-token.
+async function adminReq(path: string, opts: ReqOpts = {}): Promise<Response> {
+  const headers: Record<string, string> = { ...(opts.headers || {}) };
+  const cookieHeader = buildCookieHeader();
+  if (cookieHeader) headers["Cookie"] = cookieHeader;
+  if (adminCsrfToken && opts.method && opts.method !== "GET") {
+    headers["x-csrf-token"] = adminCsrfToken;
   }
   if (opts.body !== undefined && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
@@ -168,12 +196,16 @@ const cleanup: {
   pendingOrderIds: string[];
   milestoneBlockId: string | null;
   withdrawalReferences: string[];
+  cardSmokeBlockIds: string[];
+  cardSmokeAdminId: string | null;
 } = {
   smokeEmail: null,
   testOrderRefs: [],
   pendingOrderIds: [],
   milestoneBlockId: null,
   withdrawalReferences: [],
+  cardSmokeBlockIds: [],
+  cardSmokeAdminId: null,
 };
 
 // ─── Main ────────────────────────────────────────────────────────────────────
@@ -969,6 +1001,345 @@ async function main(): Promise<void> {
         }
       },
     );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 19 — Schema accepte cardStatus default "NONE" (legacy cagnottes)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "19. CARD-01: legacy config sans cardStatus → Zod default 'NONE'",
+      async () => {
+        const legacyCfg = {
+          subtype: "festive",
+          occasion: "anniversaire",
+          title: "Legacy",
+          description: "x",
+          coverUrl: null,
+          goalAmount: 50000,
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          visibility: "public",
+          status: "active",
+          showDonorCount: true,
+          suggestedAmounts: [1000, 5000],
+        };
+        const validated = validateBlockConfig("FUNDRAISER", legacyCfg) as Record<
+          string,
+          unknown
+        >;
+        assert.strictEqual(
+          validated.cardStatus,
+          "NONE",
+          `expected default 'NONE', got ${JSON.stringify(validated.cardStatus)}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 20 — Creator PUT /api/blocks/:id avec cardStatus=APPROVED → 403
+    // (privilege escalation guard — seul l'admin peut APPROVED/REJECTED)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "20. CARD-02: creator PUT cardStatus='APPROVED' → 403 CARD_STATUS_FORBIDDEN",
+      async () => {
+        clearCookies();
+        const r1 = await req("/api/auth/login", {
+          method: "POST",
+          body: { email: "seller-a@test.cagnottes.sn", password: "password123" },
+        });
+        assert.strictEqual(r1.status, 200, `login A status ${r1.status}`);
+
+        const sellerA = await prisma.seller.findUnique({
+          where: { slug: "test-seller-a" },
+          select: { id: true },
+        });
+        assert.ok(sellerA, "test-seller-a missing");
+
+        const futureDate = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
+        const baseCfg = {
+          subtype: "festive",
+          occasion: "anniversaire",
+          title: "Smoke 20",
+          description: "smoke",
+          coverUrl: null,
+          goalAmount: 100000,
+          endDate: futureDate,
+          visibility: "public",
+          status: "active",
+          showDonorCount: true,
+          suggestedAmounts: [1000, 5000, 10000],
+        };
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerA!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 20",
+            slug: `smoke-20-card-forbidden-${Date.now()}`,
+            isActive: true,
+            config: baseCfg,
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeBlockIds.push(block.id);
+
+        const r2 = await req(`/api/blocks/${block.id}`, {
+          method: "PUT",
+          body: {
+            config: { ...baseCfg, cardStatus: "APPROVED" },
+          },
+        });
+        assert.strictEqual(r2.status, 403, `expected 403, got ${r2.status}`);
+        const body = (await r2.json()) as { code?: string };
+        assert.strictEqual(
+          body.code,
+          "CARD_STATUS_FORBIDDEN",
+          `expected code CARD_STATUS_FORBIDDEN, got ${JSON.stringify(body)}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 21 — Creator PUT cardStatus='REQUESTED' → cardRequestedAt auto-set
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "21. CARD-03: creator PUT cardStatus='REQUESTED' → cardRequestedAt set",
+      async () => {
+        // Reuse seller A session from test 20.
+        const sellerA = await prisma.seller.findUnique({
+          where: { slug: "test-seller-a" },
+          select: { id: true },
+        });
+        assert.ok(sellerA, "test-seller-a missing");
+
+        const futureDate = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
+        const baseCfg = {
+          subtype: "festive",
+          occasion: "anniversaire",
+          title: "Smoke 21",
+          description: "smoke",
+          coverUrl: null,
+          goalAmount: 100000,
+          endDate: futureDate,
+          visibility: "public",
+          status: "active",
+          showDonorCount: true,
+          suggestedAmounts: [1000, 5000, 10000],
+        };
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerA!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 21",
+            slug: `smoke-21-card-req-${Date.now()}`,
+            isActive: true,
+            config: baseCfg,
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeBlockIds.push(block.id);
+
+        const tBefore = Date.now();
+        const r2 = await req(`/api/blocks/${block.id}`, {
+          method: "PUT",
+          body: {
+            config: { ...baseCfg, cardStatus: "REQUESTED" },
+          },
+        });
+        assert.strictEqual(r2.status, 200, `expected 200, got ${r2.status}`);
+
+        const updated = await prisma.block.findUnique({
+          where: { id: block.id },
+          select: { config: true },
+        });
+        const cfg = (updated!.config as Record<string, unknown>) || {};
+        assert.strictEqual(cfg.cardStatus, "REQUESTED");
+        assert.ok(
+          typeof cfg.cardRequestedAt === "string",
+          `cardRequestedAt expected ISO string, got ${typeof cfg.cardRequestedAt}`,
+        );
+        const tStamp = new Date(cfg.cardRequestedAt as string).getTime();
+        assert.ok(
+          tStamp >= tBefore - 1000 && tStamp <= Date.now() + 1000,
+          `cardRequestedAt out of range: ${cfg.cardRequestedAt}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 22 — Admin POST /card-review APPROVED sans KYC → 403 KYC_REQUIRED
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "22. CARD-04: admin POST /card-review APPROVED sur seller KYC≠APPROVED → 403 KYC_REQUIRED",
+      async () => {
+        // Crée un smoke admin (cleanup en finally bloc principal)
+        const smokeAdminEmail = `smoke-admin-${Date.now()}@test.cagnottes.sn`;
+        const adminPwd = "smokeAdminPass123!";
+        const admin = await prisma.admin.create({
+          data: {
+            email: smokeAdminEmail,
+            password: bcryptjs.hashSync(adminPwd, 12),
+            name: "Smoke Admin",
+            role: "ADMIN",
+            isActive: true,
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeAdminId = admin.id;
+
+        // Seller B (KYC_NONE) — crée un block avec cardStatus REQUESTED
+        const sellerB = await prisma.seller.findUnique({
+          where: { slug: "test-seller-b" },
+          select: { id: true, kycStatus: true },
+        });
+        assert.ok(sellerB, "test-seller-b missing");
+        assert.notStrictEqual(
+          sellerB!.kycStatus,
+          "APPROVED",
+          "test-seller-b must be non-APPROVED for this test",
+        );
+
+        const futureDate = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
+        const reqAt = new Date().toISOString();
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerB!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 22 — KYC gate",
+            slug: `smoke-22-card-kyc-${Date.now()}`,
+            isActive: true,
+            config: {
+              subtype: "solidaire",
+              cause: "education",
+              beneficiary: "Test",
+              title: "Smoke 22 — KYC gate",
+              description: "smoke",
+              coverUrl: null,
+              goalAmount: 100000,
+              endDate: futureDate,
+              visibility: "public",
+              status: "active",
+              showDonorCount: true,
+              suggestedAmounts: [1000, 5000, 10000],
+              cardStatus: "REQUESTED",
+              cardRequestedAt: reqAt,
+            },
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeBlockIds.push(block.id);
+
+        // Login admin (capture izy-admin-csrf via parseSetCookie)
+        clearCookies();
+        const rLogin = await req("/api/admin/auth/login", {
+          method: "POST",
+          body: { email: smokeAdminEmail, password: adminPwd },
+        });
+        assert.strictEqual(
+          rLogin.status,
+          200,
+          `admin login status ${rLogin.status}`,
+        );
+
+        const rReview = await adminReq(
+          `/api/admin/cagnottes/${block.id}/card-review`,
+          {
+            method: "POST",
+            body: { status: "APPROVED" },
+          },
+        );
+        assert.strictEqual(
+          rReview.status,
+          403,
+          `expected 403 KYC_REQUIRED, got ${rReview.status}`,
+        );
+        const body = (await rReview.json()) as { code?: string };
+        assert.strictEqual(
+          body.code,
+          "KYC_REQUIRED",
+          `expected code KYC_REQUIRED, got ${JSON.stringify(body)}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 23 — POST /api/orders amount > 50k sans email → 400 Zod
+    // (anti-blanchiment : nom + email obligatoires au-dessus de 50 000 FCFA)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "23. CARD-05: POST /api/orders amount=60000 sans email → 400 anti-blanchiment",
+      async () => {
+        const c1 = await prisma.block.findUnique({
+          where: { slug: "anniversaire-de-fatou" },
+        });
+        assert.ok(c1, "anniversaire-de-fatou missing");
+        const r = await fetch(`${API}/api/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sellerSlug: "test-seller-a",
+            orderType: "DONATION",
+            amount: 60000,
+            paymentType: "wave_money",
+            customerName: "Test 23",
+            customerPhone: "+221770000023",
+            // pas d'email — doit échouer
+            blockId: c1!.id,
+            cagnotteSlug: c1!.slug || undefined,
+            isAnonymous: false,
+            messageIsPrivate: false,
+          }),
+        });
+        assert.strictEqual(r.status, 400, `expected 400, got ${r.status}`);
+        const body = (await r.json()) as { error?: string };
+        assert.match(
+          body.error || "",
+          /email|anti-blanchiment|50.?000/i,
+          `expected anti-blanchiment error, got: ${body.error}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 24 — POST /api/orders paymentType=card sur cagnotte cardStatus≠APPROVED
+    // → 400 CARD_NOT_ENABLED
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "24. CARD-06: POST /api/orders paymentType=card sur cagnotte non-approuvée → 400 CARD_NOT_ENABLED",
+      async () => {
+        const c1 = await prisma.block.findUnique({
+          where: { slug: "anniversaire-de-fatou" },
+        });
+        assert.ok(c1, "anniversaire-de-fatou missing");
+        const r = await fetch(`${API}/api/orders`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            sellerSlug: "test-seller-a",
+            orderType: "DONATION",
+            amount: 5000,
+            paymentType: "card",
+            customerName: "Test 24",
+            customerEmail: `test24-${Date.now()}@test.cagnottes.sn`,
+            // pas de phone (carte exempte)
+            blockId: c1!.id,
+            cagnotteSlug: c1!.slug || undefined,
+            isAnonymous: false,
+            messageIsPrivate: false,
+          }),
+        });
+        assert.strictEqual(r.status, 400, `expected 400, got ${r.status}`);
+        const body = (await r.json()) as { code?: string; error?: string };
+        assert.strictEqual(
+          body.code,
+          "CARD_NOT_ENABLED",
+          `expected code CARD_NOT_ENABLED, got ${JSON.stringify(body)}`,
+        );
+      },
+    );
   } finally {
     // ─── Cleanup ───────────────────────────────────────────────────────────
     try {
@@ -1031,6 +1402,26 @@ async function main(): Promise<void> {
           customerEmail: { contains: "flood10-" },
         },
       });
+      // Card-feature smoke blocks (tests 20-22) + smoke admin
+      if (cleanup.cardSmokeBlockIds.length) {
+        await prisma.notification.deleteMany({
+          where: { blockId: { in: cleanup.cardSmokeBlockIds } },
+        });
+        await prisma.order.deleteMany({
+          where: { blockId: { in: cleanup.cardSmokeBlockIds } },
+        });
+        await prisma.block.deleteMany({
+          where: { id: { in: cleanup.cardSmokeBlockIds } },
+        });
+      }
+      if (cleanup.cardSmokeAdminId) {
+        await prisma.adminLog.deleteMany({
+          where: { adminId: cleanup.cardSmokeAdminId },
+        }).catch(() => {});
+        await prisma.admin.delete({
+          where: { id: cleanup.cardSmokeAdminId },
+        }).catch(() => {});
+      }
     } catch (cleanupErr) {
       console.error("[cleanup] partial failure:", cleanupErr);
     }
