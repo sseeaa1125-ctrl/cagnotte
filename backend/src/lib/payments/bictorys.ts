@@ -18,14 +18,18 @@ export class BictorysProvider implements PaymentProvider {
       );
     }
 
-    // cagnottes.sn v1 — the bank-card branch (`&payment_category=card`) was
-    // removed along with the UI picker. All charges are mobile money.
-    const url = `${BICTORYS_API_URL}/pay/v1/charges?payment_type=${params.paymentType}`;
+    // Carte bancaire : Bictorys exige &payment_category=card en plus du
+    // payment_type=card et normalise le pays côté serveur — on force "SN"
+    // quel que soit le pays envoyé par le caller (cf. doc §13).
+    const isCard = params.paymentType === "card";
+    const url = isCard
+      ? `${BICTORYS_API_URL}/pay/v1/charges?payment_type=card&payment_category=card`
+      : `${BICTORYS_API_URL}/pay/v1/charges?payment_type=${params.paymentType}`;
 
     const body: Record<string, unknown> = {
       amount: params.amount,
       currency: params.currency || "XOF",
-      country: params.country || "SN",
+      country: isCard ? "SN" : params.country || "SN",
       paymentReference: params.reference,
       successRedirectUrl: params.successRedirectUrl,
       ErrorRedirectUrl: params.errorRedirectUrl, // E majuscule — convention Bictorys
