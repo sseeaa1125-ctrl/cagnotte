@@ -303,14 +303,18 @@ export interface CardBlockForDispatch {
   slug: string;
 }
 
+// dedupeKey inclut `reviewedAt` (ISO) pour permettre une re-approbation après
+// désactivation admin (sinon la 2ème approbation serait dédupée silencieusement).
+// Cohérence avec fireCardRejected ci-dessous.
 export async function fireCardApproved(
   block: CardBlockForDispatch,
+  reviewedAt: string,
 ): Promise<CreateNotificationResult> {
   const tpl = cardApprovedTemplate({ blockTitle: block.title, blockSlug: block.slug });
   return createNotification({
     sellerId: block.sellerId,
     type: "CARD_APPROVED" satisfies NotificationType,
-    dedupeKey: `card:${block.id}:approved`,
+    dedupeKey: `card:${block.id}:approved:${reviewedAt}`,
     title: tpl.title,
     body: tpl.body,
     icon: tpl.icon,

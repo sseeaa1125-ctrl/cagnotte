@@ -591,7 +591,13 @@ cagnottesAdminRouter.patch(
 const cardReviewBodySchema = z
   .object({
     status: z.enum(["APPROVED", "REJECTED"]),
-    reason: z.string().trim().max(500).optional(),
+    // Trim + collapse multi-whitespace pour éviter les raisons full-blank
+    // ou bourrées de \n qui s'affichent mal en email/UI (audit-039 A-3).
+    reason: z
+      .string()
+      .max(500)
+      .transform((v) => v.trim().replace(/\s+/g, " "))
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.status === "REJECTED") {
@@ -599,7 +605,7 @@ const cardReviewBodySchema = z
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["reason"],
-          message: "Raison du rejet requise (≥5 caractères)",
+          message: "Raison du rejet requise (≥5 caractères, hors espaces)",
         });
       }
     }
@@ -653,17 +659,31 @@ cagnottesAdminRouter.post(
         cardStatus: status,
         cardReviewedAt: reviewedAt,
         cardRejectionReason: status === "REJECTED" ? (reason ?? null) : null,
-        // Archive la dernière raison de rejet (pour traçabilité après re-soumission).
-        cardLastRejectionReason: status === "REJECTED" ? (reason ?? null) : previousReason,
+        // Archive la dernière raison de rejet pour traçabilité après re-soumission.
+        // Sur APPROVED on clear l'historique : la cagnotte est désormais validée
+        // et l'ancienne raison ne doit plus rester côté creator (audit-039 C-5).
+        cardLastRejectionReason:
+          status === "APPROVED"
+            ? null
+            : status === "REJECTED"
+              ? (reason ?? null)
+              : previousReason,
       };
 
       // Re-validation complète Zod — attrape les invariants cross-field.
+      // Si elle échoue ici c'est que la config existante du block est déjà
+      // invalide (legacy data) — ce n'est pas une erreur serveur, donc on
+      // renvoie 422 avec un code que l'admin peut comprendre (audit-039 A-7).
       let validatedCfg: Record<string, unknown>;
       try {
         validatedCfg = validateBlockConfig("FUNDRAISER", mergedCfg) as Record<string, unknown>;
       } catch (zodErr) {
         const msg = zodErr instanceof z.ZodError ? zodErr.flatten() : { detail: String(zodErr) };
-        res.status(500).json({ error: "Config invalide après merge", details: msg });
+        res.status(422).json({
+          error: "Config invalide après merge — éditez le bloc avant d'approuver",
+          code: "CONFIG_INVALID_AFTER_MERGE",
+          details: msg,
+        });
         return;
       }
 
@@ -708,7 +728,7 @@ cagnottesAdminRouter.post(
           slug: existing.slug,
         };
         if (status === "APPROVED") {
-          fireCardApproved(blockForDispatch).catch((err) =>
+          fireCardApproved(blockForDispatch, reviewedAt).catch((err) =>
             logger.error("admin:cagnottes:card-review fireCardApproved", err),
           );
         } else {

@@ -138,10 +138,14 @@ export function ParticiperForm({
     if (!validate()) return;
     setSubmitting(true);
 
-    // When "Masquer mon identité" is on we DO NOT stash firstName / email
-    // in the payload at all — the donor stays anonymous end-to-end.
+    // Audit-039 C-2/A-8 — au-delà du seuil anti-blanchiment on doit stocker
+    // l'identité même si le donateur a coché "anonyme". Le maskDonation()
+    // côté backend masque l'affichage public ; isAnonymous reste source de
+    // vérité pour la UI publique. En-dessous du seuil, comportement legacy
+    // : anonyme = on n'envoie pas du tout name/email (privacy-by-default).
     const trimmedName = firstName.trim();
     const trimmedEmail = email.trim();
+    const requiresIdentity = totalAmount > HIGH_VALUE_THRESHOLD;
     const payload: StashedPayload = {
       sellerSlug: cagnotte.seller?.slug ?? "",
       cagnotteSlug: slug,
@@ -149,8 +153,11 @@ export function ParticiperForm({
       amount: totalAmount,
       baseAmount,
       voluntaryContribution: voluntaryAmount,
-      customerName: isAnonymous ? "" : trimmedName,
-      customerEmail: isAnonymous || !trimmedEmail ? undefined : trimmedEmail,
+      customerName: isAnonymous && !requiresIdentity ? "" : trimmedName,
+      customerEmail:
+        isAnonymous && !requiresIdentity
+          ? undefined
+          : trimmedEmail || undefined,
       // Placeholder — /paiement always overwrites this before POST.
       customerPhone: "",
       donorMessage: message.trim() || undefined,
@@ -297,34 +304,57 @@ export function ParticiperForm({
               </h2>
 
               <div className="space-y-4">
-                {/* Optional identity fields — grayed out and disabled
-                    when the donor opts into "Masquer mon identité". */}
-                <div
-                  className={cn(
-                    "grid grid-cols-1 gap-4 transition-opacity sm:grid-cols-2",
-                    isAnonymous ? "pointer-events-none opacity-50" : "",
-                  )}
-                  aria-hidden={isAnonymous || undefined}
-                >
-                  <Input
-                    label="Prénom"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    autoComplete="given-name"
-                    placeholder="Ex : Thomas"
-                    disabled={isAnonymous}
-                  />
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    placeholder="Pour votre reçu"
-                    icon={<Mail size={16} aria-hidden />}
-                    disabled={isAnonymous}
-                  />
-                </div>
+                {/* Audit-039 A-4/A-8 — au-dessus du seuil anti-blanchiment
+                    (50 000 FCFA) le bandeau d'aide est affiché en proactif
+                    et les champs restent activés même si l'option anonyme
+                    est cochée (l'identité est stockée mais maskDonation()
+                    masque l'affichage public). En-dessous : comportement
+                    legacy, fields disabled quand anonyme. */}
+                {totalAmount > HIGH_VALUE_THRESHOLD ? (
+                  <div
+                    role="note"
+                    className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900"
+                  >
+                    À partir de 50 000 FCFA, votre nom et votre email sont
+                    obligatoires (anti-blanchiment). Si vous restez anonyme,
+                    ces informations sont stockées en privé et ne sont pas
+                    affichées publiquement.
+                  </div>
+                ) : null}
+                {(() => {
+                  const fieldsDisabled =
+                    isAnonymous && totalAmount <= HIGH_VALUE_THRESHOLD;
+                  return (
+                    <div
+                      className={cn(
+                        "grid grid-cols-1 gap-4 transition-opacity sm:grid-cols-2",
+                        fieldsDisabled ? "pointer-events-none opacity-50" : "",
+                      )}
+                      aria-hidden={fieldsDisabled || undefined}
+                    >
+                      <Input
+                        label="Prénom"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        autoComplete="given-name"
+                        placeholder="Ex : Thomas"
+                        disabled={fieldsDisabled}
+                        error={errors.firstName}
+                      />
+                      <Input
+                        label="Email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        autoComplete="email"
+                        placeholder="Pour votre reçu"
+                        icon={<Mail size={16} aria-hidden />}
+                        disabled={fieldsDisabled}
+                        error={errors.email}
+                      />
+                    </div>
+                  );
+                })()}
 
                 <div className="pt-1">
                   <Checkbox

@@ -1,6 +1,7 @@
 /**
- * Phase 2+ smoke-test: 24 assertions covering every new/changed route + P01/P03/P05
- * + carte bancaire workflow (tests 19-24).
+ * Phase 2+ smoke-test: 27 assertions covering every new/changed route + P01/P03/P05
+ * + carte bancaire workflow (tests 19-24) + audit-039 follow-ups (tests 25-27 :
+ * audit trail anti-blanchiment, transition REJECTED→REQUESTED, cascade notif).
  *
  * Prerequisites:
  *   1. cd backend && npm run dev    (in another terminal)
@@ -1262,6 +1263,9 @@ async function main(): Promise<void> {
           "KYC_REQUIRED",
           `expected code KYC_REQUIRED, got ${JSON.stringify(body)}`,
         );
+        // Audit-039 A-6 — purger la session admin pour éviter qu'un futur
+        // test utilisant req() hérite par accident du contexte admin.
+        clearCookies();
       },
     );
 
@@ -1338,6 +1342,274 @@ async function main(): Promise<void> {
           "CARD_NOT_ENABLED",
           `expected code CARD_NOT_ENABLED, got ${JSON.stringify(body)}`,
         );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 25 — Audit trail anti-blanchiment : donateur anonyme ≥50k →
+    // Notification.data.donorDisplayName conserve le vrai nom + wasAnonymous=true
+    // (audit-039 C-3)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "25. CARD-07: don anonyme ≥50k → Notification.data préserve donorDisplayName + wasAnonymous",
+      async () => {
+        const c1 = await prisma.block.findUnique({
+          where: { slug: "anniversaire-de-fatou" },
+          select: { id: true, sellerId: true },
+        });
+        assert.ok(c1, "anniversaire-de-fatou missing");
+
+        const realName = "Donateur Audit Trail 25";
+        const realEmail = `audit25-${Date.now()}@test.cagnottes.sn`;
+        const reference = `smoke-c3-${Date.now()}`;
+        const order = await prisma.order.create({
+          data: {
+            reference,
+            sellerId: c1!.sellerId,
+            orderType: "DONATION",
+            amount: 60000,
+            currency: "XOF",
+            commissionRate: 800,
+            commissionAmount: 4800,
+            sellerAmount: 55200,
+            paymentStatus: "PENDING",
+            paymentProvider: "bictorys",
+            customerEmail: realEmail,
+            customerName: realName,
+            isAnonymous: true,
+            messageIsPrivate: false,
+            blockId: c1!.id,
+          },
+          select: { id: true, reference: true },
+        });
+        cleanup.pendingOrderIds.push(order.id);
+
+        const externalId = `bictorys-smoke-c3-${Date.now()}`;
+        const r = await postWebhook({
+          id: externalId,
+          paymentReference: order.reference,
+          status: "succeeded",
+          amount: 60000,
+          currency: "XOF",
+        });
+        assert.strictEqual(r.status, 200, `webhook status ${r.status}`);
+
+        const notif = await prisma.notification.findFirst({
+          where: { dedupeKey: `donation_received:${order.id}` },
+          select: { data: true },
+        });
+        assert.ok(notif, "no DONATION_RECEIVED notification dispatched");
+        const data = (notif!.data ?? {}) as Record<string, unknown>;
+        assert.strictEqual(
+          data.donorDisplayName,
+          realName,
+          `audit trail leak: donorDisplayName='${data.donorDisplayName}' (expected '${realName}')`,
+        );
+        assert.strictEqual(
+          data.wasAnonymous,
+          true,
+          `wasAnonymous flag missing: ${JSON.stringify(data)}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 26 — Creator transition REJECTED → REQUESTED archive
+    // cardLastRejectionReason et clear cardRejectionReason / cardReviewedAt
+    // (audit-039 G-3)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "26. CARD-08: creator PUT REJECTED→REQUESTED → archive lastRejectionReason, clear review",
+      async () => {
+        clearCookies();
+        const r1 = await req("/api/auth/login", {
+          method: "POST",
+          body: { email: "seller-a@test.cagnottes.sn", password: "password123" },
+        });
+        assert.strictEqual(r1.status, 200, `login A status ${r1.status}`);
+
+        const sellerA = await prisma.seller.findUnique({
+          where: { slug: "test-seller-a" },
+          select: { id: true },
+        });
+        assert.ok(sellerA, "test-seller-a missing");
+
+        const futureDate = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
+        const reviewedAt = new Date(Date.now() - 3600_000).toISOString();
+        const previousReason = "Doc KYC manquant — re-soumets après upload";
+        const baseCfg = {
+          subtype: "festive" as const,
+          occasion: "anniversaire",
+          title: "Smoke 26",
+          description: "smoke",
+          coverUrl: null,
+          goalAmount: 100000,
+          endDate: futureDate,
+          visibility: "public",
+          status: "active",
+          showDonorCount: true,
+          suggestedAmounts: [1000, 5000, 10000],
+          cardStatus: "REJECTED" as const,
+          cardRequestedAt: new Date(Date.now() - 7200_000).toISOString(),
+          cardReviewedAt: reviewedAt,
+          cardRejectionReason: previousReason,
+        };
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerA!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 26",
+            slug: `smoke-26-resubmit-${Date.now()}`,
+            isActive: true,
+            config: baseCfg,
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeBlockIds.push(block.id);
+
+        const r2 = await req(`/api/blocks/${block.id}`, {
+          method: "PUT",
+          body: {
+            config: { ...baseCfg, cardStatus: "REQUESTED" },
+          },
+        });
+        assert.strictEqual(r2.status, 200, `expected 200, got ${r2.status}`);
+
+        const updated = await prisma.block.findUnique({
+          where: { id: block.id },
+          select: { config: true },
+        });
+        const cfg = (updated!.config as Record<string, unknown>) || {};
+        assert.strictEqual(cfg.cardStatus, "REQUESTED");
+        assert.strictEqual(
+          cfg.cardLastRejectionReason,
+          previousReason,
+          `lastRejectionReason archive failed: ${JSON.stringify(cfg.cardLastRejectionReason)}`,
+        );
+        assert.strictEqual(
+          cfg.cardRejectionReason,
+          null,
+          `cardRejectionReason should be cleared, got ${JSON.stringify(cfg.cardRejectionReason)}`,
+        );
+        assert.strictEqual(
+          cfg.cardReviewedAt,
+          null,
+          `cardReviewedAt should be cleared, got ${JSON.stringify(cfg.cardReviewedAt)}`,
+        );
+      },
+    );
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Test 27 — Cascade post-commit notif : admin APPROVED → Notification
+    // CARD_APPROVED créée pour le seller
+    // (audit-039 G-4)
+    // ─────────────────────────────────────────────────────────────────────
+    await test(
+      "27. CARD-09: admin POST /card-review APPROVED → Notification CARD_APPROVED dispatchée",
+      async () => {
+        const sellerA = await prisma.seller.findUnique({
+          where: { slug: "test-seller-a" },
+          select: { id: true, kycStatus: true },
+        });
+        assert.ok(sellerA, "test-seller-a missing");
+        assert.strictEqual(
+          sellerA!.kycStatus,
+          "APPROVED",
+          "test-seller-a doit avoir KYC APPROVED",
+        );
+
+        const futureDate = new Date(
+          Date.now() + 30 * 24 * 60 * 60 * 1000,
+        ).toISOString();
+        const reqAt = new Date().toISOString();
+        const block = await prisma.block.create({
+          data: {
+            sellerId: sellerA!.id,
+            type: "FUNDRAISER",
+            title: "Smoke 27 — cascade approve",
+            slug: `smoke-27-cascade-${Date.now()}`,
+            isActive: true,
+            config: {
+              subtype: "festive",
+              occasion: "anniversaire",
+              title: "Smoke 27",
+              description: "smoke",
+              coverUrl: null,
+              goalAmount: 100000,
+              endDate: futureDate,
+              visibility: "public",
+              status: "active",
+              showDonorCount: true,
+              suggestedAmounts: [1000, 5000, 10000],
+              cardStatus: "REQUESTED",
+              cardRequestedAt: reqAt,
+            },
+          },
+          select: { id: true },
+        });
+        cleanup.cardSmokeBlockIds.push(block.id);
+
+        // Re-login as smoke admin (créé en test 22, encore en DB).
+        if (!cleanup.cardSmokeAdminId) {
+          throw new Error("test 27 requires test 22 smoke admin to exist");
+        }
+        const adminRow = await prisma.admin.findUnique({
+          where: { id: cleanup.cardSmokeAdminId },
+          select: { email: true },
+        });
+        assert.ok(adminRow, "smoke admin missing");
+
+        clearCookies();
+        const rLogin = await req("/api/admin/auth/login", {
+          method: "POST",
+          body: { email: adminRow!.email, password: "smokeAdminPass123!" },
+        });
+        assert.strictEqual(
+          rLogin.status,
+          200,
+          `admin login status ${rLogin.status}`,
+        );
+
+        const rReview = await adminReq(
+          `/api/admin/cagnottes/${block.id}/card-review`,
+          { method: "POST", body: { status: "APPROVED" } },
+        );
+        assert.strictEqual(
+          rReview.status,
+          200,
+          `expected 200, got ${rReview.status}: ${await rReview.text()}`,
+        );
+
+        // Le dispatch est fire-and-forget — laisser un court délai pour
+        // que la Notification soit persistée en DB.
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const notifs = await prisma.notification.findMany({
+          where: {
+            sellerId: sellerA!.id,
+            type: "CARD_APPROVED",
+            blockId: null, // dispatch ne set pas blockId, juste data
+            dedupeKey: { startsWith: `card:${block.id}:approved:` },
+          },
+        });
+        // Tolérant : si dispatch a écrit blockId, le 2ème where (null) le filtre out.
+        // On retombe sur une recherche dedupeKey-only.
+        const notifsLoose = notifs.length
+          ? notifs
+          : await prisma.notification.findMany({
+              where: {
+                sellerId: sellerA!.id,
+                type: "CARD_APPROVED",
+                dedupeKey: { startsWith: `card:${block.id}:approved:` },
+              },
+            });
+        assert.ok(
+          notifsLoose.length >= 1,
+          `expected ≥1 CARD_APPROVED notif, got ${notifsLoose.length}`,
+        );
+        clearCookies();
       },
     );
   } finally {
