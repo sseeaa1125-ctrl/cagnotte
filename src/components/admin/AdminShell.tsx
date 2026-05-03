@@ -13,6 +13,7 @@ import {
   Landmark,
   Flag,
   Bell,
+  CreditCard,
   Settings,
   UserCog,
   ScrollText,
@@ -44,6 +45,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/kyc", label: "KYC", icon: ShieldCheck, badgeKey: "pendingKyc" },
   { href: "/admin/sellers", label: "Vendeurs", icon: Users, badgeKey: "newSellersWeek" },
   { href: "/admin/cagnottes", label: "Cagnottes", icon: Heart },
+  { href: "/admin/cagnottes/demandes-carte", label: "Cartes", icon: CreditCard, badgeKey: "pendingCardRequests" },
   { href: "/admin/orders", label: "Commandes", icon: Receipt, badgeKey: "todayOrders" },
   { href: "/admin/retraits", label: "Retraits", icon: Wallet, badgeKey: "pendingWithdrawals" },
   { href: "/admin/wallet", label: "Wallet", icon: Landmark, roles: ["ADMIN", "SUPER_ADMIN"] },
@@ -62,6 +64,7 @@ interface Badges {
   pendingKyc: number;
   pendingWithdrawals: number;
   pendingReports: number;
+  pendingCardRequests: number;
   todayOrders: number;
   newSellersWeek: number;
 }
@@ -70,6 +73,7 @@ const EMPTY_BADGES: Badges = {
   pendingKyc: 0,
   pendingWithdrawals: 0,
   pendingReports: 0,
+  pendingCardRequests: 0,
   todayOrders: 0,
   newSellersWeek: 0,
 };

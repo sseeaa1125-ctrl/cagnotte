@@ -161,6 +161,16 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
   // visibilité publique. La VRAIE activation se fait via
   // `PATCH /api/admin/cagnottes/:id/toggle-active` depuis la page détail.
   // Toggle retiré pour éviter la confusion UX.
+  //
+  // Workflow carte bancaire — admin SUPER_ADMIN peut forcer le statut
+  // directement depuis ce form (skip workflow REQUESTED→APPROVED). Pour le
+  // workflow normal de review, utiliser /admin/cagnottes/demandes-carte.
+  const initialCardStatus = (typeof safeConfig.cardStatus === "string"
+    ? safeConfig.cardStatus
+    : "NONE") as "NONE" | "REQUESTED" | "APPROVED" | "REJECTED";
+  const [cardStatus, setCardStatus] = React.useState<
+    "NONE" | "REQUESTED" | "APPROVED" | "REJECTED"
+  >(initialCardStatus);
   const [uploading, setUploading] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -212,6 +222,36 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
       hideAmount,
       hideDonors,
     };
+
+    // Card status — admin override. Si l'admin change le statut, propager
+    // les invariants attendus par le superRefine Zod backend (cardReviewedAt
+    // pour APPROVED/REJECTED, cardRejectionReason ≥5 chars pour REJECTED).
+    if (cardStatus !== initialCardStatus) {
+      nextConfig.cardStatus = cardStatus;
+      const nowIso = new Date().toISOString();
+      if (cardStatus === "APPROVED") {
+        nextConfig.cardReviewedAt = nowIso;
+        nextConfig.cardRejectionReason = null;
+      } else if (cardStatus === "REJECTED") {
+        nextConfig.cardReviewedAt = nowIso;
+        // Backend Zod refuse rejection sans raison ≥5 chars — pour le
+        // override direct depuis le form admin, on met une raison par défaut.
+        if (
+          typeof nextConfig.cardRejectionReason !== "string" ||
+          (nextConfig.cardRejectionReason as string).trim().length < 5
+        ) {
+          nextConfig.cardRejectionReason = "Rejet manuel admin";
+        }
+      } else if (cardStatus === "NONE") {
+        nextConfig.cardRequestedAt = null;
+        nextConfig.cardReviewedAt = null;
+        nextConfig.cardRejectionReason = null;
+      } else if (cardStatus === "REQUESTED") {
+        nextConfig.cardRequestedAt = nowIso;
+        nextConfig.cardReviewedAt = null;
+        nextConfig.cardRejectionReason = null;
+      }
+    }
 
     // Defensive: ne jamais ship un `slug` — Block.slug @unique est géré
     // séparément par le backend.
@@ -434,6 +474,51 @@ export function AdminEditForm({ initial }: { initial: EditFormInitial }) {
           onChange={setHideDonors}
         />
       </div>
+
+      {/* Carte bancaire — admin direct override (skip workflow REQUESTED).
+          Pour la review classique (queue), passer par /admin/cagnottes/demandes-carte. */}
+      <fieldset className="flex flex-col gap-3 rounded-xl border-2 border-indigo-200 bg-indigo-50 p-4">
+        <legend className="px-2 font-headings text-base font-black text-indigo-900">
+          Paiement par carte (admin)
+        </legend>
+        <p className="text-xs text-indigo-900/70">
+          Override direct du statut carte bancaire. Pour traiter une demande
+          en attente, préférer la queue dédiée :{" "}
+          <a href="/admin/cagnottes/demandes-carte" className="underline">
+            /admin/cagnottes/demandes-carte
+          </a>
+          .
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(["NONE", "REQUESTED", "APPROVED", "REJECTED"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setCardStatus(s)}
+              className={cn(
+                "rounded-lg px-3 py-2 text-xs font-semibold transition",
+                cardStatus === s
+                  ? s === "APPROVED"
+                    ? "bg-green-600 text-white shadow-sm"
+                    : s === "REJECTED"
+                      ? "bg-red-600 text-white shadow-sm"
+                      : s === "REQUESTED"
+                        ? "bg-amber-500 text-white shadow-sm"
+                        : "bg-gray-700 text-white shadow-sm"
+                  : "bg-white text-gray-700 hover:bg-gray-100",
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+        {cardStatus !== initialCardStatus ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+            Modification : <strong>{initialCardStatus}</strong> →{" "}
+            <strong>{cardStatus}</strong>. Sera appliquée au save.
+          </div>
+        ) : null}
+      </fieldset>
 
       <div className="flex items-center justify-end pt-2">
         <Button
