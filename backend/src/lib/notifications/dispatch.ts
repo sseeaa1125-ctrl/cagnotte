@@ -35,6 +35,8 @@ import {
   payoutFailedTemplate,
   kycApprovedTemplate,
   kycRejectedTemplate,
+  cardApprovedTemplate,
+  cardRejectedTemplate,
 } from "./templates.js";
 
 // ── Minimal structural types — keep the dispatchers callable from any
@@ -286,6 +288,57 @@ export async function fireKycRejected(
     body: tpl.body,
     icon: tpl.icon,
     data: { reason },
+    email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
+  });
+}
+
+// ── 9b. CARD_APPROVED ──
+// Fired post-commit après approbation admin du paiement par carte sur une
+// cagnotte (workflow par cagnotte — `block.config.cardStatus = APPROVED`).
+// dedupeKey scoped au block pour permettre un seul "approved" par cagnotte.
+export interface CardBlockForDispatch {
+  id: string;
+  sellerId: string;
+  title: string;
+  slug: string;
+}
+
+export async function fireCardApproved(
+  block: CardBlockForDispatch,
+): Promise<CreateNotificationResult> {
+  const tpl = cardApprovedTemplate({ blockTitle: block.title, blockSlug: block.slug });
+  return createNotification({
+    sellerId: block.sellerId,
+    type: "CARD_APPROVED" satisfies NotificationType,
+    dedupeKey: `card:${block.id}:approved`,
+    title: tpl.title,
+    body: tpl.body,
+    icon: tpl.icon,
+    data: { blockId: block.id, blockSlug: block.slug, blockTitle: block.title },
+    email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
+  });
+}
+
+// ── 9c. CARD_REJECTED ──
+// dedupeKey inclut `reviewedAt` (ISO) pour permettre un nouveau cycle après
+// re-soumission rejetée (sinon le 2ème rejet serait dédupé silencieusement).
+export async function fireCardRejected(
+  block: CardBlockForDispatch,
+  reason: string,
+  reviewedAt: string,
+): Promise<CreateNotificationResult> {
+  const tpl = cardRejectedTemplate(
+    { blockTitle: block.title, blockSlug: block.slug },
+    reason,
+  );
+  return createNotification({
+    sellerId: block.sellerId,
+    type: "CARD_REJECTED" satisfies NotificationType,
+    dedupeKey: `card:${block.id}:rejected:${reviewedAt}`,
+    title: tpl.title,
+    body: tpl.body,
+    icon: tpl.icon,
+    data: { blockId: block.id, blockSlug: block.slug, blockTitle: block.title, reason },
     email: { subject: tpl.emailSubject, html: tpl.emailHtml, tier: "transactional" },
   });
 }

@@ -310,3 +310,40 @@ export function kycRejectedTemplate(_input: KycInput, reason: string): TemplateO
       ${ctaButton("Soumettre à nouveau", "/profil/kyc")}`,
   };
 }
+
+// ── 11. CARD_APPROVED ──
+export interface CardReviewInput {
+  blockTitle: string;
+  blockSlug: string;
+}
+
+export function cardApprovedTemplate(input: CardReviewInput): TemplateOutput {
+  const safeTitle = escapeHtml(input.blockTitle);
+  return {
+    title: `Carte bancaire activée`,
+    body: `Ta cagnotte « ${input.blockTitle} » accepte désormais les paiements par carte bancaire.`,
+    icon: "credit-card",
+    emailSubject: `Paiement par carte activé sur ${input.blockTitle}`,
+    emailHtml: `<h2>Carte bancaire activée</h2>
+      <p>Bonne nouvelle — ta cagnotte <strong>${safeTitle}</strong> accepte désormais les paiements par carte bancaire en plus du mobile money.</p>
+      <p>Les donateurs verront automatiquement l'option « Carte bancaire » sur ta page de paiement.</p>
+      ${ctaButton("Voir ma cagnotte", `/c/${input.blockSlug}`)}`,
+  };
+}
+
+// ── 12. CARD_REJECTED ──
+export function cardRejectedTemplate(input: CardReviewInput, reason: string): TemplateOutput {
+  const safeTitle = escapeHtml(input.blockTitle);
+  const safeReason = escapeHtml(reason);
+  return {
+    title: `Demande carte refusée`,
+    body: `Ta demande d'activation de la carte bancaire pour « ${input.blockTitle} » a été refusée. Raison : ${safeReason}.`,
+    icon: "credit-card",
+    emailSubject: `Demande carte refusée — ${input.blockTitle}`,
+    emailHtml: `<h2>Demande carte refusée</h2>
+      <p>Ta demande d'activation des paiements par carte bancaire pour <strong>${safeTitle}</strong> a été refusée.</p>
+      <p>Raison : <strong>${safeReason}</strong></p>
+      <p>Tu peux modifier ta cagnotte et re-soumettre une demande quand tu veux.</p>
+      ${ctaButton("Modifier ma cagnotte", `/tableau-de-bord/cagnottes/${input.blockSlug}/modifier`)}`,
+  };
+}

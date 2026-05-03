@@ -5,6 +5,7 @@ import { prisma } from "../../lib/prisma.js";
 import { Prisma } from "../../generated/prisma/client.js";
 import { logAdminAction } from "../../lib/adminLog.js";
 import { validateBlockConfig } from "../../lib/blocks/schemas.js";
+import { fireCardApproved, fireCardRejected } from "../../lib/notifications/dispatch.js";
 import * as logger from "../../lib/logger.js";
 
 export const cagnottesAdminRouter = Router();
@@ -622,7 +623,10 @@ cagnottesAdminRouter.post(
         select: {
           id: true,
           type: true,
+          title: true,
+          slug: true,
           config: true,
+          sellerId: true,
           seller: { select: { id: true, slug: true, kycStatus: true } },
         },
       });
@@ -692,12 +696,27 @@ cagnottesAdminRouter.post(
         req.ip,
       );
 
-      // Notifications (post-commit) — Phase 5 ajoutera fireCardApproved /
-      // fireCardRejected. Pour l'instant on log juste le placeholder.
-      logger.log(
-        `[card-review] block:${id} → ${status} by admin:${req.admin!.id}` +
-          (reason ? ` (reason: ${reason})` : ""),
-      );
+      // Notifications post-commit (in-app + email transactionnel).
+      // dedupeKey scoped au block (approval) ou à reviewedAt (rejection)
+      // pour permettre re-soumission après rejet sans collision dedupe.
+      // Slug du block requis pour les CTAs des templates email.
+      if (existing.slug) {
+        const blockForDispatch = {
+          id: existing.id,
+          sellerId: existing.sellerId,
+          title: existing.title,
+          slug: existing.slug,
+        };
+        if (status === "APPROVED") {
+          fireCardApproved(blockForDispatch).catch((err) =>
+            logger.error("admin:cagnottes:card-review fireCardApproved", err),
+          );
+        } else {
+          fireCardRejected(blockForDispatch, reason ?? "", reviewedAt).catch((err) =>
+            logger.error("admin:cagnottes:card-review fireCardRejected", err),
+          );
+        }
+      }
 
       res.json({ ok: true, cardStatus: status, cardReviewedAt: reviewedAt });
     } catch (err) {
