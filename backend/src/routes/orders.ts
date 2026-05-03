@@ -28,22 +28,27 @@ export const ordersRouter = Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 const BICTORYS_REDIRECT_URL = process.env.BICTORYS_REDIRECT_URL || FRONTEND_URL;
 
+// Seuil anti-blanchiment — au-delà, name + email du donateur deviennent
+// obligatoires (mais le donateur peut continuer à cocher isAnonymous —
+// l'identité est stockée mais non affichée publiquement).
+const HIGH_VALUE_DONATION_THRESHOLD = 50_000;
+
 const createOrderSchema = z.object({
   sellerSlug: z.string(),
   orderType: z.enum(["SALE", "BOOKING", "PAYMENT", "DONATION"]),
   amount: z.number().int().min(500).max(10_000_000),
-  // cagnottes.sn v1 — donations SN uniquement. Les opérateurs acceptés
-  // sont Wave (wave_money), Orange Money (orange_money) et Maxit (maxit,
-  // canal Bictorys dédié au nouveau nom SN d'Orange Money). Les opérateurs
-  // régionaux (mtn_money CI, togocell TG, mobicash BF, moov BF/TG/BJ,
-  // etc.) sont retirés de l'enum public — un ré-élargissement WAEMU
-  // passera par une décision business explicite + ajout cas-par-cas.
-  paymentType: z.enum(["orange_money", "wave_money", "maxit"]),
+  // cagnottes.sn — opérateurs SN : Wave, Orange Money, Maxit + carte
+  // bancaire (avec workflow d'approbation admin par cagnotte, voir
+  // config.cardStatus). Les autres opérateurs WAEMU sont gardés typés
+  // dans payments/types.ts pour future expansion mais hors enum public.
+  paymentType: z.enum(["orange_money", "wave_money", "maxit", "card"]),
   paymentCountry: z.string().length(2).optional(),
   customerEmail: z.string().email().optional(),
   // Audit 011 B-01: cap free-text name to prevent DB bloat / DoS.
   customerName: z.string().trim().max(120).optional(),
-  customerPhone: z.string().min(1, "Numéro de téléphone requis").max(30),
+  // Phone optionnel pour la carte (Bictorys collecte le PAN sur sa page
+  // hosted-checkout 3DS, pas besoin de téléphone côté API).
+  customerPhone: z.string().max(30).optional(),
   productId: z.string().optional(),
   bookingServiceId: z.string().optional(),
   bookingDate: z.string().optional(),
@@ -64,6 +69,34 @@ const createOrderSchema = z.object({
   // "Soutenir cagnotte.sn" — voluntary 3% contribution from donor
   baseAmount: z.number().int().min(0).optional(),
   voluntaryContribution: z.number().int().min(0).optional(),
+}).superRefine((data, ctx) => {
+  // Phone requis pour les opérateurs mobile money (carte exempté).
+  if (data.paymentType !== "card" && (!data.customerPhone || data.customerPhone.trim().length === 0)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["customerPhone"],
+      message: "Numéro de téléphone requis",
+    });
+  }
+  // Anti-blanchiment : > 50 000 FCFA → nom + email obligatoires.
+  // Le flag isAnonymous masque l'identité publiquement mais ne dispense pas
+  // de la collecte (KYC donateur léger).
+  if (data.amount > HIGH_VALUE_DONATION_THRESHOLD) {
+    if (!data.customerName || data.customerName.trim().length < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["customerName"],
+        message: "À partir de 50 000 FCFA, votre nom est obligatoire (anti-blanchiment).",
+      });
+    }
+    if (!data.customerEmail || data.customerEmail.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["customerEmail"],
+        message: "À partir de 50 000 FCFA, votre email est obligatoire (anti-blanchiment).",
+      });
+    }
+  }
 });
 
 
@@ -267,6 +300,19 @@ ordersRouter.post(
           end.setHours(23, 59, 59, 999);
           if (new Date() > end) {
             res.status(400).json({ error: "Cette levée de fonds est terminée" });
+            return;
+          }
+        }
+        // Card payment guard — la carte ne peut être utilisée que si l'admin
+        // a approuvé la cagnotte (workflow d'approbation par cagnotte).
+        // Les cagnottes legacy sans cardStatus ont default "NONE" via Zod.
+        if (data.paymentType === "card") {
+          const cardStatus = (config.cardStatus as string | undefined) ?? "NONE";
+          if (cardStatus !== "APPROVED") {
+            res.status(400).json({
+              error: "Le paiement par carte bancaire n'est pas activé pour cette cagnotte",
+              code: "CARD_NOT_ENABLED",
+            });
             return;
           }
         }
